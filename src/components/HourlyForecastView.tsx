@@ -223,8 +223,22 @@ export const HourlyForecastView: React.FC<HourlyForecastViewProps> = ({
   const activeIndex = hoverIndex !== null ? hoverIndex : routePoints.length - 1;
   const activePoint = routePoints[activeIndex] || routePoints[0];
 
+  // Mobil Dokunmatik Takip (Touch Scrubbing)
+  const handleTouch = useCallback(
+    (e: React.TouchEvent<SVGSVGElement>) => {
+      if (!e.touches || e.touches.length === 0) return;
+      const touch = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clientX = touch.clientX - rect.left;
+      const ratio = Math.max(0, Math.min(1, clientX / rect.width));
+      const targetIndex = Math.round(ratio * (routePoints.length - 1));
+      setHoverIndex(targetIndex);
+    },
+    [routePoints.length]
+  );
+
   return (
-    <div className="border border-zinc-800 bg-zinc-900 rounded p-4 space-y-3">
+    <div className="border border-zinc-800 bg-zinc-900 rounded p-3 sm:p-4 space-y-3">
       {/* 1. Radar Başlığı & Hızlı Vade Seçimi */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-2">
         <div className="space-y-0.5">
@@ -325,8 +339,11 @@ export const HourlyForecastView: React.FC<HourlyForecastViewProps> = ({
       <div className="w-full bg-zinc-950 border border-zinc-800 rounded overflow-hidden select-none">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="w-full h-60 cursor-crosshair select-none"
+          className="w-full h-48 sm:h-60 cursor-crosshair select-none touch-none"
           onMouseLeave={() => setHoverIndex(null)}
+          onTouchStart={handleTouch}
+          onTouchMove={handleTouch}
+          onTouchEnd={() => setHoverIndex(null)}
         >
           {/* Seans Arka Plan Bantları */}
           {sessionBands.map((band, idx) => (

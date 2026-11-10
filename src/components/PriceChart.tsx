@@ -65,8 +65,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({ candles, signal, technic
 
   const activeCandle = hoverIndex !== null && filteredCandles[hoverIndex] ? filteredCandles[hoverIndex] : filteredCandles[filteredCandles.length - 1];
 
+  const handleTouch = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (!e.touches || e.touches.length === 0 || filteredCandles.length === 0) return;
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = touch.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, clientX / rect.width));
+    const targetIndex = Math.round(ratio * (filteredCandles.length - 1));
+    setHoverIndex(targetIndex);
+  };
+
   return (
-    <div className="border border-zinc-800 bg-zinc-900 rounded p-4 space-y-3">
+    <div className="border border-zinc-800 bg-zinc-900 rounded p-3 sm:p-4 space-y-3">
       {/* Title & Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
         <div>
@@ -81,7 +91,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ candles, signal, technic
             <button
               key={tf}
               onClick={() => setTimeframe(tf)}
-              className={`px-2.5 py-1 rounded border transition-colors ${
+              className={`px-2 sm:px-2.5 py-1 rounded border transition-colors ${
                 timeframe === tf
                   ? 'bg-zinc-800 text-white font-medium border-zinc-700'
                   : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
@@ -97,8 +107,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({ candles, signal, technic
       <div className="w-full bg-zinc-950 border border-zinc-800 rounded overflow-hidden">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="w-full h-64 select-none"
+          className="w-full h-52 sm:h-64 select-none touch-none"
           onMouseLeave={() => setHoverIndex(null)}
+          onTouchStart={handleTouch}
+          onTouchMove={handleTouch}
+          onTouchEnd={() => setHoverIndex(null)}
         >
           {/* Subtle Horizontal grid lines */}
           {[0.25, 0.5, 0.75].map((pct, idx) => {

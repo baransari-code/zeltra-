@@ -4,7 +4,7 @@
   "startDate": "2026-11-10T17:57:53.564Z",
   "targetEndDate": "2026-11-14T17:57:53.564Z",
   "durationHours": 96,
-  "lastTickTime": "2026-11-10T18:54:57.907Z",
+  "lastTickTime": "2026-11-10T19:30:45.887Z",
   "testSymbols": [
     "EUR/USD",
     "XAU/USD",
@@ -32,7 +32,12 @@
               "upperBound": 1.1181,
               "lowerBound": 1.1127,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 1.1167,
+              "realizedTimestamp": 1794337222759,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.116
             },
             {
               "hour": 2,
@@ -268,12 +273,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 0,
-        "inCorridorCount": 0,
+        "totalEvaluated": 1,
+        "inCorridorCount": 1,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
-        "directionAccuracyPercent": 100,
-        "meanAbsoluteErrorPercent": 0
+        "directionAccuracyPercent": 0,
+        "meanAbsoluteErrorPercent": 0.116
       }
     },
     "XAU/USD": {
@@ -295,7 +300,12 @@
               "upperBound": 4057.8,
               "lowerBound": 3988.6,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 4036,
+              "realizedTimestamp": 1794337222759,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.317
             },
             {
               "hour": 2,
@@ -531,12 +541,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 0,
-        "inCorridorCount": 0,
+        "totalEvaluated": 1,
+        "inCorridorCount": 1,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
-        "directionAccuracyPercent": 100,
-        "meanAbsoluteErrorPercent": 0
+        "directionAccuracyPercent": 0,
+        "meanAbsoluteErrorPercent": 0.317
       }
     },
     "USD/JPY": {
@@ -558,7 +568,12 @@
               "upperBound": 159.23,
               "lowerBound": 158.51,
               "expectedDirection": "YÜKSELİŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 158.812,
+              "realizedTimestamp": 1794337222759,
+              "isInsideCorridor": true,
+              "directionHit": true,
+              "errorPercent": 0.037
             },
             {
               "hour": 2,
@@ -794,12 +809,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 0,
-        "inCorridorCount": 0,
+        "totalEvaluated": 1,
+        "inCorridorCount": 1,
         "corridorAccuracyPercent": 100,
-        "directionHitCount": 0,
+        "directionHitCount": 1,
         "directionAccuracyPercent": 100,
-        "meanAbsoluteErrorPercent": 0
+        "meanAbsoluteErrorPercent": 0.037
       }
     },
     "BTC/USD": {
@@ -821,7 +836,12 @@
               "upperBound": 73972.9,
               "lowerBound": 72133.54,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 73404.65,
+              "realizedTimestamp": 1794337222759,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.479
             },
             {
               "hour": 2,
@@ -1057,12 +1077,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 0,
-        "inCorridorCount": 0,
+        "totalEvaluated": 1,
+        "inCorridorCount": 1,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
-        "directionAccuracyPercent": 100,
-        "meanAbsoluteErrorPercent": 0
+        "directionAccuracyPercent": 0,
+        "meanAbsoluteErrorPercent": 0.479
       }
     },
     "NAS100": {
@@ -1084,7 +1104,12 @@
               "upperBound": 25086.82,
               "lowerBound": 24656.82,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 24958.955,
+              "realizedTimestamp": 1794337222759,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.349
             },
             {
               "hour": 2,
@@ -1320,19 +1345,19 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 0,
-        "inCorridorCount": 0,
+        "totalEvaluated": 1,
+        "inCorridorCount": 1,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
-        "directionAccuracyPercent": 100,
-        "meanAbsoluteErrorPercent": 0
+        "directionAccuracyPercent": 0,
+        "meanAbsoluteErrorPercent": 0.349
       }
     }
   },
   "overallMetrics": {
-    "totalCheckpointsEvaluated": 0,
+    "totalCheckpointsEvaluated": 5,
     "overallCorridorAccuracy": 100,
-    "overallDirectionalAccuracy": 100,
-    "averageErrorPercent": 0
+    "overallDirectionalAccuracy": 20,
+    "averageErrorPercent": 0.26
   }
 }

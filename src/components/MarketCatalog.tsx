@@ -44,7 +44,7 @@ export const MarketCatalog: React.FC<MarketCatalogProps> = ({
   }, [assets, searchTerm, selectedCategory]);
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900 rounded p-4 space-y-4">
+    <div className="border border-zinc-800 bg-zinc-900 rounded p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* Header and Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
         <div>

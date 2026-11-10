@@ -111,14 +111,14 @@ export const App: React.FC = () => {
       />
 
       {/* Subheader: Active Instrument Selector & Real Status Indicator */}
-      <div className="border-b border-zinc-800 bg-zinc-900/60 py-2 px-4">
+      <div className="border-b border-zinc-800 bg-zinc-900/60 py-2 px-3 sm:px-4">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center space-x-3 text-xs">
-            <span className="text-zinc-400">Aktif Enstrüman:</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs w-full sm:w-auto">
+            <span className="text-zinc-400 shrink-0">Aktif Enstrüman:</span>
             <select
               value={selectedSymbol}
               onChange={(e) => setSelectedSymbol(e.target.value)}
-              className="bg-zinc-950 border border-zinc-700 text-white font-mono text-xs rounded px-2.5 py-1 focus:outline-none"
+              className="bg-zinc-950 border border-zinc-700 text-white font-mono text-xs rounded px-2.5 py-1 focus:outline-none flex-1 sm:flex-none max-w-full"
             >
               {assets.map((a) => (
                 <option key={a.symbol} value={a.symbol}>
@@ -128,7 +128,7 @@ export const App: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center space-x-4 text-xs font-mono">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-4 text-xs font-mono">
             <div className="text-zinc-400">
               Canlı Fiyat: <strong className="text-white">{selectedAsset.price.toFixed(selectedAsset.digits)}</strong>{' '}
               <span className={selectedAsset.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
@@ -138,7 +138,7 @@ export const App: React.FC = () => {
 
             <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400 border border-emerald-900/60 bg-emerald-950/30 px-2 py-0.5 rounded">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-sans">Canlı Borsa & Çok Kaynaklı 24s Akış</span>
+              <span className="font-sans">Canlı Borsa Akışı</span>
             </div>
           </div>
         </div>
@@ -146,7 +146,7 @@ export const App: React.FC = () => {
 
       {/* Error Banner */}
       {errorMsg && (
-        <div className="max-w-6xl mx-auto w-full px-4 pt-3">
+        <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 pt-3">
           <div className="p-3 bg-rose-950/40 border border-rose-800 rounded text-xs text-rose-300">
             {errorMsg}
           </div>
@@ -154,7 +154,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-4 space-y-4">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-2.5 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
         {isLoading && candles.length === 0 ? (
           <div className="p-8 text-center text-xs text-zinc-400 font-mono">
             {selectedSymbol} için son 1 yıllık resmi borsa mumları ve anlık fiyat yükleniyor...

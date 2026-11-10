@@ -79,12 +79,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Area: Bell Notification & Test Button */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <button
             onClick={onSimulateBreakingNews}
-            className="text-xs px-2.5 py-1 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 rounded transition-colors"
+            className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-1 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 rounded transition-colors whitespace-nowrap"
           >
-            Haber Test Et
+            Haber Yenile
           </button>
 
           {/* Bell Icon */}
@@ -152,37 +152,57 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile nav */}
-      <div className="md:hidden flex items-center space-x-1 px-4 py-2 border-t border-zinc-800/80 overflow-x-auto text-xs">
+      {/* Mobile nav (Horizontal Touch Scroll) */}
+      <div className="md:hidden flex items-center space-x-1.5 px-3 py-1.5 border-t border-zinc-800 bg-zinc-950 overflow-x-auto text-xs select-none">
         <button
           onClick={() => setActiveTab('signals')}
-          className={`px-2.5 py-1 rounded whitespace-nowrap ${activeTab === 'signals' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400'}`}
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors ${
+            activeTab === 'signals'
+              ? 'bg-zinc-800 text-white font-medium border-zinc-700'
+              : 'bg-zinc-900/60 text-zinc-400 border-zinc-800'
+          }`}
         >
-          Analiz
+          Analiz & Sinyal
         </button>
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`px-2.5 py-1 rounded whitespace-nowrap ${activeTab === 'catalog' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400'}`}
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors ${
+            activeTab === 'catalog'
+              ? 'bg-zinc-800 text-white font-medium border-zinc-700'
+              : 'bg-zinc-900/60 text-zinc-400 border-zinc-800'
+          }`}
         >
-          Varlık Listesi
+          120+ Varlık Listesi
         </button>
         <button
           onClick={() => setActiveTab('news')}
-          className={`px-2.5 py-1 rounded whitespace-nowrap ${activeTab === 'news' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400'}`}
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors ${
+            activeTab === 'news'
+              ? 'bg-zinc-800 text-white font-medium border-zinc-700'
+              : 'bg-zinc-900/60 text-zinc-400 border-zinc-800'
+          }`}
         >
-          Haberler
-        </button>
-        <button
-          onClick={() => setActiveTab('glossary')}
-          className={`px-2.5 py-1 rounded whitespace-nowrap ${activeTab === 'glossary' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400'}`}
-        >
-          Sözlük
+          Canlı Haberler
         </button>
         <button
           onClick={() => setActiveTab('calculator')}
-          className={`px-2.5 py-1 rounded whitespace-nowrap ${activeTab === 'calculator' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400'}`}
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors ${
+            activeTab === 'calculator'
+              ? 'bg-zinc-800 text-white font-medium border-zinc-700'
+              : 'bg-zinc-900/60 text-zinc-400 border-zinc-800'
+          }`}
         >
-          Risk
+          Risk & Lot
+        </button>
+        <button
+          onClick={() => setActiveTab('glossary')}
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors ${
+            activeTab === 'glossary'
+              ? 'bg-zinc-800 text-white font-medium border-zinc-700'
+              : 'bg-zinc-900/60 text-zinc-400 border-zinc-800'
+          }`}
+        >
+          Forex Rehberi
         </button>
       </div>
     </header>

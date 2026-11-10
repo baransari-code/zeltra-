@@ -33,7 +33,7 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset }) => {
   const userRewardTRY = +(userRewardUSD * usdToTry).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900 rounded p-4 space-y-4">
+    <div className="border border-zinc-800 bg-zinc-900 rounded p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* 1. ÜST KOKPİT: REJİM BAZLI 3 SANİYELİK KARAR ŞERİDİ */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
         <div className="space-y-1">
