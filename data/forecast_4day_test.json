@@ -1,0 +1,1338 @@
+{
+  "testId": "ZELTRA-4DAY-VERIFY-20261110",
+  "status": "ACTIVE",
+  "startDate": "2026-11-10T17:57:53.564Z",
+  "targetEndDate": "2026-11-14T17:57:53.564Z",
+  "durationHours": 96,
+  "lastTickTime": "2026-11-10T18:54:57.907Z",
+  "testSymbols": [
+    "EUR/USD",
+    "XAU/USD",
+    "USD/JPY",
+    "BTC/USD",
+    "NAS100"
+  ],
+  "series": {
+    "EUR/USD": {
+      "symbol": "EUR/USD",
+      "digits": 4,
+      "baselinePrice": 1.1158,
+      "baselineTime": "2026-11-10T17:57:53.565Z",
+      "snapshots": [
+        {
+          "snapshotId": "SNAP-EURUSD-1794333473565",
+          "createdAt": "2026-11-10T17:57:53.565Z",
+          "initialPrice": 1.1158,
+          "checkpoints": [
+            {
+              "hour": 1,
+              "targetTimestamp": 1794337075084,
+              "targetTimeStr": "21:57",
+              "predictedPrice": 1.1154,
+              "upperBound": 1.1181,
+              "lowerBound": 1.1127,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 2,
+              "targetTimestamp": 1794340675084,
+              "targetTimeStr": "22:57",
+              "predictedPrice": 1.1154,
+              "upperBound": 1.118,
+              "lowerBound": 1.1128,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 3,
+              "targetTimestamp": 1794344275084,
+              "targetTimeStr": "23:57",
+              "predictedPrice": 1.1153,
+              "upperBound": 1.1185,
+              "lowerBound": 1.1121,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 4,
+              "targetTimestamp": 1794347875084,
+              "targetTimeStr": "00:57",
+              "predictedPrice": 1.1153,
+              "upperBound": 1.1185,
+              "lowerBound": 1.1121,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 5,
+              "targetTimestamp": 1794351475084,
+              "targetTimeStr": "01:57",
+              "predictedPrice": 1.1152,
+              "upperBound": 1.1187,
+              "lowerBound": 1.1117,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 6,
+              "targetTimestamp": 1794355075084,
+              "targetTimeStr": "02:57",
+              "predictedPrice": 1.1151,
+              "upperBound": 1.119,
+              "lowerBound": 1.1112,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 7,
+              "targetTimestamp": 1794358675084,
+              "targetTimeStr": "03:57",
+              "predictedPrice": 1.1151,
+              "upperBound": 1.1193,
+              "lowerBound": 1.1109,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 8,
+              "targetTimestamp": 1794362275084,
+              "targetTimeStr": "04:57",
+              "predictedPrice": 1.115,
+              "upperBound": 1.1194,
+              "lowerBound": 1.1106,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 9,
+              "targetTimestamp": 1794365875084,
+              "targetTimeStr": "05:57",
+              "predictedPrice": 1.115,
+              "upperBound": 1.1197,
+              "lowerBound": 1.1103,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 10,
+              "targetTimestamp": 1794369475084,
+              "targetTimeStr": "06:57",
+              "predictedPrice": 1.1149,
+              "upperBound": 1.1198,
+              "lowerBound": 1.11,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 11,
+              "targetTimestamp": 1794373075084,
+              "targetTimeStr": "07:57",
+              "predictedPrice": 1.1149,
+              "upperBound": 1.12,
+              "lowerBound": 1.1098,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 12,
+              "targetTimestamp": 1794376675084,
+              "targetTimeStr": "08:57",
+              "predictedPrice": 1.1144,
+              "upperBound": 1.1226,
+              "lowerBound": 1.1062,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 13,
+              "targetTimestamp": 1794380275084,
+              "targetTimeStr": "09:57",
+              "predictedPrice": 1.1143,
+              "upperBound": 1.1228,
+              "lowerBound": 1.1058,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 14,
+              "targetTimestamp": 1794383875084,
+              "targetTimeStr": "10:57",
+              "predictedPrice": 1.1143,
+              "upperBound": 1.1231,
+              "lowerBound": 1.1055,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 15,
+              "targetTimestamp": 1794387475084,
+              "targetTimeStr": "11:57",
+              "predictedPrice": 1.1142,
+              "upperBound": 1.1233,
+              "lowerBound": 1.1051,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 16,
+              "targetTimestamp": 1794391075084,
+              "targetTimeStr": "12:57",
+              "predictedPrice": 1.1141,
+              "upperBound": 1.1234,
+              "lowerBound": 1.1048,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 17,
+              "targetTimestamp": 1794394675084,
+              "targetTimeStr": "13:57",
+              "predictedPrice": 1.1141,
+              "upperBound": 1.1237,
+              "lowerBound": 1.1045,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 18,
+              "targetTimestamp": 1794398275084,
+              "targetTimeStr": "14:57",
+              "predictedPrice": 1.114,
+              "upperBound": 1.1239,
+              "lowerBound": 1.1041,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 19,
+              "targetTimestamp": 1794401875084,
+              "targetTimeStr": "15:57",
+              "predictedPrice": 1.1138,
+              "upperBound": 1.1248,
+              "lowerBound": 1.1028,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 20,
+              "targetTimestamp": 1794405475084,
+              "targetTimeStr": "16:57",
+              "predictedPrice": 1.1138,
+              "upperBound": 1.1251,
+              "lowerBound": 1.1025,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 21,
+              "targetTimestamp": 1794409075084,
+              "targetTimeStr": "17:57",
+              "predictedPrice": 1.1137,
+              "upperBound": 1.1252,
+              "lowerBound": 1.1022,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 22,
+              "targetTimestamp": 1794412675084,
+              "targetTimeStr": "18:57",
+              "predictedPrice": 1.1137,
+              "upperBound": 1.1255,
+              "lowerBound": 1.1019,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 23,
+              "targetTimestamp": 1794416275084,
+              "targetTimeStr": "19:57",
+              "predictedPrice": 1.1136,
+              "upperBound": 1.1257,
+              "lowerBound": 1.1015,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 24,
+              "targetTimestamp": 1794419875084,
+              "targetTimeStr": "20:57",
+              "predictedPrice": 1.1136,
+              "upperBound": 1.1259,
+              "lowerBound": 1.1013,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "totalEvaluated": 0,
+        "inCorridorCount": 0,
+        "corridorAccuracyPercent": 100,
+        "directionHitCount": 0,
+        "directionAccuracyPercent": 100,
+        "meanAbsoluteErrorPercent": 0
+      }
+    },
+    "XAU/USD": {
+      "symbol": "XAU/USD",
+      "digits": 2,
+      "baselinePrice": 4028.9,
+      "baselineTime": "2026-11-10T17:57:53.565Z",
+      "snapshots": [
+        {
+          "snapshotId": "SNAP-XAUUSD-1794333473565",
+          "createdAt": "2026-11-10T17:57:53.565Z",
+          "initialPrice": 4028.9,
+          "checkpoints": [
+            {
+              "hour": 1,
+              "targetTimestamp": 1794337075229,
+              "targetTimeStr": "21:57",
+              "predictedPrice": 4023.2,
+              "upperBound": 4057.8,
+              "lowerBound": 3988.6,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 2,
+              "targetTimestamp": 1794340675229,
+              "targetTimeStr": "22:57",
+              "predictedPrice": 4023.42,
+              "upperBound": 4056.42,
+              "lowerBound": 3990.42,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 3,
+              "targetTimestamp": 1794344275229,
+              "targetTimeStr": "23:57",
+              "predictedPrice": 4022.19,
+              "upperBound": 4062.31,
+              "lowerBound": 3982.07,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 4,
+              "targetTimestamp": 1794347875229,
+              "targetTimeStr": "00:57",
+              "predictedPrice": 4022.06,
+              "upperBound": 4062.65,
+              "lowerBound": 3981.47,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 5,
+              "targetTimestamp": 1794351475229,
+              "targetTimeStr": "01:57",
+              "predictedPrice": 4021.25,
+              "upperBound": 4066.35,
+              "lowerBound": 3976.15,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 6,
+              "targetTimestamp": 1794355075229,
+              "targetTimeStr": "02:57",
+              "predictedPrice": 4020.53,
+              "upperBound": 4069.65,
+              "lowerBound": 3971.41,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 7,
+              "targetTimestamp": 1794358675229,
+              "targetTimeStr": "03:57",
+              "predictedPrice": 4019.85,
+              "upperBound": 4072.63,
+              "lowerBound": 3967.07,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 8,
+              "targetTimestamp": 1794362275229,
+              "targetTimeStr": "04:57",
+              "predictedPrice": 4019.23,
+              "upperBound": 4075.39,
+              "lowerBound": 3963.07,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 9,
+              "targetTimestamp": 1794365875229,
+              "targetTimeStr": "05:57",
+              "predictedPrice": 4018.64,
+              "upperBound": 4077.95,
+              "lowerBound": 3959.33,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 10,
+              "targetTimestamp": 1794369475229,
+              "targetTimeStr": "06:57",
+              "predictedPrice": 4018.09,
+              "upperBound": 4080.37,
+              "lowerBound": 3955.81,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 11,
+              "targetTimestamp": 1794373075229,
+              "targetTimeStr": "07:57",
+              "predictedPrice": 4017.56,
+              "upperBound": 4082.65,
+              "lowerBound": 3952.47,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 12,
+              "targetTimestamp": 1794376675229,
+              "targetTimeStr": "08:57",
+              "predictedPrice": 4010.74,
+              "upperBound": 4114.64,
+              "lowerBound": 3906.84,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 13,
+              "targetTimestamp": 1794380275229,
+              "targetTimeStr": "09:57",
+              "predictedPrice": 4010,
+              "upperBound": 4117.83,
+              "lowerBound": 3902.17,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 14,
+              "targetTimestamp": 1794383875229,
+              "targetTimeStr": "10:57",
+              "predictedPrice": 4009.28,
+              "upperBound": 4120.88,
+              "lowerBound": 3897.68,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 15,
+              "targetTimestamp": 1794387475229,
+              "targetTimeStr": "11:57",
+              "predictedPrice": 4008.6,
+              "upperBound": 4123.84,
+              "lowerBound": 3893.36,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 16,
+              "targetTimestamp": 1794391075229,
+              "targetTimeStr": "12:57",
+              "predictedPrice": 4007.93,
+              "upperBound": 4126.69,
+              "lowerBound": 3889.17,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 17,
+              "targetTimestamp": 1794394675229,
+              "targetTimeStr": "13:57",
+              "predictedPrice": 4007.28,
+              "upperBound": 4129.45,
+              "lowerBound": 3885.11,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 18,
+              "targetTimestamp": 1794398275229,
+              "targetTimeStr": "14:57",
+              "predictedPrice": 4006.66,
+              "upperBound": 4132.15,
+              "lowerBound": 3881.17,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 19,
+              "targetTimestamp": 1794401875229,
+              "targetTimeStr": "15:57",
+              "predictedPrice": 4004.06,
+              "upperBound": 4143.97,
+              "lowerBound": 3864.15,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 20,
+              "targetTimestamp": 1794405475229,
+              "targetTimeStr": "16:57",
+              "predictedPrice": 4003.42,
+              "upperBound": 4146.76,
+              "lowerBound": 3860.08,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 21,
+              "targetTimestamp": 1794409075229,
+              "targetTimeStr": "17:57",
+              "predictedPrice": 4002.79,
+              "upperBound": 4149.47,
+              "lowerBound": 3856.11,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 22,
+              "targetTimestamp": 1794412675229,
+              "targetTimeStr": "18:57",
+              "predictedPrice": 4002.17,
+              "upperBound": 4152.12,
+              "lowerBound": 3852.22,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 23,
+              "targetTimestamp": 1794416275229,
+              "targetTimeStr": "19:57",
+              "predictedPrice": 4001.57,
+              "upperBound": 4154.72,
+              "lowerBound": 3848.42,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 24,
+              "targetTimestamp": 1794419875229,
+              "targetTimeStr": "20:57",
+              "predictedPrice": 4000.98,
+              "upperBound": 4157.27,
+              "lowerBound": 3844.69,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "totalEvaluated": 0,
+        "inCorridorCount": 0,
+        "corridorAccuracyPercent": 100,
+        "directionHitCount": 0,
+        "directionAccuracyPercent": 100,
+        "meanAbsoluteErrorPercent": 0
+      }
+    },
+    "USD/JPY": {
+      "symbol": "USD/JPY",
+      "digits": 2,
+      "baselinePrice": 158.811,
+      "baselineTime": "2026-11-10T17:57:53.565Z",
+      "snapshots": [
+        {
+          "snapshotId": "SNAP-USDJPY-1794333473565",
+          "createdAt": "2026-11-10T17:57:53.565Z",
+          "initialPrice": 158.811,
+          "checkpoints": [
+            {
+              "hour": 1,
+              "targetTimestamp": 1794337075377,
+              "targetTimeStr": "21:57",
+              "predictedPrice": 158.87,
+              "upperBound": 159.23,
+              "lowerBound": 158.51,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 2,
+              "targetTimestamp": 1794340675377,
+              "targetTimeStr": "22:57",
+              "predictedPrice": 158.87,
+              "upperBound": 159.21,
+              "lowerBound": 158.53,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 3,
+              "targetTimestamp": 1794344275377,
+              "targetTimeStr": "23:57",
+              "predictedPrice": 158.88,
+              "upperBound": 159.3,
+              "lowerBound": 158.46,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 4,
+              "targetTimestamp": 1794347875377,
+              "targetTimeStr": "00:57",
+              "predictedPrice": 158.88,
+              "upperBound": 159.3,
+              "lowerBound": 158.46,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 5,
+              "targetTimestamp": 1794351475377,
+              "targetTimeStr": "01:57",
+              "predictedPrice": 158.89,
+              "upperBound": 159.36,
+              "lowerBound": 158.42,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 6,
+              "targetTimestamp": 1794355075377,
+              "targetTimeStr": "02:57",
+              "predictedPrice": 158.9,
+              "upperBound": 159.41,
+              "lowerBound": 158.39,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 7,
+              "targetTimestamp": 1794358675377,
+              "targetTimeStr": "03:57",
+              "predictedPrice": 158.91,
+              "upperBound": 159.46,
+              "lowerBound": 158.36,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 8,
+              "targetTimestamp": 1794362275377,
+              "targetTimeStr": "04:57",
+              "predictedPrice": 158.91,
+              "upperBound": 159.5,
+              "lowerBound": 158.32,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 9,
+              "targetTimestamp": 1794365875377,
+              "targetTimeStr": "05:57",
+              "predictedPrice": 158.92,
+              "upperBound": 159.54,
+              "lowerBound": 158.3,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 10,
+              "targetTimestamp": 1794369475377,
+              "targetTimeStr": "06:57",
+              "predictedPrice": 158.92,
+              "upperBound": 159.57,
+              "lowerBound": 158.27,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 11,
+              "targetTimestamp": 1794373075377,
+              "targetTimeStr": "07:57",
+              "predictedPrice": 158.93,
+              "upperBound": 159.61,
+              "lowerBound": 158.25,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 12,
+              "targetTimestamp": 1794376675377,
+              "targetTimeStr": "08:57",
+              "predictedPrice": 159,
+              "upperBound": 160.09,
+              "lowerBound": 157.91,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 13,
+              "targetTimestamp": 1794380275377,
+              "targetTimeStr": "09:57",
+              "predictedPrice": 159.01,
+              "upperBound": 160.14,
+              "lowerBound": 157.88,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 14,
+              "targetTimestamp": 1794383875377,
+              "targetTimeStr": "10:57",
+              "predictedPrice": 159.02,
+              "upperBound": 160.19,
+              "lowerBound": 157.85,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 15,
+              "targetTimestamp": 1794387475377,
+              "targetTimeStr": "11:57",
+              "predictedPrice": 159.02,
+              "upperBound": 160.22,
+              "lowerBound": 157.82,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 16,
+              "targetTimestamp": 1794391075377,
+              "targetTimeStr": "12:57",
+              "predictedPrice": 159.03,
+              "upperBound": 160.27,
+              "lowerBound": 157.79,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 17,
+              "targetTimestamp": 1794394675377,
+              "targetTimeStr": "13:57",
+              "predictedPrice": 159.04,
+              "upperBound": 160.32,
+              "lowerBound": 157.76,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 18,
+              "targetTimestamp": 1794398275377,
+              "targetTimeStr": "14:57",
+              "predictedPrice": 159.04,
+              "upperBound": 160.35,
+              "lowerBound": 157.73,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 19,
+              "targetTimestamp": 1794401875377,
+              "targetTimeStr": "15:57",
+              "predictedPrice": 159.07,
+              "upperBound": 160.53,
+              "lowerBound": 157.61,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 20,
+              "targetTimestamp": 1794405475377,
+              "targetTimeStr": "16:57",
+              "predictedPrice": 159.08,
+              "upperBound": 160.58,
+              "lowerBound": 157.58,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 21,
+              "targetTimestamp": 1794409075377,
+              "targetTimeStr": "17:57",
+              "predictedPrice": 159.08,
+              "upperBound": 160.61,
+              "lowerBound": 157.55,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 22,
+              "targetTimestamp": 1794412675377,
+              "targetTimeStr": "18:57",
+              "predictedPrice": 159.09,
+              "upperBound": 160.66,
+              "lowerBound": 157.52,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 23,
+              "targetTimestamp": 1794416275377,
+              "targetTimeStr": "19:57",
+              "predictedPrice": 159.1,
+              "upperBound": 160.7,
+              "lowerBound": 157.5,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 24,
+              "targetTimestamp": 1794419875377,
+              "targetTimeStr": "20:57",
+              "predictedPrice": 159.1,
+              "upperBound": 160.73,
+              "lowerBound": 157.47,
+              "expectedDirection": "YÜKSELİŞ",
+              "evaluated": false
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "totalEvaluated": 0,
+        "inCorridorCount": 0,
+        "corridorAccuracyPercent": 100,
+        "directionHitCount": 0,
+        "directionAccuracyPercent": 100,
+        "meanAbsoluteErrorPercent": 0
+      }
+    },
+    "BTC/USD": {
+      "symbol": "BTC/USD",
+      "digits": 2,
+      "baselinePrice": 73204.66,
+      "baselineTime": "2026-11-10T17:57:53.565Z",
+      "snapshots": [
+        {
+          "snapshotId": "SNAP-BTCUSD-1794333473565",
+          "createdAt": "2026-11-10T17:57:53.565Z",
+          "initialPrice": 73204.66,
+          "checkpoints": [
+            {
+              "hour": 1,
+              "targetTimestamp": 1794337075567,
+              "targetTimeStr": "21:57",
+              "predictedPrice": 73053.22,
+              "upperBound": 73972.9,
+              "lowerBound": 72133.54,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 2,
+              "targetTimestamp": 1794340675567,
+              "targetTimeStr": "22:57",
+              "predictedPrice": 73059.02,
+              "upperBound": 73936.14,
+              "lowerBound": 72181.9,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 3,
+              "targetTimestamp": 1794344275567,
+              "targetTimeStr": "23:57",
+              "predictedPrice": 73026.29,
+              "upperBound": 74092.44,
+              "lowerBound": 71960.14,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 4,
+              "targetTimestamp": 1794347875567,
+              "targetTimeStr": "00:57",
+              "predictedPrice": 73022.93,
+              "upperBound": 74101.72,
+              "lowerBound": 71944.14,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 5,
+              "targetTimestamp": 1794351475567,
+              "targetTimeStr": "01:57",
+              "predictedPrice": 73001.48,
+              "upperBound": 74200.06,
+              "lowerBound": 71802.9,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 6,
+              "targetTimestamp": 1794355075567,
+              "targetTimeStr": "02:57",
+              "predictedPrice": 72982.08,
+              "upperBound": 74287.58,
+              "lowerBound": 71676.58,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 7,
+              "targetTimestamp": 1794358675567,
+              "targetTimeStr": "03:57",
+              "predictedPrice": 72964.25,
+              "upperBound": 74367.04,
+              "lowerBound": 71561.46,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 8,
+              "targetTimestamp": 1794362275567,
+              "targetTimeStr": "04:57",
+              "predictedPrice": 72947.65,
+              "upperBound": 74440.22,
+              "lowerBound": 71455.08,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 9,
+              "targetTimestamp": 1794365875567,
+              "targetTimeStr": "05:57",
+              "predictedPrice": 72932.06,
+              "upperBound": 74508.38,
+              "lowerBound": 71355.74,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 10,
+              "targetTimestamp": 1794369475567,
+              "targetTimeStr": "06:57",
+              "predictedPrice": 72917.32,
+              "upperBound": 74572.44,
+              "lowerBound": 71262.2,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 11,
+              "targetTimestamp": 1794373075567,
+              "targetTimeStr": "07:57",
+              "predictedPrice": 72903.29,
+              "upperBound": 74633.05,
+              "lowerBound": 71173.53,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 12,
+              "targetTimestamp": 1794376675567,
+              "targetTimeStr": "08:57",
+              "predictedPrice": 72722.01,
+              "upperBound": 75483.34,
+              "lowerBound": 69960.68,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 13,
+              "targetTimestamp": 1794380275567,
+              "targetTimeStr": "09:57",
+              "predictedPrice": 72702.31,
+              "upperBound": 75568.01,
+              "lowerBound": 69836.61,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 14,
+              "targetTimestamp": 1794383875567,
+              "targetTimeStr": "10:57",
+              "predictedPrice": 72683.34,
+              "upperBound": 75649.34,
+              "lowerBound": 69717.34,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 15,
+              "targetTimestamp": 1794387475567,
+              "targetTimeStr": "11:57",
+              "predictedPrice": 72665.04,
+              "upperBound": 75727.77,
+              "lowerBound": 69602.31,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 16,
+              "targetTimestamp": 1794391075567,
+              "targetTimeStr": "12:57",
+              "predictedPrice": 72647.35,
+              "upperBound": 75803.63,
+              "lowerBound": 69491.07,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 17,
+              "targetTimestamp": 1794394675567,
+              "targetTimeStr": "13:57",
+              "predictedPrice": 72630.2,
+              "upperBound": 75877.2,
+              "lowerBound": 69383.2,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 18,
+              "targetTimestamp": 1794398275567,
+              "targetTimeStr": "14:57",
+              "predictedPrice": 72613.54,
+              "upperBound": 75948.69,
+              "lowerBound": 69278.39,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 19,
+              "targetTimestamp": 1794401875567,
+              "targetTimeStr": "15:57",
+              "predictedPrice": 72544.53,
+              "upperBound": 76262.98,
+              "lowerBound": 68826.08,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 20,
+              "targetTimestamp": 1794405475567,
+              "targetTimeStr": "16:57",
+              "predictedPrice": 72527.38,
+              "upperBound": 76336.82,
+              "lowerBound": 68717.94,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 21,
+              "targetTimestamp": 1794409075567,
+              "targetTimeStr": "17:57",
+              "predictedPrice": 72510.66,
+              "upperBound": 76408.97,
+              "lowerBound": 68612.35,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 22,
+              "targetTimestamp": 1794412675567,
+              "targetTimeStr": "18:57",
+              "predictedPrice": 72494.33,
+              "upperBound": 76479.55,
+              "lowerBound": 68509.11,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 23,
+              "targetTimestamp": 1794416275567,
+              "targetTimeStr": "19:57",
+              "predictedPrice": 72478.36,
+              "upperBound": 76548.69,
+              "lowerBound": 68408.03,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 24,
+              "targetTimestamp": 1794419875567,
+              "targetTimeStr": "20:57",
+              "predictedPrice": 72462.74,
+              "upperBound": 76616.49,
+              "lowerBound": 68308.99,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "totalEvaluated": 0,
+        "inCorridorCount": 0,
+        "corridorAccuracyPercent": 100,
+        "directionHitCount": 0,
+        "directionAccuracyPercent": 100,
+        "meanAbsoluteErrorPercent": 0
+      }
+    },
+    "NAS100": {
+      "symbol": "NAS100",
+      "digits": 2,
+      "baselinePrice": 24907.223,
+      "baselineTime": "2026-11-10T17:57:53.565Z",
+      "snapshots": [
+        {
+          "snapshotId": "SNAP-NAS100-1794333473565",
+          "createdAt": "2026-11-10T17:57:53.565Z",
+          "initialPrice": 24907.223,
+          "checkpoints": [
+            {
+              "hour": 1,
+              "targetTimestamp": 1794337075718,
+              "targetTimeStr": "21:57",
+              "predictedPrice": 24871.82,
+              "upperBound": 25086.82,
+              "lowerBound": 24656.82,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 2,
+              "targetTimestamp": 1794340675718,
+              "targetTimeStr": "22:57",
+              "predictedPrice": 24873.18,
+              "upperBound": 25078.23,
+              "lowerBound": 24668.13,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 3,
+              "targetTimestamp": 1794344275718,
+              "targetTimeStr": "23:57",
+              "predictedPrice": 24865.52,
+              "upperBound": 25114.76,
+              "lowerBound": 24616.28,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 4,
+              "targetTimestamp": 1794347875718,
+              "targetTimeStr": "00:57",
+              "predictedPrice": 24864.74,
+              "upperBound": 25116.94,
+              "lowerBound": 24612.54,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 5,
+              "targetTimestamp": 1794351475718,
+              "targetTimeStr": "01:57",
+              "predictedPrice": 24859.72,
+              "upperBound": 25139.92,
+              "lowerBound": 24579.52,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 6,
+              "targetTimestamp": 1794355075718,
+              "targetTimeStr": "02:57",
+              "predictedPrice": 24855.19,
+              "upperBound": 25160.38,
+              "lowerBound": 24550,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 7,
+              "targetTimestamp": 1794358675718,
+              "targetTimeStr": "03:57",
+              "predictedPrice": 24851.02,
+              "upperBound": 25178.96,
+              "lowerBound": 24523.08,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 8,
+              "targetTimestamp": 1794362275718,
+              "targetTimeStr": "04:57",
+              "predictedPrice": 24847.14,
+              "upperBound": 25196.07,
+              "lowerBound": 24498.21,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 9,
+              "targetTimestamp": 1794365875718,
+              "targetTimeStr": "05:57",
+              "predictedPrice": 24843.5,
+              "upperBound": 25212.01,
+              "lowerBound": 24474.99,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 10,
+              "targetTimestamp": 1794369475718,
+              "targetTimeStr": "06:57",
+              "predictedPrice": 24840.05,
+              "upperBound": 25226.98,
+              "lowerBound": 24453.12,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 11,
+              "targetTimestamp": 1794373075718,
+              "targetTimeStr": "07:57",
+              "predictedPrice": 24836.77,
+              "upperBound": 25241.15,
+              "lowerBound": 24432.39,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 12,
+              "targetTimestamp": 1794376675718,
+              "targetTimeStr": "08:57",
+              "predictedPrice": 24794.39,
+              "upperBound": 25439.92,
+              "lowerBound": 24148.86,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 13,
+              "targetTimestamp": 1794380275718,
+              "targetTimeStr": "09:57",
+              "predictedPrice": 24789.78,
+              "upperBound": 25459.71,
+              "lowerBound": 24119.85,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 14,
+              "targetTimestamp": 1794383875718,
+              "targetTimeStr": "10:57",
+              "predictedPrice": 24785.35,
+              "upperBound": 25478.73,
+              "lowerBound": 24091.97,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 15,
+              "targetTimestamp": 1794387475718,
+              "targetTimeStr": "11:57",
+              "predictedPrice": 24781.07,
+              "upperBound": 25497.06,
+              "lowerBound": 24065.08,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 16,
+              "targetTimestamp": 1794391075718,
+              "targetTimeStr": "12:57",
+              "predictedPrice": 24776.94,
+              "upperBound": 25514.8,
+              "lowerBound": 24039.08,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 17,
+              "targetTimestamp": 1794394675718,
+              "targetTimeStr": "13:57",
+              "predictedPrice": 24772.93,
+              "upperBound": 25532,
+              "lowerBound": 24013.86,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 18,
+              "targetTimestamp": 1794398275718,
+              "targetTimeStr": "14:57",
+              "predictedPrice": 24769.03,
+              "upperBound": 25548.71,
+              "lowerBound": 23989.35,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 19,
+              "targetTimestamp": 1794401875718,
+              "targetTimeStr": "15:57",
+              "predictedPrice": 24752.9,
+              "upperBound": 25622.19,
+              "lowerBound": 23883.61,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 20,
+              "targetTimestamp": 1794405475718,
+              "targetTimeStr": "16:57",
+              "predictedPrice": 24748.89,
+              "upperBound": 25639.45,
+              "lowerBound": 23858.33,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 21,
+              "targetTimestamp": 1794409075718,
+              "targetTimeStr": "17:57",
+              "predictedPrice": 24744.98,
+              "upperBound": 25656.31,
+              "lowerBound": 23833.65,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 22,
+              "targetTimestamp": 1794412675718,
+              "targetTimeStr": "18:57",
+              "predictedPrice": 24741.16,
+              "upperBound": 25672.81,
+              "lowerBound": 23809.51,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 23,
+              "targetTimestamp": 1794416275718,
+              "targetTimeStr": "19:57",
+              "predictedPrice": 24737.43,
+              "upperBound": 25688.98,
+              "lowerBound": 23785.88,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            },
+            {
+              "hour": 24,
+              "targetTimestamp": 1794419875718,
+              "targetTimeStr": "20:57",
+              "predictedPrice": 24733.78,
+              "upperBound": 25704.83,
+              "lowerBound": 23762.73,
+              "expectedDirection": "DÜŞÜŞ",
+              "evaluated": false
+            }
+          ]
+        }
+      ],
+      "metrics": {
+        "totalEvaluated": 0,
+        "inCorridorCount": 0,
+        "corridorAccuracyPercent": 100,
+        "directionHitCount": 0,
+        "directionAccuracyPercent": 100,
+        "meanAbsoluteErrorPercent": 0
+      }
+    }
+  },
+  "overallMetrics": {
+    "totalCheckpointsEvaluated": 0,
+    "overallCorridorAccuracy": 100,
+    "overallDirectionalAccuracy": 100,
+    "averageErrorPercent": 0
+  }
+}
