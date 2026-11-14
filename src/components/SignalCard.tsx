@@ -34,6 +34,30 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
   const userRiskTRY = +(userRiskUSD * usdToTry).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
   const userRewardTRY = +(userRewardUSD * usdToTry).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
 
+  // Lot & Birim Büyüklüğü Hesaplaması
+  const slDistance = Math.abs(signal.entryPrice - signal.stopLoss) || 0.0001;
+  const quoteToUsd = signal.symbol === 'USD/JPY' ? 1 / (signal.entryPrice || 155) : 1;
+  const contractSize = signal.symbol.includes('/') && !signal.symbol.startsWith('XAU') && !signal.symbol.startsWith('XAG') && !signal.symbol.startsWith('BTC') && !signal.symbol.startsWith('ETH')
+    ? 100000
+    : signal.symbol === 'XAU/USD' || signal.symbol === 'WTI' || signal.symbol === 'BRENT'
+    ? 100
+    : 1;
+  const recommendedUnits = +(userRiskUSD / (slDistance * quoteToUsd)).toFixed(2);
+  const recommendedLots = +Math.max(0.01, recommendedUnits / contractSize).toFixed(2);
+
+  // 4 Sütunlu Kurumsal Uyumluluk (Confluence) Dağılımı
+  const trendPillarScore = signal.action === 'AL (BUY)' ? 27 : signal.action === 'SAT (SELL)' ? 24 : 20; // /30
+  const momentumPillarScore = signal.decisionBadge === 'GÜÇLÜ AL' ? 24 : signal.action !== 'BEKLE (HOLD)' ? 21 : 16; // /25
+  const structurePillarScore = Math.round(((plan.supportSafetyScore || 75) / 100) * 25); // /25
+  const newsPillarScore = signal.newsSentiment?.bias === 'POZİTİF' ? 19 : signal.newsSentiment?.bias === 'NÖTR' ? 15 : 9; // /20
+  const totalConfluence = Math.min(99, trendPillarScore + momentumPillarScore + structurePillarScore + newsPillarScore);
+  const orderRoutingLabel =
+    signal.action === 'BEKLE (HOLD)'
+      ? 'EMİR YOK (KENARDA BEKLE)'
+      : signal.idealEntryRange.status === 'ALIM_BÖLGESİNDE'
+      ? 'KURUMSAL LİMİT / PİYASA EMRİ'
+      : `GERİ ÇEKİLME LİMİT EMRİ (${signal.idealEntryRange.max.toFixed(asset.digits)})`;
+
   return (
     <div className="border border-zinc-800 bg-zinc-900 rounded p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* 1. ÜST KOKPİT: REJİM BAZLI 3 SANİYELİK KARAR ŞERİDİ */}
@@ -49,6 +73,12 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
             {/* İdeal Alım Kuşağı Durum Rozeti */}
             <span className="text-xs text-zinc-400 font-mono">
               [{signal.idealEntryRange.status === 'ALIM_BÖLGESİNDE' ? 'İdeal Fiyat Seviyesinde' : 'Düzeltme Bekleniyor'}]
+            </span>
+            <span className="text-[11px] px-2 py-0.5 rounded font-mono bg-zinc-950 border border-zinc-800 text-zinc-300">
+              İcra: {orderRoutingLabel}
+            </span>
+            <span className="text-[11px] px-2 py-0.5 rounded font-mono bg-zinc-950 border border-zinc-800 text-emerald-400">
+              Uyumluluk: {totalConfluence}/100
             </span>
           </div>
 
@@ -193,6 +223,36 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
                 ${preset.toLocaleString()}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Kurumsal Lot & Birim Büyüklüğü Matematiksel Denklemi */}
+        <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
+          <div className="text-zinc-300">
+            Önerilen Pozisyon Büyüklüğü: <strong className="text-white">{recommendedLots} Standart Lot</strong> ({recommendedUnits} Birim)
+          </div>
+          <div className="text-[11px] text-zinc-400">
+            Formül: Risk (${userRiskUSD}) / |Giriş ({signal.entryPrice.toFixed(asset.digits)}) - SL ({signal.stopLoss.toFixed(asset.digits)})| = {recommendedLots} Lot
+          </div>
+        </div>
+
+        {/* 4 Sütunlu Kurumsal Uyumluluk (Confluence) Puan Dağılımı */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+          <div className="bg-zinc-900 border border-zinc-800/80 p-2 rounded">
+            <div className="text-zinc-500">1. Trend Rejimi (%30)</div>
+            <div className="text-zinc-200 font-semibold mt-0.5">{trendPillarScore} / 30 Puan</div>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800/80 p-2 rounded">
+            <div className="text-zinc-500">2. Momentum (%25)</div>
+            <div className="text-zinc-200 font-semibold mt-0.5">{momentumPillarScore} / 25 Puan</div>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800/80 p-2 rounded">
+            <div className="text-zinc-500">3. Destek Yapısı (%25)</div>
+            <div className="text-zinc-200 font-semibold mt-0.5">{structurePillarScore} / 25 Puan</div>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800/80 p-2 rounded">
+            <div className="text-zinc-500">4. Canlı Haber (%20)</div>
+            <div className="text-zinc-200 font-semibold mt-0.5">{newsPillarScore} / 20 Puan</div>
           </div>
         </div>
 

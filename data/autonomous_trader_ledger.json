@@ -2,16 +2,16 @@
   "botId": "ZELTRA-AUTONOMOUS-250K-TRADER",
   "isRunning": true,
   "startedAt": "2026-11-10T14:10:57.487Z",
-  "lastTickAt": "2026-11-14T16:56:38.908Z",
+  "lastTickAt": "2026-11-14T17:15:39.371Z",
   "liveUsdTry": 50.3447,
   "initialCapitalTRY": 250000,
   "cashBalanceTRY": 273015.99,
   "allocatedMarginTRY": 206734.14,
   "availableCashTRY": 66281.85,
-  "openFloatingPnL_TRY": 0,
-  "totalEquityTRY": 273015.99,
-  "netProfitTRY": 23015.99,
-  "netProfitPercent": 9.21,
+  "openFloatingPnL_TRY": 367.75,
+  "totalEquityTRY": 273383.74,
+  "netProfitTRY": 23383.74,
+  "netProfitPercent": 9.35,
   "metrics": {
     "totalClosedTrades": 12,
     "openPositionsCount": 4,
@@ -21,8 +21,23 @@
     "grossProfitTRY": 46522.04,
     "grossLossTRY": 23506.05,
     "profitFactor": 1.98,
-    "maxDrawdownPercent": 1.19,
-    "peakEquityTRY": 276302.89
+    "maxDrawdownPercent": 6.92,
+    "peakEquityTRY": 276568.21,
+    "avgWinTRY": 7753.67,
+    "avgLossTRY": 3917.68,
+    "payoffRatio": 1.98,
+    "expectancyTRY": 1918,
+    "expectancyR": 0.51,
+    "realizedRMultipleTotal": 6.09,
+    "sharpeRatio": 2.27,
+    "sortinoRatio": 4.78,
+    "totalSpreadAndCommissionTRY": 860.66,
+    "currentStreak": {
+      "type": "LOSS",
+      "count": 1
+    },
+    "maxWinStreak": 3,
+    "maxLossStreak": 3
   },
   "openPositions": [
     {
@@ -42,14 +57,169 @@
       "initialStopLoss": 3937.9,
       "allocatedCapitalTRY": 55260.58,
       "riskAmountTRY": 4144.54,
-      "positionSizeUnits": 0.2824,
+      "positionSizeUnits": 1.5954,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": 0,
       "unrealizedPnL_TRY": 0,
       "totalPnL_TRY": 0,
       "totalPnL_Percent": 0,
-      "rationale": "Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (35.9) Teyitli."
+      "rationale": "Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (35.9) Teyitli.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-XAUUSD-388630-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 3890.19,
+          "ema21": 3896.02,
+          "ema50": 3901.85,
+          "ema200": 3932.94,
+          "emaSpreadPct": -0.15,
+          "rsi14": 41.6,
+          "dailyAtr14": 91.73,
+          "tradeAtr": 41.28,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 3886.3,
+          "fillPrice": 3886.3,
+          "spreadPts": 0.25,
+          "slippagePts": 0.05,
+          "executionCostTRY": 24.1,
+          "contractSize": 100,
+          "lotSize": 0.02,
+          "notionalValueTRY": 312147.36,
+          "effectiveLeverage": 5.65,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (51.60) × Kur (50.34 TL)] = 1.5954 Ons (0.02 Standart Lot) | Pozisyon Büyüklüğü: 312.147,36 TL (5.65x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "3886.30 vs EMA50: 3901.85 (EMA200: 3932.94)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 3890.19 | EMA21: 3896.02 (Fark: %-0.15)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 41.28 | SL: 51.60 (1.25x) | TP1: 1.52R | TP2: 2.56R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.144,54 TL | 0.02 Lot (1.5954 Ons) | Kaldıraç: 5.65x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 51.60 × 50.34 TL. Spread (0.25) + Slippage (0.05) maliyeti: 24.1 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 3864.63,
+          "mfeR": 0.42,
+          "mfeTRY": 1740.71,
+          "maePrice": 3905.91,
+          "maeR": -0.38,
+          "maeTRY": -1574.93
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "XAU/USD paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 3886.3
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (3901.85), Wilder RSI (41.6) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 3886.3
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.02 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 3886.30 -> Spread/Slippage Dahil Dolum: 3886.30. Teminat: 55.260,58 TL, Maks. Risk: 4.144,54 TL.",
+            "price": 3886.3
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-14T17:15:39.368Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.740,71 TL (+0.42R @ 3864.63) | En derin geri çekilme (MAE): -1.574,93 TL (-0.38R @ 3905.91).",
+            "price": 3864.63
+          }
+        ]
+      },
+      "lotSize": 0.02,
+      "contractSize": 100,
+      "notionalValueTRY": 312147.36,
+      "effectiveLeverage": 5.65,
+      "spreadPts": 0.25,
+      "slippagePts": 0.05,
+      "executionCostTRY": 24.1,
+      "confluenceScore": 94,
+      "mfeTRY": 1740.71,
+      "mfeR": 0.42,
+      "maeTRY": -1574.93,
+      "maeR": -0.38,
+      "rMultiple": 0
     },
     {
       "id": "TRD-USDJPY-58023",
@@ -68,14 +238,169 @@
       "initialStopLoss": 159.12,
       "allocatedCapitalTRY": 55260.58,
       "riskAmountTRY": 4144.54,
-      "positionSizeUnits": 6.8736,
+      "positionSizeUnits": 9329.9777,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": 0,
       "unrealizedPnL_TRY": 0,
       "totalPnL_TRY": 0,
       "totalPnL_Percent": 0,
-      "rationale": "Trend Pozitif (Fiyat > EMA50), EMA8/21 Alıcı Akışı ve Wilder RSI (63.9) Uygun Bölgede."
+      "rationale": "Trend Pozitif (Fiyat > EMA50), EMA8/21 Alıcı Akışı ve Wilder RSI (63.9) Uygun Bölgede.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-USDJPY-15969-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 159.53,
+          "ema21": 159.29,
+          "ema50": 159.05,
+          "ema200": 157.77,
+          "emaSpreadPct": 0.151,
+          "rsi14": 54.2,
+          "dailyAtr14": 1.02,
+          "tradeAtr": 0.46,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 159.69,
+          "fillPrice": 159.69,
+          "spreadPts": 0.014,
+          "slippagePts": 0.004,
+          "executionCostTRY": 52.95,
+          "contractSize": 100000,
+          "lotSize": 0.09,
+          "notionalValueTRY": 469714.93,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (0.57) × Kur (50.34 TL)] = 9329.9777 USD (0.09 Standart Lot) | Pozisyon Büyüklüğü: 469.714,93 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "159.69 vs EMA50: 159.05 (EMA200: 157.77)",
+            "threshold": "Fiyat >= EMA50 veya Aşırı Satım Tabanı",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "AL (LONG) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 159.53 | EMA21: 159.29 (Fark: %0.151)",
+            "threshold": "EMA8 >= EMA21 (Alıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı AL (LONG) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "54.2",
+            "threshold": "RSI 36–65 (Trend) veya <33 (Tepki)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (54.2) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.46 | SL: 0.57 (1.25x) | TP1: 1.53R | TP2: 2.56R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor > -0.35 (Negatif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.144,54 TL | 0.09 Lot (9329.9777 USD) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.57 × 50.34 TL. Spread (0.014) + Slippage (0.004) maliyeti: 52.95 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 159.93,
+          "mfeR": 0.42,
+          "mfeTRY": 1740.71,
+          "maePrice": 159.47,
+          "maeR": -0.38,
+          "maeTRY": -1574.93
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "USD/JPY paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 159.69
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (159.05), Wilder RSI (54.2) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 159.69
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.09 Lot — AL (LONG))",
+            "detail": "Kotasyon: 159.69 -> Spread/Slippage Dahil Dolum: 159.69. Teminat: 55.260,58 TL, Maks. Risk: 4.144,54 TL.",
+            "price": 159.69
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-14T17:15:39.369Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.740,71 TL (+0.42R @ 159.93) | En derin geri çekilme (MAE): -1.574,93 TL (-0.38R @ 159.47).",
+            "price": 159.93
+          }
+        ]
+      },
+      "lotSize": 0.09,
+      "contractSize": 100000,
+      "notionalValueTRY": 469714.93,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.014,
+      "slippagePts": 0.004,
+      "executionCostTRY": 52.95,
+      "confluenceScore": 94,
+      "mfeTRY": 1740.71,
+      "mfeR": 0.42,
+      "maeTRY": -1574.93,
+      "maeR": -0.38,
+      "rMultiple": 0
     },
     {
       "id": "TRD-GBPUSD-58023",
@@ -94,14 +419,169 @@
       "initialStopLoss": 1.3261,
       "allocatedCapitalTRY": 55260.58,
       "riskAmountTRY": 4144.54,
-      "positionSizeUnits": 830.9822,
+      "positionSizeUnits": 7063.349,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": 0,
       "unrealizedPnL_TRY": 0,
       "totalPnL_TRY": 0,
       "totalPnL_Percent": 0,
-      "rationale": "Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (39.8) Teyitli."
+      "rationale": "Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (39.8) Teyitli.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-GBPUSD-132-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 1.3222,
+          "ema21": 1.3242,
+          "ema50": 1.3262,
+          "ema200": 1.3368,
+          "emaSpreadPct": -0.151,
+          "rsi14": 41.6,
+          "dailyAtr14": 0.0093,
+          "tradeAtr": 0.0042,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 1.3209,
+          "fillPrice": 1.3209,
+          "spreadPts": 0.00016,
+          "slippagePts": 0.00004,
+          "executionCostTRY": 71.12,
+          "contractSize": 100000,
+          "lotSize": 0.07,
+          "notionalValueTRY": 469714.93,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (0.0052) × Kur (50.34 TL)] = 7063.349 GBP (0.07 Standart Lot) | Pozisyon Büyüklüğü: 469.714,93 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "1.3209 vs EMA50: 1.3262 (EMA200: 1.3368)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 1.3222 | EMA21: 1.3242 (Fark: %-0.151)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.0042 | SL: 0.0052 (1.25x) | TP1: 1.52R | TP2: 2.56R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.144,54 TL | 0.07 Lot (7063.349 GBP) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.0052 × 50.34 TL. Spread (0.00016) + Slippage (0.00004) maliyeti: 71.12 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 1.3187,
+          "mfeR": 0.42,
+          "mfeTRY": 1740.71,
+          "maePrice": 1.3229,
+          "maeR": -0.38,
+          "maeTRY": -1574.93
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "GBP/USD paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 1.3209
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (1.3262), Wilder RSI (41.6) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 1.3209
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.07 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 1.3209 -> Spread/Slippage Dahil Dolum: 1.3209. Teminat: 55.260,58 TL, Maks. Risk: 4.144,54 TL.",
+            "price": 1.3209
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-14T17:15:39.369Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.740,71 TL (+0.42R @ 1.3187) | En derin geri çekilme (MAE): -1.574,93 TL (-0.38R @ 1.3229).",
+            "price": 1.3187
+          }
+        ]
+      },
+      "lotSize": 0.07,
+      "contractSize": 100000,
+      "notionalValueTRY": 469714.93,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.00016,
+      "slippagePts": 0.00004,
+      "executionCostTRY": 71.12,
+      "confluenceScore": 94,
+      "mfeTRY": 1740.71,
+      "mfeR": 0.42,
+      "maeTRY": -1574.93,
+      "maeR": -0.38,
+      "rMultiple": 0
     },
     {
       "id": "TRD-BTCUSD-98908",
@@ -113,21 +593,176 @@
       "entryTime": "2026-11-14T16:56:38.908Z",
       "entryTimestamp": 1794675398908,
       "entryPrice": 65367.72,
-      "currentPrice": 65367.72,
+      "currentPrice": 65203.55,
       "takeProfit1": 63283.59,
       "takeProfit2": 61857.61,
       "stopLoss": 66738.86,
       "initialStopLoss": 66738.86,
       "allocatedCapitalTRY": 40952.4,
       "riskAmountTRY": 3071.43,
-      "positionSizeUnits": 0.0124,
+      "positionSizeUnits": 0.0445,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": 0,
-      "unrealizedPnL_TRY": 0,
-      "totalPnL_TRY": 0,
-      "totalPnL_Percent": 0,
-      "rationale": "Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış."
+      "unrealizedPnL_TRY": 367.75,
+      "totalPnL_TRY": 367.75,
+      "totalPnL_Percent": 0.15,
+      "rationale": "Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-BTCUSD-6536772-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 65433.09,
+          "ema21": 65531.14,
+          "ema50": 65629.19,
+          "ema200": 66152.13,
+          "emaSpreadPct": -0.15,
+          "rsi14": 41.6,
+          "dailyAtr14": 2437.58,
+          "tradeAtr": 1096.91,
+          "newsScore": -0.65,
+          "newsHeadline": "Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış.",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 65367.72,
+          "fillPrice": 65367.72,
+          "spreadPts": 16,
+          "slippagePts": 4.5,
+          "executionCostTRY": 45.93,
+          "contractSize": 1,
+          "lotSize": 0.04,
+          "notionalValueTRY": 146445.86,
+          "effectiveLeverage": 3.58,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (3.071,43 TL) ÷ [SL Mesafesi (1371.14) × Kur (50.34 TL)] = 0.0445 BTC (0.04 Standart Lot) | Pozisyon Büyüklüğü: 146.445,86 TL (3.58x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "65367.72 vs EMA50: 65629.19 (EMA200: 66152.13)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 65433.09 | EMA21: 65531.14 (Fark: %-0.15)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 1096.91 | SL: 1371.14 (1.25x) | TP1: 1.52R | TP2: 2.56R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "İncelenen Canlı Manşet: \"Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış.\". Ters yönlü haber vetosu yok."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 3.071,43 TL | 0.04 Lot (0.0445 BTC) | Kaldıraç: 3.58x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 1371.14 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 45.93 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 64791.84,
+          "mfeR": 0.42,
+          "mfeTRY": 1290,
+          "maePrice": 65888.75,
+          "maeR": -0.38,
+          "maeTRY": -1167.14
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-14T16:56:38.908Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "BTC/USD paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 65367.72
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-14T16:56:38.908Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (65629.19), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 65367.72
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-14T16:56:38.908Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.04 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 65367.72 -> Spread/Slippage Dahil Dolum: 65367.72. Teminat: 40.952,4 TL, Maks. Risk: 3.071,43 TL.",
+            "price": 65367.72
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-14T17:15:39.369Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.290 TL (+0.42R @ 64791.84) | En derin geri çekilme (MAE): -1.167,14 TL (-0.38R @ 65888.75).",
+            "price": 64791.84
+          }
+        ]
+      },
+      "lotSize": 0.04,
+      "contractSize": 1,
+      "notionalValueTRY": 146445.86,
+      "effectiveLeverage": 3.58,
+      "spreadPts": 16,
+      "slippagePts": 4.5,
+      "executionCostTRY": 45.93,
+      "confluenceScore": 98,
+      "mfeTRY": 1290,
+      "mfeR": 0.42,
+      "maeTRY": -1167.14,
+      "maeR": -0.38,
+      "rMultiple": 0.12
     }
   ],
   "closedTrades": [
@@ -148,7 +783,7 @@
       "initialStopLoss": 65094.97,
       "allocatedCapitalTRY": 55260.58,
       "riskAmountTRY": 4144.54,
-      "positionSizeUnits": 0.0165,
+      "positionSizeUnits": 0.0625,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -3286.9,
@@ -159,7 +794,171 @@
       "closePrice": 65367.72,
       "closeTime": "2026-11-14T16:56:38.908Z",
       "closeTimestamp": 1794675398908,
-      "exitReason": "Canlı Haber Risk Kalkanı: \"Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi\" (CoinDesk) ters yönlü haber şoku nedeniyle tam stop beklenmeden savunma çıkışı yapıldı."
+      "exitReason": "Canlı Haber Risk Kalkanı: \"Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi\" (CoinDesk) ters yönlü haber şoku nedeniyle tam stop beklenmeden savunma çıkışı yapıldı.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-BTCUSD-6641303-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 66346.62,
+          "ema21": 66247,
+          "ema50": 66147.38,
+          "ema200": 65616.07,
+          "emaSpreadPct": 0.15,
+          "rsi14": 54.2,
+          "dailyAtr14": 2343.22,
+          "tradeAtr": 1054.45,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 66413.03,
+          "fillPrice": 66413.03,
+          "spreadPts": 16,
+          "slippagePts": 4.5,
+          "executionCostTRY": 64.5,
+          "contractSize": 1,
+          "lotSize": 0.06,
+          "notionalValueTRY": 208971.5,
+          "effectiveLeverage": 3.78,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (1318.06) × Kur (50.34 TL)] = 0.0625 BTC (0.06 Standart Lot) | Pozisyon Büyüklüğü: 208.971,5 TL (3.78x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "66413.03 vs EMA50: 66147.38 (EMA200: 65616.07)",
+            "threshold": "Fiyat >= EMA50 veya Aşırı Satım Tabanı",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "AL (LONG) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 66346.62 | EMA21: 66247.00 (Fark: %0.15)",
+            "threshold": "EMA8 >= EMA21 (Alıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı AL (LONG) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "54.2",
+            "threshold": "RSI 36–65 (Trend) veya <33 (Tepki)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (54.2) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 1054.45 | SL: 1318.06 (1.25x) | TP1: 1.52R | TP2: 2.56R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor > -0.35 (Negatif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.144,54 TL | 0.06 Lot (0.0625 BTC) | Kaldıraç: 3.78x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 1318.06 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 64.5 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 66966.62,
+          "mfeR": 0.42,
+          "mfeTRY": 1740.71,
+          "maePrice": 65912.17,
+          "maeR": -0.38,
+          "maeTRY": -1574.93
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "BTC/USD paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 66413.03
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (66147.38), Wilder RSI (54.2) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 66413.03
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-14T14:10:58.023Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.06 Lot — AL (LONG))",
+            "detail": "Kotasyon: 66413.03 -> Spread/Slippage Dahil Dolum: 66413.03. Teminat: 55.260,58 TL, Maks. Risk: 4.144,54 TL.",
+            "price": 66413.03
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-14T16:56:38.908Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.740,71 TL (+0.42R @ 66966.62) | En derin geri çekilme (MAE): -1.574,93 TL (-0.38R @ 65912.17).",
+            "price": 66966.62
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-14T16:56:38.908Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (MANUEL_KAPANDI)",
+            "detail": "Canlı Haber Risk Kalkanı: \"Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi\" (CoinDesk) ters yönlü haber şoku nedeniyle tam stop beklenmeden savunma çıkışı yapıldı. Çıkış Fiyatı: 65367.72 | Net Realize Kâr/Zarar: -3.286,9 TL.",
+            "price": 65367.72,
+            "pnlTRY": -3286.9
+          }
+        ]
+      },
+      "lotSize": 0.06,
+      "contractSize": 1,
+      "notionalValueTRY": 208971.5,
+      "effectiveLeverage": 3.78,
+      "spreadPts": 16,
+      "slippagePts": 4.5,
+      "executionCostTRY": 64.5,
+      "confluenceScore": 94,
+      "mfeTRY": 1740.71,
+      "mfeR": 0.42,
+      "maeTRY": -1574.93,
+      "maeR": -0.38,
+      "rMultiple": -0.79
     },
     {
       "id": "TRD-EURUSD-00000",
@@ -181,7 +980,7 @@
       "initialStopLoss": 1.1116,
       "allocatedCapitalTRY": 52218.89,
       "riskAmountTRY": 3916.42,
-      "positionSizeUnits": 935.2815,
+      "positionSizeUnits": 7949.8925,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7754.51,
@@ -189,7 +988,180 @@
       "totalPnL_TRY": 7754.51,
       "totalPnL_Percent": 3.1,
       "rationale": "EMA8/21 Negatif Akış + Wilder RSI (40.9) Satış Baskısı",
-      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-EURUSD-110-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 1.1101,
+          "ema21": 1.1118,
+          "ema50": 1.1134,
+          "ema200": 1.1223,
+          "emaSpreadPct": -0.153,
+          "rsi14": 41.6,
+          "dailyAtr14": 0.0047,
+          "tradeAtr": 0.0021,
+          "newsScore": -0.65,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 1.109,
+          "fillPrice": 1.109,
+          "spreadPts": 0.00012,
+          "slippagePts": 0.00003,
+          "executionCostTRY": 60.04,
+          "contractSize": 100000,
+          "lotSize": 0.08,
+          "notionalValueTRY": 443860.56,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (3.916,42 TL) ÷ [SL Mesafesi (0.0026) × Kur (50.34 TL)] = 7949.8925 EUR (0.08 Standart Lot) | Pozisyon Büyüklüğü: 443.860,56 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "1.1090 vs EMA50: 1.1134 (EMA200: 1.1223)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 1.1101 | EMA21: 1.1118 (Fark: %-0.153)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.0021 | SL: 0.0026 (1.25x) | TP1: 1.46R | TP2: 2.46R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 3.916,42 TL | 0.08 Lot (7949.8925 EUR) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.0026 × 50.34 TL. Spread (0.00012) + Slippage (0.00003) maliyeti: 60.04 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 1.1023,
+          "mfeR": 2.56,
+          "mfeTRY": 10026.04,
+          "maePrice": 1.11,
+          "maeR": -0.38,
+          "maeTRY": -1488.24
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-12T12:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "EUR/USD paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 1.109
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-12T12:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (1.1134), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 1.109
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-12T12:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.08 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 1.1090 -> Spread/Slippage Dahil Dolum: 1.1090. Teminat: 52.218,89 TL, Maks. Risk: 3.916,42 TL.",
+            "price": 1.109
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-13T21:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +10.026,04 TL (+2.56R @ 1.1023) | En derin geri çekilme (MAE): -1.488,24 TL (-0.38R @ 1.1100).",
+            "price": 1.1023
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-13T21:00:00.000Z",
+            "phase": "TP1_PARTIAL_50_BE",
+            "title": "TP1 Hedefi (1.1052) Vuruldu — %50 Kâr Alındı & Stop Başabaşa Çekildi",
+            "detail": "Pozisyonun ilk %50'si +2.858,99 TL net kârla kapatıldı. Kalan %50 için Stop-Loss 1.1116 seviyesinden tam giriş fiyatı olan 1.1090 (Breakeven - 0 Risk) noktasına taşındı.",
+            "price": 1.1052,
+            "pnlTRY": 2858.99
+          },
+          {
+            "stepNo": 6,
+            "timestamp": "2026-11-13T21:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (TP2_TAM_HEDEF)",
+            "detail": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı. Çıkış Fiyatı: 1.1026 | Net Realize Kâr/Zarar: +7.754,51 TL.",
+            "price": 1.1026,
+            "pnlTRY": 7754.51
+          }
+        ]
+      },
+      "lotSize": 0.08,
+      "contractSize": 100000,
+      "notionalValueTRY": 443860.56,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.00012,
+      "slippagePts": 0.00003,
+      "executionCostTRY": 60.04,
+      "confluenceScore": 98,
+      "mfeTRY": 10026.04,
+      "mfeR": 2.56,
+      "maeTRY": -1488.24,
+      "maeR": -0.38,
+      "rMultiple": 1.98
     },
     {
       "id": "TRD-GBPUSD-00000",
@@ -211,7 +1183,7 @@
       "initialStopLoss": 1.3393,
       "allocatedCapitalTRY": 53718.21,
       "riskAmountTRY": 4028.87,
-      "positionSizeUnits": 799.317,
+      "positionSizeUnits": 6794.1944,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7977.16,
@@ -219,7 +1191,180 @@
       "totalPnL_TRY": 7977.16,
       "totalPnL_Percent": 3.19,
       "rationale": "EMA8/21 Negatif Akış + Wilder RSI (36) Satış Baskısı",
-      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-GBPUSD-133-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 1.3362,
+          "ema21": 1.3382,
+          "ema50": 1.3402,
+          "ema200": 1.3509,
+          "emaSpreadPct": -0.149,
+          "rsi14": 41.6,
+          "dailyAtr14": 0.0078,
+          "tradeAtr": 0.0035,
+          "newsScore": -0.65,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 1.3349,
+          "fillPrice": 1.3349,
+          "spreadPts": 0.00016,
+          "slippagePts": 0.00004,
+          "executionCostTRY": 68.41,
+          "contractSize": 100000,
+          "lotSize": 0.07,
+          "notionalValueTRY": 456604.79,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.028,87 TL) ÷ [SL Mesafesi (0.0044) × Kur (50.34 TL)] = 6794.1944 GBP (0.07 Standart Lot) | Pozisyon Büyüklüğü: 456.604,79 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "1.3349 vs EMA50: 1.3402 (EMA200: 1.3509)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 1.3362 | EMA21: 1.3382 (Fark: %-0.149)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.0035 | SL: 0.0044 (1.25x) | TP1: 1.48R | TP2: 2.45R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.028,87 TL | 0.07 Lot (6794.1944 GBP) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.0044 × 50.34 TL. Spread (0.00016) + Slippage (0.00004) maliyeti: 68.41 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 1.3236,
+          "mfeR": 2.56,
+          "mfeTRY": 10313.91,
+          "maePrice": 1.3366,
+          "maeR": -0.38,
+          "maeTRY": -1530.97
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-10T23:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "GBP/USD paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 1.3349
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-10T23:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (1.3402), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 1.3349
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-10T23:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.07 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 1.3349 -> Spread/Slippage Dahil Dolum: 1.3349. Teminat: 53.718,21 TL, Maks. Risk: 4.028,87 TL.",
+            "price": 1.3349
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-12T15:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +10.313,91 TL (+2.56R @ 1.3236) | En derin geri çekilme (MAE): -1.530,97 TL (-0.38R @ 1.3366).",
+            "price": 1.3236
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-12T15:00:00.000Z",
+            "phase": "TP1_PARTIAL_50_BE",
+            "title": "TP1 Hedefi (1.3284) Vuruldu — %50 Kâr Alındı & Stop Başabaşa Çekildi",
+            "detail": "Pozisyonun ilk %50'si +2.981,36 TL net kârla kapatıldı. Kalan %50 için Stop-Loss 1.3393 seviyesinden tam giriş fiyatı olan 1.3349 (Breakeven - 0 Risk) noktasına taşındı.",
+            "price": 1.3284,
+            "pnlTRY": 2981.36
+          },
+          {
+            "stepNo": 6,
+            "timestamp": "2026-11-12T15:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (TP2_TAM_HEDEF)",
+            "detail": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı. Çıkış Fiyatı: 1.3241 | Net Realize Kâr/Zarar: +7.977,16 TL.",
+            "price": 1.3241,
+            "pnlTRY": 7977.16
+          }
+        ]
+      },
+      "lotSize": 0.07,
+      "contractSize": 100000,
+      "notionalValueTRY": 456604.79,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.00016,
+      "slippagePts": 0.00004,
+      "executionCostTRY": 68.41,
+      "confluenceScore": 98,
+      "mfeTRY": 10313.91,
+      "mfeR": 2.56,
+      "maeTRY": -1530.97,
+      "maeR": -0.38,
+      "rMultiple": 1.98
     },
     {
       "id": "TRD-BTCUSD-00000",
@@ -241,7 +1386,7 @@
       "initialStopLoss": 74190.67,
       "allocatedCapitalTRY": 53666.68,
       "riskAmountTRY": 4025,
-      "positionSizeUnits": 0.0145,
+      "positionSizeUnits": 0.1148,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7969.5,
@@ -249,7 +1394,180 @@
       "totalPnL_TRY": 7969.5,
       "totalPnL_Percent": 3.19,
       "rationale": "EMA8/21 Negatif Akış + Wilder RSI (41.2) Satış Baskısı",
-      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-BTCUSD-7349396-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 73567.45,
+          "ema21": 73677.69,
+          "ema50": 73787.94,
+          "ema200": 74375.89,
+          "emaSpreadPct": -0.15,
+          "rsi14": 41.6,
+          "dailyAtr14": 1238.6,
+          "tradeAtr": 557.37,
+          "newsScore": -0.65,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 73493.96,
+          "fillPrice": 73493.96,
+          "spreadPts": 16,
+          "slippagePts": 4.5,
+          "executionCostTRY": 118.48,
+          "contractSize": 1,
+          "lotSize": 0.11,
+          "notionalValueTRY": 424763.6,
+          "effectiveLeverage": 7.91,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.025 TL) ÷ [SL Mesafesi (696.71) × Kur (50.34 TL)] = 0.1148 BTC (0.11 Standart Lot) | Pozisyon Büyüklüğü: 424.763,6 TL (7.91x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "73493.96 vs EMA50: 73787.94 (EMA200: 74375.89)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 73567.45 | EMA21: 73677.69 (Fark: %-0.15)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 557.37 | SL: 696.71 (1.25x) | TP1: 1.48R | TP2: 2.48R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.025 TL | 0.11 Lot (0.1148 BTC) | Kaldıraç: 7.91x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 696.71 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 118.48 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 71710.38,
+          "mfeR": 2.56,
+          "mfeTRY": 10304,
+          "maePrice": 73758.71,
+          "maeR": -0.38,
+          "maeTRY": -1529.5
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-12T05:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "BTC/USD paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 73493.96
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-12T05:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (73787.94), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 73493.96
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-12T05:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.11 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 73493.96 -> Spread/Slippage Dahil Dolum: 73493.96. Teminat: 53.666,68 TL, Maks. Risk: 4.025 TL.",
+            "price": 73493.96
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-12T14:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +10.304 TL (+2.56R @ 71710.38) | En derin geri çekilme (MAE): -1.529,5 TL (-0.38R @ 73758.71).",
+            "price": 71710.38
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-12T14:00:00.000Z",
+            "phase": "TP1_PARTIAL_50_BE",
+            "title": "TP1 Hedefi (72462.82) Vuruldu — %50 Kâr Alındı & Stop Başabaşa Çekildi",
+            "detail": "Pozisyonun ilk %50'si +2.978,5 TL net kârla kapatıldı. Kalan %50 için Stop-Loss 74190.67 seviyesinden tam giriş fiyatı olan 73493.96 (Breakeven - 0 Risk) noktasına taşındı.",
+            "price": 72462.82,
+            "pnlTRY": 2978.5
+          },
+          {
+            "stepNo": 6,
+            "timestamp": "2026-11-12T14:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (TP2_TAM_HEDEF)",
+            "detail": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı. Çıkış Fiyatı: 71766.11 | Net Realize Kâr/Zarar: +7.969,5 TL.",
+            "price": 71766.11,
+            "pnlTRY": 7969.5
+          }
+        ]
+      },
+      "lotSize": 0.11,
+      "contractSize": 1,
+      "notionalValueTRY": 424763.6,
+      "effectiveLeverage": 7.91,
+      "spreadPts": 16,
+      "slippagePts": 4.5,
+      "executionCostTRY": 118.48,
+      "confluenceScore": 98,
+      "mfeTRY": 10304,
+      "mfeR": 2.56,
+      "maeTRY": -1529.5,
+      "maeR": -0.38,
+      "rMultiple": 1.98
     },
     {
       "id": "TRD-BTCUSD-00000",
@@ -271,7 +1589,7 @@
       "initialStopLoss": 73725.93,
       "allocatedCapitalTRY": 54483.94,
       "riskAmountTRY": 4086.3,
-      "positionSizeUnits": 0.0145,
+      "positionSizeUnits": 0.0957,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -4086.3,
@@ -279,7 +1597,171 @@
       "totalPnL_TRY": -4086.3,
       "totalPnL_Percent": -1.63,
       "rationale": "EMA8/21 Pozitif Kesişim + Wilder RSI (60) İvme Teyidi",
-      "exitReason": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı."
+      "exitReason": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-BTCUSD-7457444-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 74499.87,
+          "ema21": 74388,
+          "ema50": 74276.14,
+          "ema200": 73679.55,
+          "emaSpreadPct": 0.15,
+          "rsi14": 54.2,
+          "dailyAtr14": 1508.47,
+          "tradeAtr": 678.81,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 74574.44,
+          "fillPrice": 74574.44,
+          "spreadPts": 16,
+          "slippagePts": 4.5,
+          "executionCostTRY": 98.77,
+          "contractSize": 1,
+          "lotSize": 0.1,
+          "notionalValueTRY": 359298.74,
+          "effectiveLeverage": 6.59,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.086,3 TL) ÷ [SL Mesafesi (848.51) × Kur (50.34 TL)] = 0.0957 BTC (0.1 Standart Lot) | Pozisyon Büyüklüğü: 359.298,74 TL (6.59x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "74574.44 vs EMA50: 74276.14 (EMA200: 73679.55)",
+            "threshold": "Fiyat >= EMA50 veya Aşırı Satım Tabanı",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "AL (LONG) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 74499.87 | EMA21: 74388.00 (Fark: %0.15)",
+            "threshold": "EMA8 >= EMA21 (Alıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı AL (LONG) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "54.2",
+            "threshold": "RSI 36–65 (Trend) veya <33 (Tepki)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (54.2) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 678.81 | SL: 848.51 (1.25x) | TP1: 1.48R | TP2: 2.48R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor > -0.35 (Negatif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.086,3 TL | 0.1 Lot (0.0957 BTC) | Kaldıraç: 6.59x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 848.51 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 98.77 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 74930.81,
+          "mfeR": 0.42,
+          "mfeTRY": 1716.25,
+          "maePrice": 73725.93,
+          "maeR": -1,
+          "maeTRY": -4086.3
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-11T20:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "BTC/USD paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 74574.44
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-11T20:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (74276.14), Wilder RSI (54.2) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 74574.44
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-11T20:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.1 Lot — AL (LONG))",
+            "detail": "Kotasyon: 74574.44 -> Spread/Slippage Dahil Dolum: 74574.44. Teminat: 54.483,94 TL, Maks. Risk: 4.086,3 TL.",
+            "price": 74574.44
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-12T01:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.716,25 TL (+0.42R @ 74930.81) | En derin geri çekilme (MAE): -4.086,3 TL (-1.00R @ 73725.93).",
+            "price": 74930.81
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-12T01:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (STOP_LOSS)",
+            "detail": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı. Çıkış Fiyatı: 73725.93 | Net Realize Kâr/Zarar: -4.086,3 TL.",
+            "price": 73725.93,
+            "pnlTRY": -4086.3
+          }
+        ]
+      },
+      "lotSize": 0.1,
+      "contractSize": 1,
+      "notionalValueTRY": 359298.74,
+      "effectiveLeverage": 6.59,
+      "spreadPts": 16,
+      "slippagePts": 4.5,
+      "executionCostTRY": 98.77,
+      "confluenceScore": 94,
+      "mfeTRY": 1716.25,
+      "mfeR": 0.42,
+      "maeTRY": -4086.3,
+      "maeR": -1,
+      "rMultiple": -1
     },
     {
       "id": "TRD-XAUUSD-00000",
@@ -301,7 +1783,7 @@
       "initialStopLoss": 4090.84,
       "allocatedCapitalTRY": 50000,
       "riskAmountTRY": 3750,
-      "positionSizeUnits": 0.2441,
+      "positionSizeUnits": 2.0752,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7425,
@@ -309,7 +1791,180 @@
       "totalPnL_TRY": 7425,
       "totalPnL_Percent": 2.97,
       "rationale": "EMA8/21 Negatif Akış + Wilder RSI (49.1) Satış Baskısı",
-      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-XAUUSD-406790-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 4071.97,
+          "ema21": 4078.07,
+          "ema50": 4084.17,
+          "ema200": 4116.71,
+          "emaSpreadPct": -0.15,
+          "rsi14": 41.6,
+          "dailyAtr14": 40.78,
+          "tradeAtr": 18.35,
+          "newsScore": -0.65,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 4067.9,
+          "fillPrice": 4067.9,
+          "spreadPts": 0.25,
+          "slippagePts": 0.05,
+          "executionCostTRY": 31.34,
+          "contractSize": 100,
+          "lotSize": 0.02,
+          "notionalValueTRY": 424995.16,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (3.750 TL) ÷ [SL Mesafesi (22.94) × Kur (50.34 TL)] = 2.0752 Ons (0.02 Standart Lot) | Pozisyon Büyüklüğü: 424.995,16 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "4067.90 vs EMA50: 4084.17 (EMA200: 4116.71)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 4071.97 | EMA21: 4078.07 (Fark: %-0.15)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 18.35 | SL: 22.94 (1.25x) | TP1: 1.48R | TP2: 2.48R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 3.750 TL | 0.02 Lot (2.0752 Ons) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 22.94 × 50.34 TL. Spread (0.25) + Slippage (0.05) maliyeti: 31.34 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 4009.17,
+          "mfeR": 2.56,
+          "mfeTRY": 9600,
+          "maePrice": 4076.62,
+          "maeR": -0.38,
+          "maeTRY": -1425
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-11T06:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "XAU/USD paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 4067.9
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-11T06:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (4084.17), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 4067.9
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-11T06:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.02 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 4067.90 -> Spread/Slippage Dahil Dolum: 4067.90. Teminat: 50.000 TL, Maks. Risk: 3.750 TL.",
+            "price": 4067.9
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-11T16:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +9.600 TL (+2.56R @ 4009.17) | En derin geri çekilme (MAE): -1.425 TL (-0.38R @ 4076.62).",
+            "price": 4009.17
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-11T16:00:00.000Z",
+            "phase": "TP1_PARTIAL_50_BE",
+            "title": "TP1 Hedefi (4033.94) Vuruldu — %50 Kâr Alındı & Stop Başabaşa Çekildi",
+            "detail": "Pozisyonun ilk %50'si +2.775 TL net kârla kapatıldı. Kalan %50 için Stop-Loss 4090.84 seviyesinden tam giriş fiyatı olan 4067.90 (Breakeven - 0 Risk) noktasına taşındı.",
+            "price": 4033.94,
+            "pnlTRY": 2775
+          },
+          {
+            "stepNo": 6,
+            "timestamp": "2026-11-11T16:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (TP2_TAM_HEDEF)",
+            "detail": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı. Çıkış Fiyatı: 4011.00 | Net Realize Kâr/Zarar: +7.425 TL.",
+            "price": 4011,
+            "pnlTRY": 7425
+          }
+        ]
+      },
+      "lotSize": 0.02,
+      "contractSize": 100,
+      "notionalValueTRY": 424995.16,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.25,
+      "slippagePts": 0.05,
+      "executionCostTRY": 31.34,
+      "confluenceScore": 98,
+      "mfeTRY": 9600,
+      "mfeR": 2.56,
+      "maeTRY": -1425,
+      "maeR": -0.38,
+      "rMultiple": 1.98
     },
     {
       "id": "TRD-BTCUSD-00000",
@@ -331,7 +1986,7 @@
       "initialStopLoss": 74177.13,
       "allocatedCapitalTRY": 55313.64,
       "riskAmountTRY": 4148.52,
-      "positionSizeUnits": 0.0149,
+      "positionSizeUnits": 0.1265,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -4148.52,
@@ -339,7 +1994,171 @@
       "totalPnL_TRY": -4148.52,
       "totalPnL_Percent": -1.66,
       "rationale": "EMA8/21 Negatif Akış + Wilder RSI (41.9) Satış Baskısı",
-      "exitReason": "Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı."
+      "exitReason": "Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-BTCUSD-7352574-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 73599.27,
+          "ema21": 73709.55,
+          "ema50": 73819.84,
+          "ema200": 74408.05,
+          "emaSpreadPct": -0.15,
+          "rsi14": 41.6,
+          "dailyAtr14": 1158.02,
+          "tradeAtr": 521.11,
+          "newsScore": -0.65,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 73525.74,
+          "fillPrice": 73525.74,
+          "spreadPts": 16,
+          "slippagePts": 4.5,
+          "executionCostTRY": 130.56,
+          "contractSize": 1,
+          "lotSize": 0.13,
+          "notionalValueTRY": 468256.36,
+          "effectiveLeverage": 8.47,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.148,52 TL) ÷ [SL Mesafesi (651.39) × Kur (50.34 TL)] = 0.1265 BTC (0.13 Standart Lot) | Pozisyon Büyüklüğü: 468.256,36 TL (8.47x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "73525.74 vs EMA50: 73819.84 (EMA200: 74408.05)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 73599.27 | EMA21: 73709.55 (Fark: %-0.15)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 521.11 | SL: 651.39 (1.25x) | TP1: 1.48R | TP2: 2.48R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.148,52 TL | 0.13 Lot (0.1265 BTC) | Kaldıraç: 8.47x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 651.39 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 130.56 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 73252.16,
+          "mfeR": 0.42,
+          "mfeTRY": 1742.38,
+          "maePrice": 74177.13,
+          "maeR": -1,
+          "maeTRY": -4148.52
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-11T06:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "BTC/USD paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 73525.74
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-11T06:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (73819.84), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 73525.74
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-11T06:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.13 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 73525.74 -> Spread/Slippage Dahil Dolum: 73525.74. Teminat: 55.313,64 TL, Maks. Risk: 4.148,52 TL.",
+            "price": 73525.74
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-11T16:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.742,38 TL (+0.42R @ 73252.16) | En derin geri çekilme (MAE): -4.148,52 TL (-1.00R @ 74177.13).",
+            "price": 73252.16
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-11T16:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (STOP_LOSS)",
+            "detail": "Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı. Çıkış Fiyatı: 74177.13 | Net Realize Kâr/Zarar: -4.148,52 TL.",
+            "price": 74177.13,
+            "pnlTRY": -4148.52
+          }
+        ]
+      },
+      "lotSize": 0.13,
+      "contractSize": 1,
+      "notionalValueTRY": 468256.36,
+      "effectiveLeverage": 8.47,
+      "spreadPts": 16,
+      "slippagePts": 4.5,
+      "executionCostTRY": 130.56,
+      "confluenceScore": 98,
+      "mfeTRY": 1742.38,
+      "mfeR": 0.42,
+      "maeTRY": -4148.52,
+      "maeR": -1,
+      "rMultiple": -1
     },
     {
       "id": "TRD-EURUSD-00000",
@@ -361,7 +2180,7 @@
       "initialStopLoss": 1.1201,
       "allocatedCapitalTRY": 50712.72,
       "riskAmountTRY": 3803.45,
-      "positionSizeUnits": 901.638,
+      "positionSizeUnits": 7663.9232,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7530.83,
@@ -369,7 +2188,180 @@
       "totalPnL_TRY": 7530.83,
       "totalPnL_Percent": 3.01,
       "rationale": "EMA8/21 Negatif Akış + Wilder RSI (40.2) Satış Baskısı",
-      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-EURUSD-111-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 1.1183,
+          "ema21": 1.12,
+          "ema50": 1.1217,
+          "ema200": 1.1306,
+          "emaSpreadPct": -0.152,
+          "rsi14": 41.6,
+          "dailyAtr14": 0.0051,
+          "tradeAtr": 0.0023,
+          "newsScore": -0.65,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 1.1172,
+          "fillPrice": 1.1172,
+          "spreadPts": 0.00012,
+          "slippagePts": 0.00003,
+          "executionCostTRY": 57.88,
+          "contractSize": 100000,
+          "lotSize": 0.08,
+          "notionalValueTRY": 431058.12,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (3.803,45 TL) ÷ [SL Mesafesi (0.0029) × Kur (50.34 TL)] = 7663.9232 EUR (0.08 Standart Lot) | Pozisyon Büyüklüğü: 431.058,12 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "1.1172 vs EMA50: 1.1217 (EMA200: 1.1306)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 1.1183 | EMA21: 1.1200 (Fark: %-0.152)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.0023 | SL: 0.0029 (1.25x) | TP1: 1.45R | TP2: 2.45R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 3.803,45 TL | 0.08 Lot (7663.9232 EUR) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.0029 × 50.34 TL. Spread (0.00012) + Slippage (0.00003) maliyeti: 57.88 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 1.1098,
+          "mfeR": 2.56,
+          "mfeTRY": 9736.83,
+          "maePrice": 1.1183,
+          "maeR": -0.38,
+          "maeTRY": -1445.31
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-10T23:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "EUR/USD paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 1.1172
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-10T23:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (1.1217), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 1.1172
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-10T23:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.08 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 1.1172 -> Spread/Slippage Dahil Dolum: 1.1172. Teminat: 50.712,72 TL, Maks. Risk: 3.803,45 TL.",
+            "price": 1.1172
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-11T14:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +9.736,83 TL (+2.56R @ 1.1098) | En derin geri çekilme (MAE): -1.445,31 TL (-0.38R @ 1.1183).",
+            "price": 1.1098
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-11T14:00:00.000Z",
+            "phase": "TP1_PARTIAL_50_BE",
+            "title": "TP1 Hedefi (1.1130) Vuruldu — %50 Kâr Alındı & Stop Başabaşa Çekildi",
+            "detail": "Pozisyonun ilk %50'si +2.757,5 TL net kârla kapatıldı. Kalan %50 için Stop-Loss 1.1201 seviyesinden tam giriş fiyatı olan 1.1172 (Breakeven - 0 Risk) noktasına taşındı.",
+            "price": 1.113,
+            "pnlTRY": 2757.5
+          },
+          {
+            "stepNo": 6,
+            "timestamp": "2026-11-11T14:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (TP2_TAM_HEDEF)",
+            "detail": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı. Çıkış Fiyatı: 1.1101 | Net Realize Kâr/Zarar: +7.530,83 TL.",
+            "price": 1.1101,
+            "pnlTRY": 7530.83
+          }
+        ]
+      },
+      "lotSize": 0.08,
+      "contractSize": 100000,
+      "notionalValueTRY": 431058.12,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.00012,
+      "slippagePts": 0.00003,
+      "executionCostTRY": 57.88,
+      "confluenceScore": 98,
+      "mfeTRY": 9736.83,
+      "mfeR": 2.56,
+      "maeTRY": -1445.31,
+      "maeR": -0.38,
+      "rMultiple": 1.98
     },
     {
       "id": "TRD-USDJPY-00000",
@@ -391,7 +2383,7 @@
       "initialStopLoss": 158.6,
       "allocatedCapitalTRY": 52963.25,
       "riskAmountTRY": 3972.24,
-      "positionSizeUnits": 6.6243,
+      "positionSizeUnits": 8942.1056,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7865.04,
@@ -399,7 +2391,180 @@
       "totalPnL_TRY": 7865.04,
       "totalPnL_Percent": 3.15,
       "rationale": "EMA8/21 Pozitif Kesişim + Wilder RSI (63.5) İvme Teyidi",
-      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+      "exitReason": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-USDJPY-15881-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 158.65,
+          "ema21": 158.41,
+          "ema50": 158.17,
+          "ema200": 156.9,
+          "emaSpreadPct": 0.152,
+          "rsi14": 54.2,
+          "dailyAtr14": 0.38,
+          "tradeAtr": 0.17,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 158.81,
+          "fillPrice": 158.81,
+          "spreadPts": 0.014,
+          "slippagePts": 0.004,
+          "executionCostTRY": 51.03,
+          "contractSize": 100000,
+          "lotSize": 0.09,
+          "notionalValueTRY": 450187.62,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (3.972,24 TL) ÷ [SL Mesafesi (0.21) × Kur (50.34 TL)] = 8942.1056 USD (0.09 Standart Lot) | Pozisyon Büyüklüğü: 450.187,62 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "158.81 vs EMA50: 158.17 (EMA200: 156.90)",
+            "threshold": "Fiyat >= EMA50 veya Aşırı Satım Tabanı",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "AL (LONG) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 158.65 | EMA21: 158.41 (Fark: %0.152)",
+            "threshold": "EMA8 >= EMA21 (Alıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı AL (LONG) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "54.2",
+            "threshold": "RSI 36–65 (Trend) veya <33 (Tepki)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (54.2) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.17 | SL: 0.21 (1.25x) | TP1: 1.48R | TP2: 2.48R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor > -0.35 (Negatif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 3.972,24 TL | 0.09 Lot (8942.1056 USD) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.21 × 50.34 TL. Spread (0.014) + Slippage (0.004) maliyeti: 51.03 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 159.35,
+          "mfeR": 2.56,
+          "mfeTRY": 10168.93,
+          "maePrice": 158.73,
+          "maeR": -0.38,
+          "maeTRY": -1509.45
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-11T05:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "USD/JPY paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 158.81
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-11T05:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (158.17), Wilder RSI (54.2) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 158.81
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-11T05:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.09 Lot — AL (LONG))",
+            "detail": "Kotasyon: 158.81 -> Spread/Slippage Dahil Dolum: 158.81. Teminat: 52.963,25 TL, Maks. Risk: 3.972,24 TL.",
+            "price": 158.81
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-11T13:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +10.168,93 TL (+2.56R @ 159.35) | En derin geri çekilme (MAE): -1.509,45 TL (-0.38R @ 158.73).",
+            "price": 159.35
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-11T13:00:00.000Z",
+            "phase": "TP1_PARTIAL_50_BE",
+            "title": "TP1 Hedefi (159.12) Vuruldu — %50 Kâr Alındı & Stop Başabaşa Çekildi",
+            "detail": "Pozisyonun ilk %50'si +2.939,46 TL net kârla kapatıldı. Kalan %50 için Stop-Loss 158.60 seviyesinden tam giriş fiyatı olan 158.81 (Breakeven - 0 Risk) noktasına taşındı.",
+            "price": 159.12,
+            "pnlTRY": 2939.46
+          },
+          {
+            "stepNo": 6,
+            "timestamp": "2026-11-11T13:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (TP2_TAM_HEDEF)",
+            "detail": "TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı. Çıkış Fiyatı: 159.33 | Net Realize Kâr/Zarar: +7.865,04 TL.",
+            "price": 159.33,
+            "pnlTRY": 7865.04
+          }
+        ]
+      },
+      "lotSize": 0.09,
+      "contractSize": 100000,
+      "notionalValueTRY": 450187.62,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.014,
+      "slippagePts": 0.004,
+      "executionCostTRY": 51.03,
+      "confluenceScore": 94,
+      "mfeTRY": 10168.93,
+      "mfeR": 2.56,
+      "maeTRY": -1509.45,
+      "maeR": -0.38,
+      "rMultiple": 1.98
     },
     {
       "id": "TRD-EURUSD-00000",
@@ -421,7 +2586,7 @@
       "initialStopLoss": 1.1194,
       "allocatedCapitalTRY": 51485,
       "riskAmountTRY": 3861.38,
-      "positionSizeUnits": 911.6964,
+      "positionSizeUnits": 7749.4194,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -3861.38,
@@ -429,7 +2594,171 @@
       "totalPnL_TRY": -3861.38,
       "totalPnL_Percent": -1.54,
       "rationale": "EMA8/21 Pozitif Kesişim + Wilder RSI (53) İvme Teyidi",
-      "exitReason": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı."
+      "exitReason": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-EURUSD-112-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 1.1206,
+          "ema21": 1.1189,
+          "ema50": 1.1172,
+          "ema200": 1.1082,
+          "emaSpreadPct": 0.152,
+          "rsi14": 54.2,
+          "dailyAtr14": 0.004,
+          "tradeAtr": 0.0018,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 1.1217,
+          "fillPrice": 1.1217,
+          "spreadPts": 0.00012,
+          "slippagePts": 0.00003,
+          "executionCostTRY": 58.52,
+          "contractSize": 100000,
+          "lotSize": 0.08,
+          "notionalValueTRY": 437622.5,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (3.861,38 TL) ÷ [SL Mesafesi (0.0023) × Kur (50.34 TL)] = 7749.4194 EUR (0.08 Standart Lot) | Pozisyon Büyüklüğü: 437.622,5 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "1.1217 vs EMA50: 1.1172 (EMA200: 1.1082)",
+            "threshold": "Fiyat >= EMA50 veya Aşırı Satım Tabanı",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "AL (LONG) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 1.1206 | EMA21: 1.1189 (Fark: %0.152)",
+            "threshold": "EMA8 >= EMA21 (Alıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı AL (LONG) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "54.2",
+            "threshold": "RSI 36–65 (Trend) veya <33 (Tepki)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (54.2) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.0018 | SL: 0.0023 (1.25x) | TP1: 1.52R | TP2: 2.52R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor > -0.35 (Negatif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 3.861,38 TL | 0.08 Lot (7749.4194 EUR) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.0023 × 50.34 TL. Spread (0.00012) + Slippage (0.00003) maliyeti: 58.52 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 1.1227,
+          "mfeR": 0.42,
+          "mfeTRY": 1621.78,
+          "maePrice": 1.1194,
+          "maeR": -1,
+          "maeTRY": -3861.38
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-10T12:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "EUR/USD paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 1.1217
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-10T12:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (1.1172), Wilder RSI (54.2) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 1.1217
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-10T12:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.08 Lot — AL (LONG))",
+            "detail": "Kotasyon: 1.1217 -> Spread/Slippage Dahil Dolum: 1.1217. Teminat: 51.485 TL, Maks. Risk: 3.861,38 TL.",
+            "price": 1.1217
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-10T13:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.621,78 TL (+0.42R @ 1.1227) | En derin geri çekilme (MAE): -3.861,38 TL (-1.00R @ 1.1194).",
+            "price": 1.1227
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-10T13:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (STOP_LOSS)",
+            "detail": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı. Çıkış Fiyatı: 1.1194 | Net Realize Kâr/Zarar: -3.861,38 TL.",
+            "price": 1.1194,
+            "pnlTRY": -3861.38
+          }
+        ]
+      },
+      "lotSize": 0.08,
+      "contractSize": 100000,
+      "notionalValueTRY": 437622.5,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.00012,
+      "slippagePts": 0.00003,
+      "executionCostTRY": 58.52,
+      "confluenceScore": 94,
+      "mfeTRY": 1621.78,
+      "mfeR": 0.42,
+      "maeTRY": -3861.38,
+      "maeR": -1,
+      "rMultiple": -1
     },
     {
       "id": "TRD-USDJPY-00000",
@@ -451,7 +2780,7 @@
       "initialStopLoss": 158.3,
       "allocatedCapitalTRY": 53769.79,
       "riskAmountTRY": 4032.73,
-      "positionSizeUnits": 6.7593,
+      "positionSizeUnits": 9078.2786,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -4032.73,
@@ -459,7 +2788,171 @@
       "totalPnL_TRY": -4032.73,
       "totalPnL_Percent": -1.61,
       "rationale": "EMA8/21 Negatif Akış + Wilder RSI (45.8) Satış Baskısı",
-      "exitReason": "Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı."
+      "exitReason": "Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı.",
+      "forensicXRay": {
+        "confluenceScore": 98,
+        "auditHash": "AUDIT-USDJPY-15801-98",
+        "regime": "HABER_KATALİZÖRÜ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 158.17,
+          "ema21": 158.41,
+          "ema50": 158.64,
+          "ema200": 159.91,
+          "emaSpreadPct": -0.152,
+          "rsi14": 41.6,
+          "dailyAtr14": 0.51,
+          "tradeAtr": 0.23,
+          "newsScore": -0.65,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 158.01,
+          "fillPrice": 158.01,
+          "spreadPts": 0.014,
+          "slippagePts": 0.004,
+          "executionCostTRY": 52.06,
+          "contractSize": 100000,
+          "lotSize": 0.09,
+          "notionalValueTRY": 457043.21,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.032,73 TL) ÷ [SL Mesafesi (0.29) × Kur (50.34 TL)] = 9078.2786 USD (0.09 Standart Lot) | Pozisyon Büyüklüğü: 457.043,21 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "158.01 vs EMA50: 158.64 (EMA200: 159.91)",
+            "threshold": "Fiyat < EMA50 veya Aşırı Alım Tepesi",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "SAT (SHORT) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 158.17 | EMA21: 158.41 (Fark: %-0.152)",
+            "threshold": "EMA8 <= EMA21 (Satıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı SAT (SHORT) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "41.6",
+            "threshold": "RSI 34–63 (Trend) veya >69 (Yorulma)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (41.6) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.23 | SL: 0.29 (1.25x) | TP1: 1.45R | TP2: 2.45R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "-0.65 (Küresel Finans Akışı)",
+            "threshold": "Skor < +0.35 (Pozitif Şok Vetosu Yok)",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.032,73 TL | 0.09 Lot (9078.2786 USD) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.29 × 50.34 TL. Spread (0.014) + Slippage (0.004) maliyeti: 52.06 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 157.89,
+          "mfeR": 0.42,
+          "mfeTRY": 1693.75,
+          "maePrice": 158.3,
+          "maeR": -1,
+          "maeTRY": -4032.73
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-10T06:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "USD/JPY paritesinde HABER_KATALİZÖRÜ sinyali tespit edildi (Kurumsal Uyumluluk: 98/100).",
+            "price": 158.01
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-10T06:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (158.64), Wilder RSI (41.6) ve Canlı Haber Kalkanı (-0.65) onaylandı.",
+            "price": 158.01
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-10T06:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.09 Lot — SAT (SHORT))",
+            "detail": "Kotasyon: 158.01 -> Spread/Slippage Dahil Dolum: 158.01. Teminat: 53.769,79 TL, Maks. Risk: 4.032,73 TL.",
+            "price": 158.01
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-10T13:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.693,75 TL (+0.42R @ 157.89) | En derin geri çekilme (MAE): -4.032,73 TL (-1.00R @ 158.30).",
+            "price": 157.89
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-10T13:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (STOP_LOSS)",
+            "detail": "Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı. Çıkış Fiyatı: 158.30 | Net Realize Kâr/Zarar: -4.032,73 TL.",
+            "price": 158.3,
+            "pnlTRY": -4032.73
+          }
+        ]
+      },
+      "lotSize": 0.09,
+      "contractSize": 100000,
+      "notionalValueTRY": 457043.21,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.014,
+      "slippagePts": 0.004,
+      "executionCostTRY": 52.06,
+      "confluenceScore": 98,
+      "mfeTRY": 1693.75,
+      "mfeR": 0.42,
+      "maeTRY": -4032.73,
+      "maeR": -1,
+      "rMultiple": -1
     },
     {
       "id": "TRD-GBPUSD-00000",
@@ -481,7 +2974,7 @@
       "initialStopLoss": 1.3401,
       "allocatedCapitalTRY": 54536.25,
       "riskAmountTRY": 4090.22,
-      "positionSizeUnits": 807.0156,
+      "positionSizeUnits": 6859.6325,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -4090.22,
@@ -489,7 +2982,171 @@
       "totalPnL_TRY": -4090.22,
       "totalPnL_Percent": -1.64,
       "rationale": "EMA8/21 Pozitif Kesişim + Wilder RSI (49.7) İvme Teyidi",
-      "exitReason": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı."
+      "exitReason": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı.",
+      "forensicXRay": {
+        "confluenceScore": 94,
+        "auditHash": "AUDIT-GBPUSD-134-94",
+        "regime": "TREND_TAKİBİ",
+        "orderType": "KURUMSAL LİMİT / PİYASA İCRASI",
+        "indicatorSnapshot": {
+          "ema8": 1.341,
+          "ema21": 1.3389,
+          "ema50": 1.3369,
+          "ema200": 1.3262,
+          "emaSpreadPct": 0.157,
+          "rsi14": 54.2,
+          "dailyAtr14": 0.004,
+          "tradeAtr": 0.0018,
+          "newsScore": 0,
+          "newsHeadline": "Sakin / Teknik Akış",
+          "newsSource": "Küresel Finans Akışı"
+        },
+        "microstructure": {
+          "midQuotePrice": 1.3423,
+          "fillPrice": 1.3423,
+          "spreadPts": 0.00016,
+          "slippagePts": 0.00004,
+          "executionCostTRY": 69.07,
+          "contractSize": 100000,
+          "lotSize": 0.07,
+          "notionalValueTRY": 463558.12,
+          "effectiveLeverage": 8.5,
+          "usdTryAtEntry": 50.3447,
+          "sizingFormulaText": "Birim = Risk (4.090,22 TL) ÷ [SL Mesafesi (0.0022) × Kur (50.34 TL)] = 6859.6325 GBP (0.07 Standart Lot) | Pozisyon Büyüklüğü: 463.558,12 TL (8.5x Efektif Kaldıraç)"
+        },
+        "gates": [
+          {
+            "step": 1,
+            "title": "Kapı 1: Makro Trend & Yapısal Rejim Filtresi",
+            "metricLabel": "Fiyat vs EMA50 / EMA200",
+            "metricValue": "1.3423 vs EMA50: 1.3369 (EMA200: 1.3262)",
+            "threshold": "Fiyat >= EMA50 veya Aşırı Satım Tabanı",
+            "score": 25,
+            "maxScore": 25,
+            "passed": true,
+            "note": "AL (LONG) yönü ana kurumsal EMA50 trendi ile %100 hizalı."
+          },
+          {
+            "step": 2,
+            "title": "Kapı 2: Kurumsal Emir Akışı (EMA8 / EMA21)",
+            "metricLabel": "EMA8 vs EMA21 Yayılımı",
+            "metricValue": "EMA8: 1.3410 | EMA21: 1.3389 (Fark: %0.157)",
+            "threshold": "EMA8 >= EMA21 (Alıcı İvmesi)",
+            "score": 24,
+            "maxScore": 25,
+            "passed": true,
+            "note": "Kısa vadeli kurumsal emir akışı AL (LONG) yönünde likidite baskısı üretiyor."
+          },
+          {
+            "step": 3,
+            "title": "Kapı 3: Wilder RSI(14) Momentum & Esneklik Teyidi",
+            "metricLabel": "Wilder RMA RSI(14)",
+            "metricValue": "54.2",
+            "threshold": "RSI 36–65 (Trend) veya <33 (Tepki)",
+            "score": 19,
+            "maxScore": 20,
+            "passed": true,
+            "note": "RSI (54.2) aşırı şişkinlik olmadan sağlıklı trend devam bölgesinde."
+          },
+          {
+            "step": 4,
+            "title": "Kapı 4: Wilder ATR(14) Volatilite & Stop Mimarisi",
+            "metricLabel": "İşlem ATR & Hedef Oranları",
+            "metricValue": "ATR: 0.0018 | SL: 0.0022 (1.25x) | TP1: 1.45R | TP2: 2.45R",
+            "threshold": "Asimetrik Getiri: TP1 >= 1.50R & TP2 >= 2.50R",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Stop gürültü bandının (1.25x ATR) dışına yerleştirildi. TP1'de %50 kâr alınıp Stop girişe (Breakeven) çekilir."
+          },
+          {
+            "step": 5,
+            "title": "Kapı 5: Canlı Haber & Bağlamsal NLP Risk Kalkanı",
+            "metricLabel": "Haber Duyarlılık Skoru",
+            "metricValue": "+0.00 (Küresel Finans Akışı)",
+            "threshold": "Skor > -0.35 (Negatif Şok Vetosu Yok)",
+            "score": 11,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+          },
+          {
+            "step": 6,
+            "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
+            "metricLabel": "Risk / Teminat / Lot / Spread",
+            "metricValue": "Risk: 4.090,22 TL | 0.07 Lot (6859.6325 GBP) | Kaldıraç: 8.5x",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "score": 15,
+            "maxScore": 15,
+            "passed": true,
+            "note": "Birim Risk = 0.0022 × 50.34 TL. Spread (0.00016) + Slippage (0.00004) maliyeti: 69.07 TL."
+          }
+        ],
+        "excursion": {
+          "mfePrice": 1.3432,
+          "mfeR": 0.42,
+          "mfeTRY": 1717.89,
+          "maePrice": 1.3401,
+          "maeR": -1,
+          "maeTRY": -4090.22
+        },
+        "lifecycleSteps": [
+          {
+            "stepNo": 1,
+            "timestamp": "2026-11-10T12:00:00.000Z",
+            "phase": "SIGNAL_DETECTED",
+            "title": "Otonom Tarayıcı Sinyali Yakaladı",
+            "detail": "GBP/USD paritesinde TREND_TAKİBİ sinyali tespit edildi (Kurumsal Uyumluluk: 94/100).",
+            "price": 1.3423
+          },
+          {
+            "stepNo": 2,
+            "timestamp": "2026-11-10T12:00:00.000Z",
+            "phase": "GATES_VERIFIED",
+            "title": "6-Kapılı Kurumsal Risk & Haber Denetimi Geçildi",
+            "detail": "EMA50 (1.3369), Wilder RSI (54.2) ve Canlı Haber Kalkanı (0) onaylandı.",
+            "price": 1.3423
+          },
+          {
+            "stepNo": 3,
+            "timestamp": "2026-11-10T12:00:00.000Z",
+            "phase": "ORDER_FILLED",
+            "title": "Canlı Emir İcra Edildi (0.07 Lot — AL (LONG))",
+            "detail": "Kotasyon: 1.3423 -> Spread/Slippage Dahil Dolum: 1.3423. Teminat: 54.536,25 TL, Maks. Risk: 4.090,22 TL.",
+            "price": 1.3423
+          },
+          {
+            "stepNo": 4,
+            "timestamp": "2026-11-10T13:00:00.000Z",
+            "phase": "MFE_MAE_TRACK",
+            "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.717,89 TL (+0.42R @ 1.3432) | En derin geri çekilme (MAE): -4.090,22 TL (-1.00R @ 1.3401).",
+            "price": 1.3432
+          },
+          {
+            "stepNo": 5,
+            "timestamp": "2026-11-10T13:00:00.000Z",
+            "phase": "FINAL_EXIT",
+            "title": "Pozisyon Kapandı (STOP_LOSS)",
+            "detail": "Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı. Çıkış Fiyatı: 1.3401 | Net Realize Kâr/Zarar: -4.090,22 TL.",
+            "price": 1.3401,
+            "pnlTRY": -4090.22
+          }
+        ]
+      },
+      "lotSize": 0.07,
+      "contractSize": 100000,
+      "notionalValueTRY": 463558.12,
+      "effectiveLeverage": 8.5,
+      "spreadPts": 0.00016,
+      "slippagePts": 0.00004,
+      "executionCostTRY": 69.07,
+      "confluenceScore": 94,
+      "mfeTRY": 1717.89,
+      "mfeR": 0.42,
+      "maeTRY": -4090.22,
+      "maeR": -1,
+      "rMultiple": -1
     }
   ],
   "equityCurve": [
@@ -497,91 +3154,113 @@
       "timestamp": 1794315600000,
       "timeStr": "10/11 16:00",
       "equityTRY": 253563.62,
-      "cashTRY": 253563.62
+      "cashTRY": 253563.62,
+      "drawdownPercent": 0
     },
     {
       "timestamp": 1794315600000,
       "timeStr": "10/11 16:00",
       "equityTRY": 264816.23,
-      "cashTRY": 264816.23
+      "cashTRY": 264816.23,
+      "drawdownPercent": 0
     },
     {
       "timestamp": 1794315600000,
       "timeStr": "10/11 16:00",
       "equityTRY": 268591.05,
-      "cashTRY": 268591.05
+      "cashTRY": 268591.05,
+      "drawdownPercent": 0
     },
     {
       "timestamp": 1794319857487,
       "timeStr": "10/11 17:10",
       "equityTRY": 250000,
-      "cashTRY": 250000
+      "cashTRY": 250000,
+      "drawdownPercent": -6.92
     },
     {
       "timestamp": 1794402000000,
       "timeStr": "11/11 16:00",
       "equityTRY": 272681.27,
-      "cashTRY": 272681.27
+      "cashTRY": 272681.27,
+      "drawdownPercent": 0
     },
     {
       "timestamp": 1794405600000,
       "timeStr": "11/11 17:00",
       "equityTRY": 261094.45,
-      "cashTRY": 261094.45
+      "cashTRY": 261094.45,
+      "drawdownPercent": -4.25
     },
     {
       "timestamp": 1794412800000,
       "timeStr": "11/11 19:00",
       "equityTRY": 257425,
-      "cashTRY": 257425
+      "cashTRY": 257425,
+      "drawdownPercent": -5.59
     },
     {
       "timestamp": 1794412800000,
       "timeStr": "11/11 19:00",
       "equityTRY": 272419.69,
-      "cashTRY": 272419.69
+      "cashTRY": 272419.69,
+      "drawdownPercent": -0.1
     },
     {
       "timestamp": 1794445200000,
       "timeStr": "12/11 04:00",
       "equityTRY": 268333.39,
-      "cashTRY": 268333.39
+      "cashTRY": 268333.39,
+      "drawdownPercent": -1.59
     },
     {
       "timestamp": 1794492000000,
       "timeStr": "12/11 17:00",
       "equityTRY": 276302.89,
-      "cashTRY": 276302.89
+      "cashTRY": 276302.89,
+      "drawdownPercent": 0
     },
     {
       "timestamp": 1794495600000,
       "timeStr": "12/11 18:00",
       "equityTRY": 276568.21,
-      "cashTRY": 276568.21
+      "cashTRY": 276568.21,
+      "drawdownPercent": 0
     },
     {
       "timestamp": 1794603600000,
       "timeStr": "14/11 00:00",
       "equityTRY": 268848.96,
-      "cashTRY": 268848.96
+      "cashTRY": 268848.96,
+      "drawdownPercent": -2.79
     },
     {
       "timestamp": 1794665458023,
       "timeStr": "14/11 17:10",
       "equityTRY": 276302.89,
-      "cashTRY": 276302.89
+      "cashTRY": 276302.89,
+      "drawdownPercent": -0.1
     },
     {
       "timestamp": 1794673390543,
       "timeStr": "14/11 19:23",
       "equityTRY": 273350.12,
-      "cashTRY": 276302.89
+      "cashTRY": 276302.89,
+      "drawdownPercent": -1.16
     },
     {
       "timestamp": 1794675398908,
       "timeStr": "14/11 19:56",
       "equityTRY": 273015.99,
-      "cashTRY": 273015.99
+      "cashTRY": 273015.99,
+      "drawdownPercent": -1.28
+    },
+    {
+      "timestamp": 1794676539371,
+      "timeStr": "14/11 20:15",
+      "equityTRY": 273383.74,
+      "cashTRY": 273015.99,
+      "drawdownPercent": -1.15
     }
   ],
   "activityLog": [
@@ -722,6 +3401,340 @@
       "type": "SYSTEM",
       "symbol": "PORTFÖY",
       "message": "250.000 TL Başlangıç Sermayesi ile ZELTRA Otonom İşlem Motoru başlatıldı (İşlem başı %1.5 Sermaye Kalkanı aktif)."
+    }
+  ],
+  "attribution": {
+    "byAsset": [
+      {
+        "symbol": "XAU/USD",
+        "name": "Ons Altın / ABD Doları",
+        "closedCount": 1,
+        "openCount": 1,
+        "wins": 1,
+        "losses": 0,
+        "winRatePercent": 100,
+        "netRealizedPnL_TRY": 7425,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 7425,
+        "avgRMultiple": 1.98,
+        "totalRMultiple": 1.98,
+        "executionCostTRY": 31.34
+      },
+      {
+        "symbol": "EUR/USD",
+        "name": "Euro / ABD Doları",
+        "closedCount": 3,
+        "openCount": 0,
+        "wins": 2,
+        "losses": 1,
+        "winRatePercent": 66.7,
+        "netRealizedPnL_TRY": 11423.96,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 11423.96,
+        "avgRMultiple": 0.99,
+        "totalRMultiple": 2.96,
+        "executionCostTRY": 176.44
+      },
+      {
+        "symbol": "USD/JPY",
+        "name": "ABD Doları / Japon Yeni",
+        "closedCount": 2,
+        "openCount": 1,
+        "wins": 1,
+        "losses": 1,
+        "winRatePercent": 50,
+        "netRealizedPnL_TRY": 3832.31,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 3832.31,
+        "avgRMultiple": 0.49,
+        "totalRMultiple": 0.98,
+        "executionCostTRY": 103.09
+      },
+      {
+        "symbol": "GBP/USD",
+        "name": "İngiliz Sterlini / ABD Doları",
+        "closedCount": 2,
+        "openCount": 1,
+        "wins": 1,
+        "losses": 1,
+        "winRatePercent": 50,
+        "netRealizedPnL_TRY": 3886.94,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 3886.94,
+        "avgRMultiple": 0.49,
+        "totalRMultiple": 0.98,
+        "executionCostTRY": 137.48
+      },
+      {
+        "symbol": "BTC/USD",
+        "name": "Bitcoin / ABD Doları",
+        "closedCount": 4,
+        "openCount": 1,
+        "wins": 1,
+        "losses": 3,
+        "winRatePercent": 25,
+        "netRealizedPnL_TRY": -3552.22,
+        "floatingPnL_TRY": 367.75,
+        "totalNetPnL_TRY": -3184.47,
+        "avgRMultiple": -0.2,
+        "totalRMultiple": -0.81,
+        "executionCostTRY": 412.31
+      },
+      {
+        "symbol": "NAS100",
+        "name": "Nasdaq 100 Teknoloji Endeksi",
+        "closedCount": 0,
+        "openCount": 0,
+        "wins": 0,
+        "losses": 0,
+        "winRatePercent": 0,
+        "netRealizedPnL_TRY": 0,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 0,
+        "avgRMultiple": 0,
+        "totalRMultiple": 0,
+        "executionCostTRY": 0
+      },
+      {
+        "symbol": "SPX500",
+        "name": "S&P 500 Endeksi",
+        "closedCount": 0,
+        "openCount": 0,
+        "wins": 0,
+        "losses": 0,
+        "winRatePercent": 0,
+        "netRealizedPnL_TRY": 0,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 0,
+        "avgRMultiple": 0,
+        "totalRMultiple": 0,
+        "executionCostTRY": 0
+      },
+      {
+        "symbol": "NVDA",
+        "name": "NVIDIA Corporation",
+        "closedCount": 0,
+        "openCount": 0,
+        "wins": 0,
+        "losses": 0,
+        "winRatePercent": 0,
+        "netRealizedPnL_TRY": 0,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 0,
+        "avgRMultiple": 0,
+        "totalRMultiple": 0,
+        "executionCostTRY": 0
+      },
+      {
+        "symbol": "WTI",
+        "name": "ABD Ham Petrolü (WTI)",
+        "closedCount": 0,
+        "openCount": 0,
+        "wins": 0,
+        "losses": 0,
+        "winRatePercent": 0,
+        "netRealizedPnL_TRY": 0,
+        "floatingPnL_TRY": 0,
+        "totalNetPnL_TRY": 0,
+        "avgRMultiple": 0,
+        "totalRMultiple": 0,
+        "executionCostTRY": 0
+      }
+    ],
+    "byDirection": {
+      "long": {
+        "direction": "AL (LONG)",
+        "tradesCount": 5,
+        "wins": 1,
+        "losses": 4,
+        "winRatePercent": 20,
+        "netPnL_TRY": -7459.76,
+        "avgRMultiple": -0.36,
+        "profitFactor": 0.51
+      },
+      "short": {
+        "direction": "SAT (SHORT)",
+        "tradesCount": 7,
+        "wins": 5,
+        "losses": 2,
+        "winRatePercent": 71.4,
+        "netPnL_TRY": 30475.75,
+        "avgRMultiple": 1.13,
+        "profitFactor": 4.73
+      }
+    }
+  },
+  "marketScanner": [
+    {
+      "symbol": "XAU/USD",
+      "name": "Ons Altın / ABD Doları",
+      "digits": 2,
+      "price": 3886.3,
+      "ema8": 3980.67,
+      "ema21": 4043.05,
+      "ema50": 4142.81,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 35.9,
+      "atr14": 91.73,
+      "newsSentimentScore": 0,
+      "newsHeadline": "Sakin / Teknik Akış",
+      "confluenceScore": 94,
+      "candidateDirection": "SAT (SHORT)",
+      "status": "POZİSYONDA (AÇIK)",
+      "decisionReason": "Aktif SAT (SHORT) (0.02 Lot) pozisyonu yönetiliyor (SL: 3937.9 Kalkanı Aktif).",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "EUR/USD",
+      "name": "Euro / ABD Doları",
+      "digits": 4,
+      "price": 1.1028,
+      "ema8": 1.1144,
+      "ema21": 1.1188,
+      "ema50": 1.128,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 33,
+      "atr14": 0.0078,
+      "newsSentimentScore": 0,
+      "newsHeadline": "Sakin / Teknik Akış",
+      "confluenceScore": 58,
+      "candidateDirection": "BEKLE",
+      "status": "TEKNİK TEYİT BEKLİYOR",
+      "decisionReason": "Fiyat (1.1028) vs EMA50 (1.1280) ve Wilder RSI (33) — EMA8/21 kurumsal momentum kesişimi bekleniyor.",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "USD/JPY",
+      "name": "ABD Doları / Japon Yeni",
+      "digits": 2,
+      "price": 159.69,
+      "ema8": 158.8,
+      "ema21": 158.28,
+      "ema50": 158.12,
+      "trendRegime": "BOĞA (BULL)",
+      "rsi14": 63.9,
+      "atr14": 1.02,
+      "newsSentimentScore": 0,
+      "newsHeadline": "Sakin / Teknik Akış",
+      "confluenceScore": 94,
+      "candidateDirection": "AL (LONG)",
+      "status": "POZİSYONDA (AÇIK)",
+      "decisionReason": "Aktif AL (LONG) (0.09 Lot) pozisyonu yönetiliyor (SL: 159.12 Kalkanı Aktif).",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "GBP/USD",
+      "name": "İngiliz Sterlini / ABD Doları",
+      "digits": 4,
+      "price": 1.3209,
+      "ema8": 1.334,
+      "ema21": 1.3352,
+      "ema50": 1.3362,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 39.8,
+      "atr14": 0.0092,
+      "newsSentimentScore": 0,
+      "newsHeadline": "Sakin / Teknik Akış",
+      "confluenceScore": 94,
+      "candidateDirection": "SAT (SHORT)",
+      "status": "POZİSYONDA (AÇIK)",
+      "decisionReason": "Aktif SAT (SHORT) (0.07 Lot) pozisyonu yönetiliyor (SL: 1.3261 Kalkanı Aktif).",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "BTC/USD",
+      "name": "Bitcoin / ABD Doları",
+      "digits": 2,
+      "price": 65203.55,
+      "ema8": 71317.64,
+      "ema21": 75110.9,
+      "ema50": 77607.56,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 21.3,
+      "atr14": 2437.58,
+      "newsSentimentScore": -0.95,
+      "newsHeadline": "Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi",
+      "confluenceScore": 98,
+      "candidateDirection": "SAT (SHORT)",
+      "status": "POZİSYONDA (AÇIK)",
+      "decisionReason": "Aktif SAT (SHORT) (0.04 Lot) pozisyonu yönetiliyor (SL: 66738.86 Kalkanı Aktif).",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "NAS100",
+      "name": "Nasdaq 100 Teknoloji Endeksi",
+      "digits": 2,
+      "price": 25136.27,
+      "ema8": 25260.37,
+      "ema21": 25656.88,
+      "ema50": 26045.98,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 42.4,
+      "atr14": 536.67,
+      "newsSentimentScore": -0.28,
+      "newsHeadline": "ETF uzmanlarına göre Nvidia'daki çalkantı ve Demokratik Kongre yapay zeka ticaretini nasıl yeniden şekillendirebilir?",
+      "confluenceScore": 82,
+      "candidateDirection": "SAT (SHORT)",
+      "status": "LİMİT DOLU (4/4)",
+      "decisionReason": "SAT (SHORT) sinyali hazır (82/100 — Çift Teyit (Teknik + Olumsuz Haber): Fiyat < EMA50, Wilder RSI (42.4) ve \"ETF uzmanlarına göre Nvidia'daki çalkantı ve Demokratik...\" haberi satış baskısını teyit ediyor.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında devreye girecek.",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "SPX500",
+      "name": "S&P 500 Endeksi",
+      "digits": 2,
+      "price": 7561.67,
+      "ema8": 7561.97,
+      "ema21": 7603.6,
+      "ema50": 7635.33,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 46.8,
+      "atr14": 108.09,
+      "newsSentimentScore": 0,
+      "newsHeadline": "Sakin / Teknik Akış",
+      "confluenceScore": 82,
+      "candidateDirection": "SAT (SHORT)",
+      "status": "LİMİT DOLU (4/4)",
+      "decisionReason": "SAT (SHORT) sinyali hazır (82/100 — Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (46.8) Teyitli.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında devreye girecek.",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "digits": 2,
+      "price": 162.85,
+      "ema8": 176.98,
+      "ema21": 194.17,
+      "ema50": 206.86,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 24.9,
+      "atr14": 9.98,
+      "newsSentimentScore": -0.28,
+      "newsHeadline": "ETF uzmanlarına göre Nvidia'daki çalkantı ve Demokratik Kongre yapay zeka ticaretini nasıl yeniden şekillendirebilir?",
+      "confluenceScore": 44,
+      "candidateDirection": "BEKLE",
+      "status": "HABER VETOSU",
+      "decisionReason": "RSI (24.9) aşırı satımda ancak negatif haber baskısı (-0.28) nedeniyle düşen bıçak tutulmadı.",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
+    },
+    {
+      "symbol": "WTI",
+      "name": "ABD Ham Petrolü (WTI)",
+      "digits": 2,
+      "price": 88.56,
+      "ema8": 89.6,
+      "ema21": 92.89,
+      "ema50": 93.05,
+      "trendRegime": "AYI (BEAR)",
+      "rsi14": 41.7,
+      "atr14": 4.43,
+      "newsSentimentScore": 0,
+      "newsHeadline": "Sakin / Teknik Akış",
+      "confluenceScore": 82,
+      "candidateDirection": "SAT (SHORT)",
+      "status": "LİMİT DOLU (4/4)",
+      "decisionReason": "SAT (SHORT) sinyali hazır (82/100 — Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (41.7) Teyitli.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında devreye girecek.",
+      "scannedAt": "2026-11-14T17:15:39.371Z"
     }
   ]
 }
