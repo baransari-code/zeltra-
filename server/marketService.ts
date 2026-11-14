@@ -253,14 +253,22 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<{ timestam
   return list;
 }
 
-// Multi-Source Financial Feeds (Strictly Pure Financial & Market Feeds — Last 24 Hours)
+// Multi-Source Financial Feeds (14 Global Financial & Market Feeds — Last 24 Hours)
 const FINANCIAL_NEWS_FEEDS = [
   { source: 'CNBC Markets', url: 'https://www.cnbc.com/id/10000664/device/rss/rss.html' },
   { source: 'CNBC Economy', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html' },
+  { source: 'CNBC Investing', url: 'https://www.cnbc.com/id/15839069/device/rss/rss.html' },
+  { source: 'CNBC Technology', url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html' },
   { source: 'MarketWatch / Dow Jones', url: 'https://feeds.content.dowjones.io/public/rss/mw_marketpulse' },
-  { source: 'Wall Street Journal', url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml' },
+  { source: 'MarketWatch Top Stories', url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories' },
+  { source: 'Wall Street Journal Markets', url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml' },
+  { source: 'Wall Street Journal Economy', url: 'https://feeds.a.dj.com/rss/RSSEconomics.xml' },
   { source: 'Investing.com Forex', url: 'https://www.investing.com/rss/forex.rss' },
+  { source: 'Investing.com Emtia (Altın & Petrol)', url: 'https://www.investing.com/rss/commodities.rss' },
+  { source: 'Investing.com Borsa', url: 'https://www.investing.com/rss/stock.rss' },
+  { source: 'Yahoo Finance Markets', url: 'https://finance.yahoo.com/news/rssindex' },
   { source: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
+  { source: 'Cointelegraph', url: 'https://cointelegraph.com/rss' },
 ];
 
 // Magazin, Yaşam, Seyahat ve Kişisel Tüketici Şikayeti Filtresi (Örn: "Uçmaktan bıktım / bagaj" vb. haberleri kesin olarak eler)
@@ -277,16 +285,31 @@ const ASSET_KEYWORD_MAP: Record<string, string[]> = {
   'GBP/USD': ['gbp/usd', 'gbpusd', 'pound', 'sterling', 'boe', 'bailey', 'bank of england', 'uk inflation', 'britain', 'sterlin'],
   'USD/TRY': ['usd/try', 'usdtry', 'turkey', 'lira', 'cbrt', 'tcmb', 'turkish lira', 'merkez bankası'],
   'USD/JPY': ['usd/jpy', 'usdjpy', 'japanese yen', 'boj', 'ueda', 'bank of japan', 'japon yeni', 'yen'],
+  'USD/CHF': ['usd/chf', 'usdchf', 'swiss franc', 'snb', 'switzerland', 'isviçre frangı'],
+  'AUD/USD': ['aud/usd', 'audusd', 'australian dollar', 'rba', 'aussie', 'avustralya doları'],
+  'USD/CAD': ['usd/cad', 'usdcad', 'canadian dollar', 'boc', 'loonie', 'kanada doları'],
   'XAU/USD': ['xau/usd', 'xauusd', 'gold', 'bullion', 'precious metal', 'safe haven', 'safe-haven', 'ons altın', 'altın'],
+  'XAG/USD': ['xag/usd', 'xagusd', 'silver', 'gümüş'],
   'WTI': ['wti', 'crude oil', 'west texas', 'opec', 'petroleum', 'oil prices', 'barrel', 'ham petrol', 'petrol'],
   'BRENT': ['brent', 'brent crude', 'opec', 'north sea oil', 'oil prices', 'petrol'],
-  'BTC/USD': ['btc/usd', 'btc', 'bitcoin', 'crypto', 'coindesk', 'bitcoin etf', 'crypto etf', 'mining', 'capitulation', 'halving', 'binance', 'coinbase', 'kripto'],
+  'NATGAS': ['natural gas', 'natgas', 'lng', 'doğalgaz'],
+  'BTC/USD': ['btc/usd', 'btc', 'bitcoin', 'crypto', 'coindesk', 'cointelegraph', 'bitcoin etf', 'crypto etf', 'mining', 'capitulation', 'halving', 'binance', 'coinbase', 'kripto'],
   'ETH/USD': ['eth/usd', 'ethereum', 'ether', 'defi', 'ether etf', 'staking'],
+  'SOL/USD': ['sol/usd', 'solana'],
+  'XRP/USD': ['xrp/usd', 'ripple', 'xrp'],
   'NVDA': ['nvidia', 'nvda', 'jensen huang', 'huang', 'blackwell', 'semiconductor', 'chips', 'gpu', 'ai chip', 'yapay zeka çip'],
   'AAPL': ['apple', 'aapl', 'iphone', 'tim cook', 'cupertino'],
+  'MSFT': ['microsoft', 'msft', 'satya nadella', 'azure', 'copilot'],
+  'GOOGL': ['alphabet', 'google', 'googl', 'sundar pichai', 'waymo'],
+  'AMZN': ['amazon', 'amzn', 'aws', 'andy jassy'],
+  'META': ['meta platforms', 'meta', 'zuckerberg', 'instagram', 'whatsapp'],
+  'AMD': ['advanced micro devices', 'amd', 'lisa su'],
   'TSLA': ['tesla', 'tsla', 'elon musk', 'musk', 'electric vehicle', 'cybertruck'],
   'SPX500': ['s&p 500', 's&p500', 'spx', 'wall street', 'equities', 'us stocks', 'dow jones'],
   'NAS100': ['nasdaq', 'tech stocks', 'big tech', 'qqq', 'ai trade', 'yapay zeka ticaret'],
+  'US30': ['dow jones', 'djia', 'blue-chip'],
+  'GER40': ['dax', 'german economy', 'bundesbank'],
+  'US10Y': ['10-year treasury', 'treasury yield', 'treasury yields', 'bond yields', 'us10y'],
 };
 
 // Küresel Makro / Merkez Bankası Anahtar Kelimeleri (Tüm Pariteleri ve Riskli Varlıkları Etkiler)

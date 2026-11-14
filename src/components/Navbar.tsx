@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 activeTab === 'test' ? 'text-white font-medium bg-zinc-800' : 'text-zinc-400 hover:text-white'
               }`}
             >
-              Otonom Portföy (250B TL)
+              Canlı Test Verileri
             </button>
           </nav>
         </div>
@@ -211,7 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               : 'bg-zinc-900/60 text-zinc-400 border-zinc-800'
           }`}
         >
-          Otonom Portföy (250B TL)
+          Canlı Test Verileri
         </button>
         <button
           onClick={() => setActiveTab('catalog')}
