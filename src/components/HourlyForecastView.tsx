@@ -267,21 +267,19 @@ export const HourlyForecastView: React.FC<HourlyForecastViewProps> = ({
               </button>
             </div>
           </div>
-          <div className="text-[11px] text-zinc-400 font-mono flex flex-wrap items-center gap-2">
-            <span>Başlangıç Çıpası: <span className="text-zinc-200">{baselinePrice.toFixed(digits)}</span> ({baselineTime || 'Canlı Seans'}) • %98 Gauss Koridoru</span>
-            <span className="text-zinc-600">|</span>
-            <span className="text-zinc-300 bg-zinc-950 border border-zinc-700 px-1.5 py-0.5 rounded text-[10px] font-mono">
-              4 Günlük Doğrulama Testi: Aktif (96s)
-            </span>
+          <div className="text-xs text-zinc-400 flex flex-wrap items-center gap-2">
+            <span>Başlangıç Fiyatı: <strong className="text-zinc-200 font-mono">{baselinePrice.toFixed(digits)}</strong> ({baselineTime || 'Canlı Seans'})</span>
+            <span className="text-zinc-700">•</span>
+            <span>Son 4 günlük tahminlerle gerçek fiyatlar otomatik karşılaştırılır</span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 text-xs font-mono">
+        <div className="flex items-center space-x-3 text-xs">
           <div className="text-zinc-400">
-            Canlı: <strong className="text-white">{currentPrice.toFixed(digits)}</strong>
+            Canlı: <strong className="text-white font-mono">{currentPrice.toFixed(digits)}</strong>
           </div>
-          <div className="border border-zinc-700 bg-zinc-950 px-2 py-0.5 rounded text-[11px]">
-            Model Doğruluğu: <strong className="text-emerald-400">%{finalAccuracy}</strong>
+          <div className="text-zinc-400">
+            Tahmin Doğruluğu: <strong className="text-emerald-400 font-mono">%{finalAccuracy}</strong>
           </div>
           <button
             onClick={loadForecast}
@@ -294,43 +292,47 @@ export const HourlyForecastView: React.FC<HourlyForecastViewProps> = ({
       </div>
 
       {/* 2. İNTERAKTİF HOVER HUD & SEANS MÜFETTİŞİ KARTI */}
-      <div className="bg-zinc-950 border border-zinc-800/90 p-3 rounded text-xs font-mono flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-zinc-950 border border-zinc-800/90 p-3 rounded text-xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-1.5">
-            <span className="text-zinc-400">Hedef:</span>
-            <span className="font-bold text-white bg-zinc-900 border border-zinc-700 px-2 py-0.5 rounded">
+            <span className="text-zinc-400">Seçili Saat:</span>
+            <span className="font-semibold text-white">
               {activePoint.hour === 0 ? 'Şu An' : `+${activePoint.hour} Saat`} ({activePoint.targetTime})
             </span>
           </div>
 
-          <div className="flex items-center space-x-1.5">
-            <span className="text-zinc-400">Seans:</span>
-            <span className="text-zinc-200 font-sans font-medium">{activePoint.session}</span>
-          </div>
+          <span className="text-zinc-700">•</span>
 
           <div className="flex items-center space-x-1.5">
-            <span className="text-zinc-400">Öngörülen:</span>
-            <span className="font-bold text-sky-400 text-sm">
+            <span className="text-zinc-400">Seans:</span>
+            <span className="text-zinc-200 font-medium">{activePoint.session}</span>
+          </div>
+
+          <span className="text-zinc-700">•</span>
+
+          <div className="flex items-center space-x-1.5">
+            <span className="text-zinc-400">Beklenen Fiyat:</span>
+            <span className="font-bold text-sky-400 font-mono text-sm">
               {activePoint.predictedPrice.toFixed(digits)}
             </span>
-            <span className={`text-[11px] px-1.5 py-0.2 rounded font-sans ${
+            <span className={`font-mono font-medium ${
               activePoint.expectedMovePercent > 0
-                ? 'text-emerald-400 bg-emerald-950 border border-emerald-900'
+                ? 'text-emerald-400'
                 : activePoint.expectedMovePercent < 0
-                ? 'text-rose-400 bg-rose-950 border border-rose-900'
-                : 'text-zinc-400 bg-zinc-800'
+                ? 'text-rose-400'
+                : 'text-zinc-400'
             }`}>
-              {activePoint.expectedMovePercent > 0 ? '+' : ''}{activePoint.expectedMovePercent}%
+              ({activePoint.expectedMovePercent > 0 ? '+' : ''}{activePoint.expectedMovePercent}%)
             </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-zinc-400 text-[11px]">
+        <div className="flex flex-wrap items-center gap-3 text-zinc-400">
           <div>
-            %98 Güven Tüneli: <span className="text-zinc-300 font-semibold">{activePoint.lowerBound.toFixed(digits)}</span> — <span className="text-zinc-300 font-semibold">{activePoint.upperBound.toFixed(digits)}</span>
+            Beklenen Aralık: <span className="text-zinc-200 font-mono font-semibold">{activePoint.lowerBound.toFixed(digits)}</span> — <span className="text-zinc-200 font-mono font-semibold">{activePoint.upperBound.toFixed(digits)}</span>
           </div>
           <div>
-            Model Güveni: <strong className="text-emerald-400">%{activePoint.confidenceScore}</strong>
+            Güven Oranı: <strong className="text-emerald-400 font-mono">%{activePoint.confidenceScore}</strong>
           </div>
         </div>
       </div>

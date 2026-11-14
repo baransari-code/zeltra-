@@ -51,34 +51,34 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
   const structurePillarScore = Math.round(((plan.supportSafetyScore || 75) / 100) * 25); // /25
   const newsPillarScore = signal.newsSentiment?.bias === 'POZİTİF' ? 19 : signal.newsSentiment?.bias === 'NÖTR' ? 15 : 9; // /20
   const totalConfluence = Math.min(99, trendPillarScore + momentumPillarScore + structurePillarScore + newsPillarScore);
-  const orderRoutingLabel =
-    signal.action === 'BEKLE (HOLD)'
-      ? 'EMİR YOK (KENARDA BEKLE)'
-      : signal.idealEntryRange.status === 'ALIM_BÖLGESİNDE'
-      ? 'KURUMSAL LİMİT / PİYASA EMRİ'
-      : `GERİ ÇEKİLME LİMİT EMRİ (${signal.idealEntryRange.max.toFixed(asset.digits)})`;
 
   return (
     <div className="border border-zinc-800 bg-zinc-900 rounded p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* 1. ÜST KOKPİT: REJİM BAZLI 3 SANİYELİK KARAR ŞERİDİ */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
         <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             <span className="text-xl font-bold text-white tracking-tight">{signal.symbol}</span>
             <span className="text-xs text-zinc-400 font-normal">({asset.name})</span>
-            {/* Minimal Karar Rozeti (Glowsuz, Sade Koyu Finans Teması) */}
-            <span className="text-xs px-2.5 py-0.5 rounded font-mono font-medium border border-zinc-700 bg-zinc-800 text-zinc-100">
+            <span className="text-xs text-zinc-600">•</span>
+            <span
+              className={`text-sm font-semibold ${
+                signal.action === 'AL (BUY)'
+                  ? 'text-emerald-400'
+                  : signal.action === 'SAT (SELL)'
+                  ? 'text-rose-400'
+                  : 'text-amber-400'
+              }`}
+            >
               {signal.decisionBadge}
             </span>
-            {/* İdeal Alım Kuşağı Durum Rozeti */}
-            <span className="text-xs text-zinc-400 font-mono">
-              [{signal.idealEntryRange.status === 'ALIM_BÖLGESİNDE' ? 'İdeal Fiyat Seviyesinde' : 'Düzeltme Bekleniyor'}]
+            <span className="text-xs text-zinc-600">•</span>
+            <span className="text-xs text-zinc-400">
+              {signal.idealEntryRange.status === 'ALIM_BÖLGESİNDE' ? 'İdeal Fiyat Seviyesinde' : 'Düzeltme Bekleniyor'}
             </span>
-            <span className="text-[11px] px-2 py-0.5 rounded font-mono bg-zinc-950 border border-zinc-800 text-zinc-300">
-              İcra: {orderRoutingLabel}
-            </span>
-            <span className="text-[11px] px-2 py-0.5 rounded font-mono bg-zinc-950 border border-zinc-800 text-emerald-400">
-              Uyumluluk: {totalConfluence}/100
+            <span className="text-xs text-zinc-600">•</span>
+            <span className="text-xs text-zinc-400">
+              Sinyal Gücü: <strong className="text-zinc-200">{totalConfluence}/100</strong>
             </span>
           </div>
 
@@ -115,37 +115,38 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
 
       {/* CANLI HABER & MAKRO RİSK ANALİZİ KALKANI */}
       {signal.newsSentiment && (
-        <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1.5 text-xs">
+        <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1.5 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-              <span className="text-zinc-300 font-semibold">Canlı Haber & Risk Değerlendirmesi:</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-zinc-300 font-semibold">Canlı Haber Etkisi:</span>
               <span
-                className={`px-2 py-0.5 rounded border font-semibold ${
+                className={`font-semibold ${
                   signal.newsSentiment.bias === 'POZİTİF'
-                    ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                    ? 'text-emerald-400'
                     : signal.newsSentiment.bias === 'NEGATİF'
-                    ? 'bg-rose-950/60 border-rose-800 text-rose-300'
-                    : 'bg-zinc-900 border-zinc-700 text-zinc-300'
+                    ? 'text-rose-400'
+                    : 'text-zinc-300'
                 }`}
               >
                 {signal.newsSentiment.bias === 'POZİTİF'
-                  ? 'OLUMLU HABER AKIŞI'
+                  ? 'Olumlu Haber Akışı'
                   : signal.newsSentiment.bias === 'NEGATİF'
-                  ? 'OLUMSUZ HABER RİSKİ'
-                  : 'NÖTR HABER AKIŞI'}
+                  ? 'Olumsuz Haber Riski'
+                  : 'Nötr Haber Akışı'}
               </span>
+              <span className="text-zinc-600">•</span>
               <span className="text-zinc-400">
                 Kaynak: <strong className="text-zinc-200">{signal.newsSentiment.source}</strong> ({signal.newsSentiment.publishedAt})
               </span>
             </div>
-            <span className="font-mono text-[11px] text-zinc-300 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
+            <span className="text-zinc-400">
               {signal.newsSentiment.riskAdjustmentLabel}
             </span>
           </div>
           <div className="text-zinc-200 font-medium">
             Manşet: &ldquo;{signal.newsSentiment.headline}&rdquo;
           </div>
-          <div className="text-[11px] text-zinc-400">
+          <div className="text-zinc-400">
             {signal.newsSentiment.simpleImpact}
           </div>
         </div>
@@ -343,23 +344,6 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
                 <strong>Plan:</strong> {signal.scenarios.scenarioB.actionPlan}
               </p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. HABER ETKİSİ ROZETİ */}
-      {signal.newsSentiment && (
-        <div className="bg-zinc-950 border border-zinc-800 p-2.5 rounded flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <div className="flex items-center space-x-2">
-            <span className="font-mono text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700 px-1.5 py-0.5 rounded">
-              Haber Etkisi
-            </span>
-            <span className="text-zinc-200 font-medium">
-              {signal.newsSentiment.headline}
-            </span>
-          </div>
-          <div className="text-zinc-400 text-[11px] shrink-0">
-            {signal.newsSentiment.simpleImpact}
           </div>
         </div>
       )}

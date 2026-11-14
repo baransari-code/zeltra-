@@ -79,13 +79,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('test')}
-              className={`px-3 py-1.5 rounded transition-colors border font-mono text-xs ${
-                activeTab === 'test'
-                  ? 'text-emerald-300 font-semibold bg-emerald-950/60 border-emerald-800'
-                  : 'text-emerald-400/90 border-zinc-800 bg-zinc-900/60 hover:text-emerald-300 hover:border-emerald-900'
+              className={`px-3 py-1.5 rounded transition-colors ${
+                activeTab === 'test' ? 'text-white font-medium bg-zinc-800' : 'text-zinc-400 hover:text-white'
               }`}
             >
-              /test (250B TL Otonom)
+              Otonom Portföy (250B TL)
             </button>
           </nav>
         </div>
@@ -141,35 +139,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <span className="font-semibold text-zinc-300">{n.source}</span>
                           <span>{n.publishedAt}</span>
                         </div>
-                        {/* Canlı Haber Duyarlılık (Olumlu/Olumsuz) & Varlık Etki Rozetleri */}
-                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5 font-mono text-[10px]">
+                        <div className="flex flex-wrap items-center gap-2 mb-1 text-[11px] text-zinc-400">
                           <span
-                            className={`px-1.5 py-0.5 rounded border font-semibold ${
+                            className={`font-medium ${
                               n.sentiment === 'POZİTİF'
-                                ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                                ? 'text-emerald-400'
                                 : n.sentiment === 'NEGATİF'
-                                ? 'bg-rose-950/60 border-rose-800 text-rose-300'
-                                : 'bg-zinc-900 border-zinc-700 text-zinc-300'
+                                ? 'text-rose-400'
+                                : 'text-zinc-300'
                             }`}
                           >
                             {n.sentiment === 'POZİTİF'
-                              ? 'OLUMLU (ALIM DESTEĞİ)'
+                              ? 'Olumlu Etki'
                               : n.sentiment === 'NEGATİF'
-                              ? 'OLUMSUZ (SATIŞ RİSKİ)'
-                              : 'NÖTR DENGE'}
+                              ? 'Olumsuz Etki'
+                              : 'Nötr'}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
-                            Etki: {n.impact}
-                          </span>
-                          {Array.isArray(n.affectedAssets) &&
-                            n.affectedAssets.map((sym) => (
-                              <span
-                                key={sym}
-                                className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-zinc-200"
-                              >
-                                {sym}
-                              </span>
-                            ))}
+                          {Array.isArray(n.affectedAssets) && n.affectedAssets.length > 0 && (
+                            <span className="text-zinc-400">
+                              • {n.affectedAssets.join(', ')}
+                            </span>
+                          )}
                         </div>
                         <div className="font-medium text-white mb-1">{n.title}</div>
                         <div className="text-zinc-400 text-[11px] leading-relaxed mb-1.5">{n.summary}</div>
@@ -208,13 +198,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('test')}
-          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors font-mono ${
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors ${
             activeTab === 'test'
-              ? 'bg-emerald-950/70 text-emerald-300 font-semibold border-emerald-800'
-              : 'bg-zinc-900/60 text-emerald-400 border-zinc-800'
+              ? 'bg-zinc-800 text-white font-medium border-zinc-700'
+              : 'bg-zinc-900/60 text-zinc-400 border-zinc-800'
           }`}
         >
-          /test (250B TL Bot)
+          Otonom Portföy (250B TL)
         </button>
         <button
           onClick={() => setActiveTab('catalog')}

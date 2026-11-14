@@ -194,9 +194,9 @@ export const App: React.FC = () => {
               Canlı USD/TRY: <strong className="text-zinc-200">{liveUsdTry.toFixed(2)} ₺</strong>
             </div>
 
-            <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400 border border-emerald-900/60 bg-emerald-950/30 px-2 py-0.5 rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-sans">Canlı Borsa & Otonom Kayıt Aktif</span>
+            <div className="flex items-center space-x-1.5 text-xs text-zinc-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span className="font-sans">Canlı Piyasa Aktif</span>
             </div>
           </div>
         </div>
