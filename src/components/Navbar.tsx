@@ -29,10 +29,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center space-x-6">
           <button
             onClick={() => setActiveTab('signals')}
-            className="text-base font-bold tracking-tight text-white flex items-center space-x-2"
+            className="text-base font-bold tracking-tight text-white flex items-center space-x-2.5"
           >
+            <img
+              src="/zeltra-logo.png"
+              alt="ZELTRA Logo"
+              className="h-8 w-auto object-contain select-none"
+            />
             <span>ZELTRA</span>
-            <span className="text-[11px] font-normal text-zinc-400 font-mono">Kantitatif Piyasa Analizi</span>
+            <span className="text-[11px] font-normal text-zinc-400 font-mono hidden sm:inline">
+              Kantitatif Piyasa Analizi
+            </span>
           </button>
 
           {/* Traditional Navigation Links */}
