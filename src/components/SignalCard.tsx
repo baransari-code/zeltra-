@@ -4,9 +4,10 @@ import { TradeSignal, Asset } from '../types';
 interface SignalCardProps {
   signal: TradeSignal;
   asset: Asset;
+  liveUsdTry?: number;
 }
 
-export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset }) => {
+export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTry = 38.55 }) => {
   const [copied, setCopied] = useState(false);
   const [userBalance, setUserBalance] = useState<number>(10000);
   const [activePreset, setActivePreset] = useState<number>(10000);
@@ -24,8 +25,8 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset }) => {
     setActivePreset(val);
   };
 
-  // Sermaye Kalkanı Dinamik Parasal Hesaplama
-  const usdToTry = 38.5;
+  // Sermaye Kalkanı Dinamik Parasal Hesaplama (Canlı USD/TRY Kuruyla)
+  const usdToTry = liveUsdTry > 10 ? liveUsdTry : 38.55;
   const plan = signal.executivePlan;
   const userRiskUSD = +(userBalance * (plan.maxLossPercent / 100)).toFixed(1);
   const userRewardUSD = +(userRiskUSD * signal.riskRewardRatio).toFixed(1);

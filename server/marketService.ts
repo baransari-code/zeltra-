@@ -269,6 +269,27 @@ let cachedNews: any[] = [];
 let lastNewsFetchTime = 0;
 const NEWS_CACHE_TTL = 60 * 1000; // 60 saniye tazeleme döngüsü
 
+// Canlı USD/TRY Kur Önbelleği
+let cachedUsdTryRate = 38.55;
+let lastUsdTryFetchTime = 0;
+
+export async function fetchLiveUsdTryRate(): Promise<number> {
+  const now = Date.now();
+  if (now - lastUsdTryFetchTime < 5 * 60 * 1000 && cachedUsdTryRate > 10) {
+    return cachedUsdTryRate;
+  }
+  try {
+    const data = await fetchReal1YearData('USD/TRY');
+    if (data && data.price > 10) {
+      cachedUsdTryRate = +data.price.toFixed(4);
+      lastUsdTryFetchTime = now;
+    }
+  } catch {
+    // Fallback to last known live rate
+  }
+  return cachedUsdTryRate;
+}
+
 export async function translateToTurkish(text: string): Promise<string> {
   if (!text || text.trim().length === 0) return '';
   const trimmed = text.trim();
@@ -564,21 +585,77 @@ export function generate24HourPredictions(
   const now = Date.now();
   const predictions: HourlyPrediction[] = [];
 
-  // Günlük ATR'den saatlik volatilite marjı hesabı
-  const lastSlice = candles.slice(-14);
-  let trSum = 0;
-  for (let i = 1; i < lastSlice.length; i++) {
-    const cur = lastSlice[i];
-    const prev = lastSlice[i - 1];
-    trSum += Math.max(cur.high - cur.low, Math.abs(cur.high - prev.close), Math.abs(cur.low - prev.close));
+  // 1. Wilder's RMA tabanlı gerçek Günlük ATR & Saatlik Volatilite
+  const atrPeriod = 14;
+  let dailyATR = currentPrice * 0.006;
+  if (candles.length > 2) {
+    const trList: number[] = [];
+    for (let i = 1; i < candles.length; i++) {
+      const cur = candles[i];
+      const prev = candles[i - 1];
+      trList.push(Math.max(cur.high - cur.low, Math.abs(cur.high - prev.close), Math.abs(cur.low - prev.close)));
+    }
+    let rma = trList.slice(0, Math.min(atrPeriod, trList.length)).reduce((a, b) => a + b, 0) / Math.min(atrPeriod, trList.length);
+    for (let i = atrPeriod; i < trList.length; i++) {
+      rma = (rma * (atrPeriod - 1) + trList[i]) / atrPeriod;
+    }
+    dailyATR = rma || (currentPrice * 0.006);
   }
-  const dailyATR = (trSum / (lastSlice.length - 1 || 1)) || (currentPrice * 0.006);
   const hourlyATR = dailyATR / Math.sqrt(24);
 
-  // Teknik momentum eğimi
-  const recentCloses = candles.slice(-20).map((c: any) => c.close);
-  const slope = (recentCloses[recentCloses.length - 1] - recentCloses[0]) / (recentCloses.length || 1);
-  const baseTechnicalUp = slope >= 0;
+  // 2. Çok Faktörlü Kantitatif Yön & Momentum Motoru (EMA8/EMA21 + 3-Bar ROC + Wilder RSI-14 Esnekliği)
+  const closes = candles.map((c: any) => c.close);
+  const calcEMAVal = (arr: number[], period: number): number => {
+    if (arr.length === 0) return currentPrice;
+    const k = 2 / (period + 1);
+    let ema = arr.slice(0, Math.min(period, arr.length)).reduce((a, b) => a + b, 0) / Math.min(period, arr.length);
+    for (let i = period; i < arr.length; i++) {
+      ema = arr[i] * k + ema * (1 - k);
+    }
+    return ema;
+  };
+
+  const ema8 = calcEMAVal(closes, 8);
+  const ema21 = calcEMAVal(closes, 21);
+  const ema50 = calcEMAVal(closes, 50);
+
+  // Wilder's RSI-14 Hesabı
+  let rsi14 = 50;
+  if (closes.length > 15) {
+    let avgGain = 0;
+    let avgLoss = 0;
+    for (let i = 1; i <= 14; i++) {
+      const diff = closes[i] - closes[i - 1];
+      if (diff >= 0) avgGain += diff;
+      else avgLoss -= diff;
+    }
+    avgGain /= 14;
+    avgLoss /= 14;
+    for (let i = 15; i < closes.length; i++) {
+      const diff = closes[i] - closes[i - 1];
+      avgGain = (avgGain * 13 + (diff > 0 ? diff : 0)) / 14;
+      avgLoss = (avgLoss * 13 + (diff < 0 ? -diff : 0)) / 14;
+    }
+    rsi14 = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+  }
+
+  // Kısa vadeli 3 günlük ivme ve orta vadeli EMA uyumu
+  const cLen = closes.length;
+  const shortImpulse = cLen >= 4 ? (currentPrice - closes[cLen - 4]) / (dailyATR * 3 || 1) : 0;
+  const emaSpread = (ema8 - ema21) / (dailyATR || 1);
+  const macroBias = currentPrice >= ema50 ? 0.25 : -0.25;
+
+  // RSI Aşırı Alım (>70) / Aşırı Satım (<30) Ortalamaya Dönüş (Mean-Reversion) Düzeltmesi
+  let rsiReversionForce = 0;
+  if (rsi14 > 68) {
+    rsiReversionForce = -((rsi14 - 68) / 32) * 0.65;
+  } else if (rsi14 < 32) {
+    rsiReversionForce = ((32 - rsi14) / 32) * 0.65;
+  }
+
+  // Birleşik Kantitatif Drift Katsayısı (-1.2 ile +1.2 arası normalize güç)
+  const rawCompositeSignal = (shortImpulse * 0.45) + (emaSpread * 0.35) + macroBias + rsiReversionForce;
+  const compositeDriftScore = Math.max(-1.1, Math.min(1.1, rawCompositeSignal));
 
   // CANLI HABER ŞOKU VE DUYARLILIK UYARLAMASI
   const newsSentiment = newsContext?.sentimentScore || 0;
@@ -610,11 +687,11 @@ export function generate24HourPredictions(
 
     const timeFactor = Math.sqrt(h);
 
-    // Teknik sapma
-    const technicalDrift = (baseTechnicalUp ? 1 : -1) * (0.24 * timeFactor * hourlyATR * sessionVolFactor);
+    // Çok faktörlü teknik sapma (EMA8/21 + Kısa İvme + RSI Ortalamaya Dönüş)
+    const technicalDrift = compositeDriftScore * (0.26 * timeFactor * hourlyATR * sessionVolFactor);
     // Canlı Haber Şoku: İlk 8 saatte en yüksek ağırlıkla fiyata yansır
     const newsDecay = Math.exp(-h / 10);
-    const newsDrift = (newsSentiment * 0.48 * newsDecay * timeFactor * hourlyATR);
+    const newsDrift = (newsSentiment * 0.45 * newsDecay * timeFactor * hourlyATR);
 
     const totalDrift = technicalDrift + newsDrift;
     const predictedPrice = +(currentPrice + totalDrift).toFixed(digits);
@@ -627,16 +704,16 @@ export function generate24HourPredictions(
     const lowerBound = +(predictedPrice - bandWidth).toFixed(digits);
     const expectedMovePercent = +(((predictedPrice - currentPrice) / currentPrice) * 100).toFixed(3);
 
-    const expectedDirection = totalDrift >= 0 ? 'YÜKSELİŞ' : 'DÜŞÜŞ';
-    const confidenceScore = Math.max(68, Math.floor(94 - h * 0.88 - (newsShock * 4)));
+    const expectedDirection = Math.abs(expectedMovePercent) < 0.005 ? 'YATAY' : totalDrift >= 0 ? 'YÜKSELİŞ' : 'DÜŞÜŞ';
+    const confidenceScore = Math.max(72, Math.floor(95 - h * 0.82 - (newsShock * 3.5)));
 
     let rationale = '';
     if (isNewsActive && h <= 6) {
       rationale = `Canlı Haber Uyarlaması: "${newsContext?.impactingHeadline?.slice(0, 52)}..." sebebiyle fiyat projeksiyonu anlık revize edildi.`;
     } else if (h <= 12) {
-      rationale = `${session}: Seans likidite havuzu ve haber sindirme dengesi.`;
+      rationale = `${session}: EMA8/21 akışı (RSI: ${rsi14.toFixed(1)}) ve seans likidite dengesi.`;
     } else {
-      rationale = `${session}: 24 saatlik tam döngü ve günlük ATR kapanış hedefi.`;
+      rationale = `${session}: 24 saatlik tam döngü ve günlük Wilder ATR kapanış hedefi.`;
     }
 
     predictions.push({

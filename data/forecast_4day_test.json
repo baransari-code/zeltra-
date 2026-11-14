@@ -4,7 +4,7 @@
   "startDate": "2026-11-10T17:57:53.564Z",
   "targetEndDate": "2026-11-14T17:57:53.564Z",
   "durationHours": 96,
-  "lastTickTime": "2026-11-10T19:30:45.887Z",
+  "lastTickTime": "2026-11-10T20:30:45.913Z",
   "testSymbols": [
     "EUR/USD",
     "XAU/USD",
@@ -47,7 +47,12 @@
               "upperBound": 1.118,
               "lowerBound": 1.1128,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 1.1169,
+              "realizedTimestamp": 1794340822778,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.134
             },
             {
               "hour": 3,
@@ -273,12 +278,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 1,
-        "inCorridorCount": 1,
+        "totalEvaluated": 2,
+        "inCorridorCount": 2,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
         "directionAccuracyPercent": 0,
-        "meanAbsoluteErrorPercent": 0.116
+        "meanAbsoluteErrorPercent": 0.125
       }
     },
     "XAU/USD": {
@@ -315,7 +320,12 @@
               "upperBound": 4056.42,
               "lowerBound": 3990.42,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 4039.8,
+              "realizedTimestamp": 1794340822778,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.405
             },
             {
               "hour": 3,
@@ -541,12 +551,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 1,
-        "inCorridorCount": 1,
+        "totalEvaluated": 2,
+        "inCorridorCount": 2,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
         "directionAccuracyPercent": 0,
-        "meanAbsoluteErrorPercent": 0.317
+        "meanAbsoluteErrorPercent": 0.361
       }
     },
     "USD/JPY": {
@@ -583,7 +593,12 @@
               "upperBound": 159.21,
               "lowerBound": 158.53,
               "expectedDirection": "YÜKSELİŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 158.781,
+              "realizedTimestamp": 1794340822778,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.056
             },
             {
               "hour": 3,
@@ -809,12 +824,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 1,
-        "inCorridorCount": 1,
+        "totalEvaluated": 2,
+        "inCorridorCount": 2,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 1,
-        "directionAccuracyPercent": 100,
-        "meanAbsoluteErrorPercent": 0.037
+        "directionAccuracyPercent": 50,
+        "meanAbsoluteErrorPercent": 0.046
       }
     },
     "BTC/USD": {
@@ -851,7 +866,12 @@
               "upperBound": 73936.14,
               "lowerBound": 72181.9,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 73354.42,
+              "realizedTimestamp": 1794340822778,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.403
             },
             {
               "hour": 3,
@@ -1077,12 +1097,12 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 1,
-        "inCorridorCount": 1,
+        "totalEvaluated": 2,
+        "inCorridorCount": 2,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
         "directionAccuracyPercent": 0,
-        "meanAbsoluteErrorPercent": 0.479
+        "meanAbsoluteErrorPercent": 0.441
       }
     },
     "NAS100": {
@@ -1119,7 +1139,12 @@
               "upperBound": 25078.23,
               "lowerBound": 24668.13,
               "expectedDirection": "DÜŞÜŞ",
-              "evaluated": false
+              "evaluated": true,
+              "realizedPrice": 24985.342,
+              "realizedTimestamp": 1794340822778,
+              "isInsideCorridor": true,
+              "directionHit": false,
+              "errorPercent": 0.449
             },
             {
               "hour": 3,
@@ -1345,19 +1370,19 @@
         }
       ],
       "metrics": {
-        "totalEvaluated": 1,
-        "inCorridorCount": 1,
+        "totalEvaluated": 2,
+        "inCorridorCount": 2,
         "corridorAccuracyPercent": 100,
         "directionHitCount": 0,
         "directionAccuracyPercent": 0,
-        "meanAbsoluteErrorPercent": 0.349
+        "meanAbsoluteErrorPercent": 0.399
       }
     }
   },
   "overallMetrics": {
-    "totalCheckpointsEvaluated": 5,
+    "totalCheckpointsEvaluated": 10,
     "overallCorridorAccuracy": 100,
-    "overallDirectionalAccuracy": 20,
-    "averageErrorPercent": 0.26
+    "overallDirectionalAccuracy": 10,
+    "averageErrorPercent": 0.274
   }
 }

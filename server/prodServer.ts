@@ -7,11 +7,18 @@ import {
   fetchRealFinancialNews,
   generate24HourPredictions,
   extractNewsSentimentForAsset,
+  fetchLiveUsdTryRate,
 } from './marketService';
 import {
   loadTestState,
   executeValidationCycle,
 } from './forecastValidator';
+import {
+  loadOrInitAutonomousLedger,
+  executeAutonomousTradingTick,
+  toggleAutonomousBot,
+  resetAutonomousBot,
+} from './autonomousTrader';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +65,33 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: err?.message || 'Bilinmeyen hata' }));
+    }
+    return;
+  }
+
+  // 1b. API: Gerçek 24 Saatlik Haber Akışı
+  if (pathname === '/api/real-news') {
+    try {
+      const news = await fetchRealFinancialNews();
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(news));
+    } catch (err: any) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: err?.message || 'Haber akışı alınamadı' }));
+    }
+    return;
+  }
+
+  // 1c. API: Canlı USD/TRY Kur Uç Noktası
+  if (pathname === '/api/live-fx-rate') {
+    try {
+      const usdTry = await fetchLiveUsdTryRate();
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ usdTry }));
+    } catch {
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ usdTry: 38.55 }));
     }
     return;
   }
@@ -130,7 +164,32 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 4. STATİK DOSYA SUNUMU (SPA - React Frontend)
+  // 3b. API: 250.000 TL Otonom Canlı İşlem Motoru (/test sayfası API'si)
+  if (pathname === '/api/autonomous-test') {
+    try {
+      const action = urlObj.searchParams.get('action') || 'status';
+      let state;
+      if (action === 'tick' || action === 'scan') {
+        state = await executeAutonomousTradingTick(true);
+      } else if (action === 'toggle') {
+        const running = urlObj.searchParams.get('running') === 'true';
+        state = await toggleAutonomousBot(running);
+      } else if (action === 'reset') {
+        state = await resetAutonomousBot(250000);
+      } else {
+        state = await executeAutonomousTradingTick(false);
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(state));
+    } catch (err: any) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: err?.message || 'Otonom işlem motoru hatası' }));
+    }
+    return;
+  }
+
+  // 4. STATİK DOSYA SUNUMU (SPA - React Frontend; /test dahil tüm rotaları index.html'e yönlendir)
   let filePath = path.join(DIST_DIR, pathname);
   if (pathname === '/' || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     filePath = path.join(DIST_DIR, 'index.html');
@@ -150,13 +209,17 @@ const server = http.createServer(async (req, res) => {
 // Sunucuyu başlat
 server.listen(PORT, () => {
   console.log(`[ZELTRA 7/24 Sunucu] Port ${PORT} üzerinde aktif.`);
-  console.log(`[ZELTRA 7/24 Sunucu] 4 Günlük Doğrulama Testi arka plan döngüsü başlatıldı.`);
+  console.log(`[ZELTRA 7/24 Sunucu] 4 Günlük Doğrulama Testi ve 250.000 TL Otonom İşlem Motoru arka plan döngüsü başlatıldı.`);
 
-  // İlk tetikleme ve her 30 dakikada bir otomatik kontrol
+  // İlk tetikleme ve periyodik otomatik kontrol
   setTimeout(() => {
     executeValidationCycle().catch(console.error);
+    loadOrInitAutonomousLedger().then(() => executeAutonomousTradingTick(false)).catch(console.error);
   }, 2000);
   setInterval(() => {
     executeValidationCycle().catch(console.error);
   }, 30 * 60 * 1000);
+  setInterval(() => {
+    executeAutonomousTradingTick(false).catch(console.error);
+  }, 5 * 60 * 1000);
 });

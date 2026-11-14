@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Bell, ExternalLink } from 'lucide-react';
 import { NewsNotification } from '../types';
 
+export type AppTab = 'signals' | 'catalog' | 'news' | 'glossary' | 'calculator' | 'test';
+
 interface NavbarProps {
   notifications: NewsNotification[];
   onMarkAllAsRead: () => void;
   onSimulateBreakingNews: () => void;
-  activeTab: 'signals' | 'catalog' | 'news' | 'glossary' | 'calculator';
-  setActiveTab: (tab: 'signals' | 'catalog' | 'news' | 'glossary' | 'calculator') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -74,6 +76,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               Risk & Lot
+            </button>
+            <button
+              onClick={() => setActiveTab('test')}
+              className={`px-3 py-1.5 rounded transition-colors border font-mono text-xs ${
+                activeTab === 'test'
+                  ? 'text-emerald-300 font-semibold bg-emerald-950/60 border-emerald-800'
+                  : 'text-emerald-400/90 border-zinc-800 bg-zinc-900/60 hover:text-emerald-300 hover:border-emerald-900'
+              }`}
+            >
+              /test (250B TL Otonom)
             </button>
           </nav>
         </div>
@@ -163,6 +175,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           Analiz & Sinyal
+        </button>
+        <button
+          onClick={() => setActiveTab('test')}
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors font-mono ${
+            activeTab === 'test'
+              ? 'bg-emerald-950/70 text-emerald-300 font-semibold border-emerald-800'
+              : 'bg-zinc-900/60 text-emerald-400 border-zinc-800'
+          }`}
+        >
+          /test (250B TL Bot)
         </button>
         <button
           onClick={() => setActiveTab('catalog')}

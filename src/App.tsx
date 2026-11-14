@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Navbar } from './components/Navbar';
+import { Navbar, AppTab } from './components/Navbar';
 import { SignalCard } from './components/SignalCard';
 import { PriceChart } from './components/PriceChart';
 import { TechnicalMatrix } from './components/TechnicalMatrix';
@@ -8,6 +8,7 @@ import { RiskCalculator } from './components/RiskCalculator';
 import { MarketCatalog } from './components/MarketCatalog';
 import { ForexGlossary } from './components/ForexGlossary';
 import { HourlyForecastView } from './components/HourlyForecastView';
+import { AutonomousTestView } from './components/AutonomousTestView';
 import {
   ALL_ASSETS,
   fetchRealAssetData,
@@ -20,16 +21,59 @@ import { Asset, Candle, NewsNotification } from './types';
 
 export const App: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>(ALL_ASSETS);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('EUR/USD');
-  const [activeTab, setActiveTab] = useState<'signals' | 'catalog' | 'news' | 'glossary' | 'calculator'>('signals');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('XAU/USD');
+  const [activeTab, setActiveTabState] = useState<AppTab>(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/test') {
+      return 'test';
+    }
+    return 'signals';
+  });
   const [candles, setCandles] = useState<Candle[]>([]);
   const [notifications, setNotifications] = useState<NewsNotification[]>([]);
+  const [liveUsdTry, setLiveUsdTry] = useState<number>(38.55);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const setActiveTab = useCallback((tab: AppTab) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      const targetPath = tab === 'test' ? '/test' : '/';
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, '', targetPath);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (window.location.pathname === '/test') {
+        setActiveTabState('test');
+      } else {
+        setActiveTabState('signals');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const selectedAsset = useMemo(() => {
     return assets.find((a) => a.symbol === selectedSymbol) || assets[0];
   }, [assets, selectedSymbol]);
+
+  // Canlı USD/TRY Kurunu Çek
+  const loadLiveFxRate = useCallback(async () => {
+    try {
+      const res = await fetch('/api/live-fx-rate');
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.usdTry && json.usdTry > 10) {
+          setLiveUsdTry(json.usdTry);
+        }
+      }
+    } catch {
+      // Fallback korunur
+    }
+  }, []);
 
   // Canlı Gerçek 1 Yıllık Borsa Verisini Çek
   const loadRealMarketData = useCallback(async (symbol: string) => {
@@ -38,6 +82,9 @@ export const App: React.FC = () => {
     try {
       const realData = await fetchRealAssetData(symbol);
       setCandles(realData.candles);
+      if (symbol === 'USD/TRY' && realData.price > 10) {
+        setLiveUsdTry(realData.price);
+      }
 
       setAssets((prev) =>
         prev.map((a) =>
@@ -76,28 +123,35 @@ export const App: React.FC = () => {
   }, [selectedSymbol, loadRealMarketData]);
 
   useEffect(() => {
+    loadLiveFxRate();
     loadRealNews();
-    const newsTimer = setInterval(loadRealNews, 120000);
+    const newsTimer = setInterval(() => {
+      loadRealNews();
+      loadLiveFxRate();
+    }, 120000);
     return () => clearInterval(newsTimer);
-  }, [loadRealNews]);
+  }, [loadRealNews, loadLiveFxRate]);
 
   const technicals = useMemo(() => {
     return analyzeTechnicals(candles);
   }, [candles]);
 
   const currentSignal = useMemo(() => {
-    return generateQuantitativeSignal(selectedAsset, candles);
-  }, [selectedAsset, candles]);
+    return generateQuantitativeSignal(selectedAsset, candles, liveUsdTry);
+  }, [selectedAsset, candles, liveUsdTry]);
 
   const handleMarkAllAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }, []);
 
-  const handleGoToAnalysis = useCallback((symbol: string) => {
-    setSelectedSymbol(symbol);
-    setActiveTab('signals');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  const handleGoToAnalysis = useCallback(
+    (symbol: string) => {
+      setSelectedSymbol(symbol);
+      setActiveTab('signals');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [setActiveTab]
+  );
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
@@ -136,9 +190,13 @@ export const App: React.FC = () => {
               </span>
             </div>
 
+            <div className="text-zinc-400 hidden md:block">
+              Canlı USD/TRY: <strong className="text-zinc-200">{liveUsdTry.toFixed(2)} ₺</strong>
+            </div>
+
             <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400 border border-emerald-900/60 bg-emerald-950/30 px-2 py-0.5 rounded">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-sans">Canlı Borsa Akışı</span>
+              <span className="font-sans">Canlı Borsa & Otonom Kayıt Aktif</span>
             </div>
           </div>
         </div>
@@ -155,7 +213,9 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-2.5 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
-        {isLoading && candles.length === 0 ? (
+        {activeTab === 'test' ? (
+          <AutonomousTestView />
+        ) : isLoading && candles.length === 0 ? (
           <div className="p-8 text-center text-xs text-zinc-400 font-mono">
             {selectedSymbol} için son 1 yıllık resmi borsa mumları ve anlık fiyat yükleniyor...
           </div>
@@ -163,7 +223,7 @@ export const App: React.FC = () => {
           <>
             {activeTab === 'signals' && (
               <div className="space-y-4">
-                <SignalCard signal={currentSignal} asset={selectedAsset} />
+                <SignalCard signal={currentSignal} asset={selectedAsset} liveUsdTry={liveUsdTry} />
                 <HourlyForecastView
                   symbol={selectedAsset.symbol}
                   currentPrice={selectedAsset.price}
@@ -209,8 +269,8 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-zinc-800 bg-zinc-950 py-4 text-xs text-zinc-500">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>TransZel • Çok Kaynaklı Son 24 Saat Haberleri & 7 Saatlik Tahmin Modeli</div>
-          <div className="font-mono text-zinc-400">nexustrans | Belgex | Toykarot | TransZel</div>
+          <div>ZELTRA • Kurumsal Kantitatif Analiz, Canlı İşlem Kütüğü & 250.000 TL Otonom Portföy Motoru</div>
+          <div className="font-mono text-zinc-400">nexustrans | Belgex | Toykarot | ZELTRA</div>
         </div>
       </footer>
     </div>

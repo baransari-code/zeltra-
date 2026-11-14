@@ -6,11 +6,18 @@ import {
   fetchRealFinancialNews,
   generate24HourPredictions,
   extractNewsSentimentForAsset,
+  fetchLiveUsdTryRate,
 } from './server/marketService'
 import {
   loadTestState,
   executeValidationCycle,
 } from './server/forecastValidator'
+import {
+  loadOrInitAutonomousLedger,
+  executeAutonomousTradingTick,
+  toggleAutonomousBot,
+  resetAutonomousBot,
+} from './server/autonomousTrader'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -105,13 +112,54 @@ export default defineConfig({
           }
         });
 
-        // İlk başlangıç testi döngüsünü tetikle ve her 30 dakikada bir otomatik yürüt
+        // 250.000 TL Otonom Canlı İşlem Motoru (/test sayfası API'si)
+        server.middlewares.use('/api/autonomous-test', async (req, res) => {
+          try {
+            const urlObj = new URL(req.url || '', `http://${req.headers.host}`);
+            const action = urlObj.searchParams.get('action') || 'status';
+            let state;
+            if (action === 'tick' || action === 'scan') {
+              state = await executeAutonomousTradingTick(true);
+            } else if (action === 'toggle') {
+              const running = urlObj.searchParams.get('running') === 'true';
+              state = await toggleAutonomousBot(running);
+            } else if (action === 'reset') {
+              state = await resetAutonomousBot(250000);
+            } else {
+              state = await executeAutonomousTradingTick(false);
+            }
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(state));
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err?.message || 'Otonom işlem motoru hatası' }));
+          }
+        });
+
+        // Canlı USD/TRY Kur Uç Noktası
+        server.middlewares.use('/api/live-fx-rate', async (_req, res) => {
+          try {
+            const usdTry = await fetchLiveUsdTryRate();
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ usdTry }));
+          } catch {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ usdTry: 38.55 }));
+          }
+        });
+
+        // İlk başlangıç testi döngüsünü tetikle ve periyodik otomatik yürüt
         setTimeout(() => {
           executeValidationCycle().catch(console.error);
+          loadOrInitAutonomousLedger().then(() => executeAutonomousTradingTick(false)).catch(console.error);
         }, 3000);
         setInterval(() => {
           executeValidationCycle().catch(console.error);
         }, 30 * 60 * 1000);
+        setInterval(() => {
+          executeAutonomousTradingTick(false).catch(console.error);
+        }, 5 * 60 * 1000);
       },
     },
   ],
