@@ -132,8 +132,14 @@ export interface TradeSignal {
   scenarios: ConditionalScenarios;
   newsSentiment?: {
     bias: 'POZİTİF' | 'NEGATİF' | 'NÖTR';
+    score: number;
+    impact: 'YÜKSEK' | 'ORTA' | 'DÜŞÜK';
     headline: string;
+    source: string;
+    publishedAt: string;
     simpleImpact: string;
+    riskAdjustmentLabel: string;
+    recommendedRiskMultiplier: number;
   };
   createdAt: string;
   status: 'AKTİF İŞLEM' | 'HEDEFE ULAŞTI' | 'STOPLANDI' | 'BEKLEMEDE';
@@ -149,6 +155,8 @@ export interface NewsNotification {
   sourceUrl?: string;
   impact: 'YÜKSEK' | 'ORTA' | 'DÜŞÜK';
   sentiment: 'POZİTİF' | 'NEGATİF' | 'NÖTR' | 'KRİTİK';
+  sentimentScore?: number;
+  isMacro?: boolean;
   affectedAssets: string[];
   publishedAt: string;
   read: boolean;

@@ -85,12 +85,36 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({ institut
             ) : (
               filteredNews.map((n) => (
                 <div key={n.id} className="py-3 first:pt-1 last:pb-1">
-                  <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-semibold text-zinc-300 font-mono">{n.source}</span>
-                      <span className="text-[10px] bg-zinc-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono">
-                        TR Finans Özeti
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 mb-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 font-mono">
+                      <span className="font-semibold text-zinc-200">{n.source}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${
+                          n.sentiment === 'POZİTİF'
+                            ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                            : n.sentiment === 'NEGATİF'
+                            ? 'bg-rose-950/60 border-rose-800 text-rose-300'
+                            : 'bg-zinc-800 border-zinc-700 text-zinc-300'
+                        }`}
+                      >
+                        {n.sentiment === 'POZİTİF'
+                          ? 'OLUMLU (POZİTİF ETKİ)'
+                          : n.sentiment === 'NEGATİF'
+                          ? 'OLUMSUZ (SATIŞ RİSKİ)'
+                          : 'NÖTR DENGE'}
                       </span>
+                      <span className="text-[10px] bg-zinc-950 border border-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded">
+                        Önem: {n.impact}
+                      </span>
+                      {Array.isArray(n.affectedAssets) &&
+                        n.affectedAssets.map((sym) => (
+                          <span
+                            key={sym}
+                            className="text-[10px] bg-zinc-950 border border-zinc-700 text-white px-1.5 py-0.5 rounded"
+                          >
+                            {sym}
+                          </span>
+                        ))}
                     </div>
                     <span className="font-mono text-zinc-500">{n.publishedAt}</span>
                   </div>

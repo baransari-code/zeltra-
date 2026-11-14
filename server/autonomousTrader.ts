@@ -5,6 +5,8 @@ import {
   fetchReal1YearData,
   fetchRealHourlyHistory,
   fetchLiveUsdTryRate,
+  fetchRealFinancialNews,
+  extractNewsSentimentForAsset,
 } from './marketService';
 
 export interface AutonomousTrade {
@@ -475,16 +477,19 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
   return await bootstrapHistoricalRealTrades(250000);
 }
 
-// Canlı Piyasa Tarama, Açık Pozisyon Güncelleme ve Yeni İşlem Açma Döngüsü
+// Canlı Piyasa Tarama, Açık Pozisyon Güncelleme, Canlı Haber Risk Kalkanı ve Yeni İşlem Açma Döngüsü
 export async function executeAutonomousTradingTick(forceScan = false): Promise<AutonomousLedgerState> {
   const state = await loadOrInitAutonomousLedger();
   const now = Date.now();
   state.lastTickAt = new Date(now).toISOString();
 
-  const usdTry = await fetchLiveUsdTryRate();
+  const [usdTry, liveNews] = await Promise.all([
+    fetchLiveUsdTryRate(),
+    fetchRealFinancialNews().catch(() => []),
+  ]);
   state.liveUsdTry = usdTry;
 
-  // 1. AÇIK POZİSYONLARI CANLI BORSA FİYATLARIYLA GÜNCELLE VE TP/SL DENETLE
+  // 1. AÇIK POZİSYONLARI CANLI BORSA FİYATLARI VE CANLI HABER ŞOKLARIYLA DENETLE
   const remainingOpen: AutonomousTrade[] = [];
 
   for (const pos of state.openPositions) {
@@ -505,6 +510,40 @@ export async function executeAutonomousTradingTick(forceScan = false): Promise<A
 
       const rMultiple = priceDiff / slDist;
       const remainingWeight = pos.tp1Hit ? 0.5 : 1.0;
+
+      // CANLI HABER ACİL RİSK KALKANI:
+      // Açık pozisyonun tam tersi yönünde yüksek etkili flaş bir haber düştüyse (Örn: BTC AL pozisyonundayken "4. Teslimiyet Dalgası / 65.000$ Çöküş" haberi),
+      // fiyatın tam Stop-Loss'a vurmasını beklemeden erken savunma çıkışı yap!
+      const newsCtx = extractNewsSentimentForAsset(pos.symbol, liveNews);
+      const isSevereAdverseNews =
+        (pos.direction === 'AL (LONG)' && newsCtx.sentimentScore <= -0.50) ||
+        (pos.direction === 'SAT (SHORT)' && newsCtx.sentimentScore >= 0.50);
+
+      if (isSevereAdverseNews && !pos.tp1Hit) {
+        const earlyPnL = +(pos.riskAmountTRY * rMultiple * remainingWeight).toFixed(2);
+        pos.realizedPnL_TRY = earlyPnL;
+        pos.unrealizedPnL_TRY = 0;
+        pos.totalPnL_TRY = earlyPnL;
+        pos.totalPnL_Percent = +((earlyPnL / state.initialCapitalTRY) * 100).toFixed(2);
+        pos.closePrice = livePrice;
+        pos.closeTime = new Date(now).toISOString();
+        pos.closeTimestamp = now;
+        pos.status = 'MANUEL_KAPANDI';
+        pos.exitReason = `Canlı Haber Risk Kalkanı: "${newsCtx.impactingHeadline}" (${newsCtx.source}) ters yönlü haber şoku nedeniyle tam stop beklenmeden savunma çıkışı yapıldı.`;
+
+        state.cashBalanceTRY = +(state.cashBalanceTRY + earlyPnL).toFixed(2);
+        state.closedTrades.unshift(pos);
+
+        state.activityLog.unshift({
+          id: `ACT-NEWS-SHIELD-${now}-${pos.symbol}`,
+          timestamp: new Date(now).toISOString(),
+          type: 'SYSTEM',
+          symbol: pos.symbol,
+          message: `HABER RİSK KALKANI DEVREDE: ${pos.symbol} (${pos.direction}) pozisyonu "${newsCtx.impactingHeadline}" olumsuz haberi nedeniyle tam stop zararını beklemeden ${livePrice} seviyesinden savunma amaçlı kapatıldı (${earlyPnL >= 0 ? '+' : ''}${earlyPnL.toLocaleString('tr-TR')} TL).`,
+          pnlImpactTRY: earlyPnL,
+        });
+        continue;
+      }
 
       // TP1 Kontrolü
       const reachedTp1 = pos.direction === 'AL (LONG)'
@@ -626,7 +665,7 @@ export async function executeAutonomousTradingTick(forceScan = false): Promise<A
 
   state.openPositions = remainingOpen;
 
-  // 2. EĞER BOT AKTİFSE VE AÇIK POZİSYON SAYISI < 4 İSE YENİ GERÇEK PİYASA FIRSATLARINI TARA ve GİR
+  // 2. EĞER BOT AKTİFSE VE AÇIK POZİSYON SAYISI < 4 İSE YENİ GERÇEK PİYASA + CANLI HABER TEYİTLİ FIRSATLARI TARA
   if (state.isRunning && (state.openPositions.length < 4 || forceScan)) {
     const openSymbols = new Set(state.openPositions.map((p) => p.symbol));
 
@@ -647,30 +686,58 @@ export async function executeAutonomousTradingTick(forceScan = false): Promise<A
         const ema50 = computeEMA(closes, 50);
         const rsi = computeWilderRSI(closes, 14);
         const dailyAtr = computeWilderATR(candles, 14);
-        // Gün içi / Swing işlem marjı (Günlük ATR'nin %45'i)
         const tradeAtr = dailyAtr * 0.45;
+
+        // Canlı Haber Duyarlılık ve Risk Analizi
+        const newsCtx = extractNewsSentimentForAsset(candidate.symbol, liveNews);
+        const newsScore = newsCtx.sentimentScore;
+        const hasNewsHeadline = Boolean(newsCtx.impactingHeadline);
 
         let direction: 'AL (LONG)' | 'SAT (SHORT)' | null = null;
         let rationale = '';
+        let riskScale = 1.0; // Haber teyidine göre dinamik risk ölçekleme
 
         if (livePrice >= ema50 && ema8 >= ema21 * 0.999 && rsi >= 36 && rsi <= 65) {
-          direction = 'AL (LONG)';
-          rationale = `Trend Pozitif (Fiyat > EMA50), EMA8/21 Alıcı Akışı ve Wilder RSI (${rsi}) Uygun Bölgede.`;
+          if (newsScore <= -0.35) {
+            // Güçlü negatif haber varken ALIM (LONG) VETO EDİLİR!
+            direction = null;
+          } else {
+            direction = 'AL (LONG)';
+            rationale = hasNewsHeadline && newsScore >= 0.2
+              ? `Çift Teyit (Teknik + Olumlu Haber): Fiyat > EMA50, Wilder RSI (${rsi}) ve "${newsCtx.impactingHeadline.slice(0, 55)}..." haberi alımı destekliyor.`
+              : `Trend Pozitif (Fiyat > EMA50), EMA8/21 Alıcı Akışı ve Wilder RSI (${rsi}) Uygun Bölgede (Haber Akışı Nötr/Güvenli).`;
+          }
         } else if (livePrice < ema50 && ema8 <= ema21 * 1.001 && rsi >= 34 && rsi <= 63) {
-          direction = 'SAT (SHORT)';
-          rationale = `Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (${rsi}) Teyitli.`;
+          if (newsScore >= 0.35) {
+            // Güçlü pozitif haber varken SATIŞ (SHORT) VETO EDİLİR!
+            direction = null;
+          } else {
+            direction = 'SAT (SHORT)';
+            rationale = hasNewsHeadline && newsScore <= -0.2
+              ? `Çift Teyit (Teknik + Olumsuz Haber): Fiyat < EMA50, Wilder RSI (${rsi}) ve "${newsCtx.impactingHeadline.slice(0, 55)}..." haberi satış baskısını teyit ediyor.`
+              : `Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (${rsi}) Teyitli.`;
+          }
         } else if (rsi < 33) {
-          direction = 'AL (LONG)';
-          rationale = `Aşırı Satım Tepki Bölgesi (Wilder RSI: ${rsi}) + Kurumsal Destek Alımı.`;
+          // Aşırı satım (RSI < 33) durumunda: Eğer canlı haberde "Teslimiyet / Çöküş" (newsScore <= -0.35) varsa düşen bıçak tutulmaz!
+          if (newsScore <= -0.45 && livePrice < ema50) {
+            direction = 'SAT (SHORT)';
+            riskScale = 0.75; // Volatilite yüksek olduğu için %25 azaltılmış kontrollü risk
+            rationale = `Canlı Negatif Haber Katalizörü ("${newsCtx.impactingHeadline.slice(0, 55)}...") + EMA50 Altı Kırılım Teyitli Satış.`;
+          } else if (newsScore > -0.25) {
+            direction = 'AL (LONG)';
+            rationale = `Aşırı Satım Tepki Bölgesi (Wilder RSI: ${rsi}) + Ters Haber Şoku Yok.`;
+          }
         } else if (rsi > 69) {
-          direction = 'SAT (SHORT)';
-          rationale = `Aşırı Alım Yorulma Bölgesi (Wilder RSI: ${rsi}) + Ortalamaya Dönüş Satışı.`;
+          if (newsScore < 0.25) {
+            direction = 'SAT (SHORT)';
+            rationale = `Aşırı Alım Yorulma Bölgesi (Wilder RSI: ${rsi}) + Ortalamaya Dönüş Satışı.`;
+          }
         }
 
         if (direction) {
           const currentEq = state.cashBalanceTRY;
-          const riskTRY = +(currentEq * 0.015).toFixed(2); // %1.5 Risk
-          const allocTRY = +(currentEq * 0.20).toFixed(2); // %20 Teminat
+          const riskTRY = +(currentEq * 0.015 * riskScale).toFixed(2); // Haber risk ölçekli (%1.12 - %1.5)
+          const allocTRY = +(currentEq * 0.20 * riskScale).toFixed(2);
 
           const slDist = tradeAtr * 1.25;
           const tp1Dist = tradeAtr * 1.90;
@@ -721,7 +788,7 @@ export async function executeAutonomousTradingTick(forceScan = false): Promise<A
             timestamp: new Date(now).toISOString(),
             type: 'ENTRY',
             symbol: candidate.symbol,
-            message: `YENİ İŞLEM AÇILDI: ${candidate.symbol} (${direction}) @ ${livePrice} | TP1: ${tp1} | TP2: ${tp2} | SL: ${stopLoss} (Teminat: ${allocTRY.toLocaleString('tr-TR')} TL, Risk: ${riskTRY.toLocaleString('tr-TR')} TL)`,
+            message: `YENİ İŞLEM AÇILDI: ${candidate.symbol} (${direction}) @ ${livePrice} | TP1: ${tp1} | TP2: ${tp2} | SL: ${stopLoss} | Gerekçe: ${rationale}`,
           });
         }
       } catch {

@@ -25,10 +25,11 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
     setActivePreset(val);
   };
 
-  // Sermaye Kalkanı Dinamik Parasal Hesaplama (Canlı USD/TRY Kuruyla)
+  // Sermaye Kalkanı Dinamik Parasal Hesaplama (Canlı USD/TRY Kuru & Haber Risk Çarpanıyla)
   const usdToTry = liveUsdTry > 10 ? liveUsdTry : 38.55;
   const plan = signal.executivePlan;
-  const userRiskUSD = +(userBalance * (plan.maxLossPercent / 100)).toFixed(1);
+  const riskMultiplier = signal.newsSentiment?.recommendedRiskMultiplier ?? 1.0;
+  const userRiskUSD = +(userBalance * (plan.maxLossPercent / 100) * riskMultiplier).toFixed(1);
   const userRewardUSD = +(userRiskUSD * signal.riskRewardRatio).toFixed(1);
   const userRiskTRY = +(userRiskUSD * usdToTry).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
   const userRewardTRY = +(userRewardUSD * usdToTry).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
@@ -81,6 +82,44 @@ export const SignalCard: React.FC<SignalCardProps> = ({ signal, asset, liveUsdTr
           Geriye Dönük Başarı: <strong className="text-zinc-200 font-semibold">%{signal.winProbability}</strong> (1 Yıllık Test)
         </div>
       </div>
+
+      {/* CANLI HABER & MAKRO RİSK ANALİZİ KALKANI */}
+      {signal.newsSentiment && (
+        <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1.5 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
+              <span className="text-zinc-300 font-semibold">Canlı Haber & Risk Değerlendirmesi:</span>
+              <span
+                className={`px-2 py-0.5 rounded border font-semibold ${
+                  signal.newsSentiment.bias === 'POZİTİF'
+                    ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                    : signal.newsSentiment.bias === 'NEGATİF'
+                    ? 'bg-rose-950/60 border-rose-800 text-rose-300'
+                    : 'bg-zinc-900 border-zinc-700 text-zinc-300'
+                }`}
+              >
+                {signal.newsSentiment.bias === 'POZİTİF'
+                  ? 'OLUMLU HABER AKIŞI'
+                  : signal.newsSentiment.bias === 'NEGATİF'
+                  ? 'OLUMSUZ HABER RİSKİ'
+                  : 'NÖTR HABER AKIŞI'}
+              </span>
+              <span className="text-zinc-400">
+                Kaynak: <strong className="text-zinc-200">{signal.newsSentiment.source}</strong> ({signal.newsSentiment.publishedAt})
+              </span>
+            </div>
+            <span className="font-mono text-[11px] text-zinc-300 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
+              {signal.newsSentiment.riskAdjustmentLabel}
+            </span>
+          </div>
+          <div className="text-zinc-200 font-medium">
+            Manşet: &ldquo;{signal.newsSentiment.headline}&rdquo;
+          </div>
+          <div className="text-[11px] text-zinc-400">
+            {signal.newsSentiment.simpleImpact}
+          </div>
+        </div>
+      )}
 
       {/* 2. SADE 3 KOLONLU İŞLEM PLANI (Giriş, Kâr Al, Zarar Durdur) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

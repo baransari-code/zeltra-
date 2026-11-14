@@ -2,26 +2,26 @@
   "botId": "ZELTRA-AUTONOMOUS-250K-TRADER",
   "isRunning": true,
   "startedAt": "2026-11-10T14:10:57.487Z",
-  "lastTickAt": "2026-11-14T14:10:58.023Z",
+  "lastTickAt": "2026-11-14T16:56:38.908Z",
   "liveUsdTry": 50.3447,
   "initialCapitalTRY": 250000,
-  "cashBalanceTRY": 276302.89,
-  "allocatedMarginTRY": 221042.32,
-  "availableCashTRY": 55260.57,
+  "cashBalanceTRY": 273015.99,
+  "allocatedMarginTRY": 206734.14,
+  "availableCashTRY": 66281.85,
   "openFloatingPnL_TRY": 0,
-  "totalEquityTRY": 276302.89,
-  "netProfitTRY": 26302.89,
-  "netProfitPercent": 10.52,
+  "totalEquityTRY": 273015.99,
+  "netProfitTRY": 23015.99,
+  "netProfitPercent": 9.21,
   "metrics": {
-    "totalClosedTrades": 11,
+    "totalClosedTrades": 12,
     "openPositionsCount": 4,
     "winningTrades": 6,
-    "losingTrades": 5,
-    "winRatePercent": 54.5,
+    "losingTrades": 6,
+    "winRatePercent": 50,
     "grossProfitTRY": 46522.04,
-    "grossLossTRY": 20219.15,
-    "profitFactor": 2.3,
-    "maxDrawdownPercent": 0,
+    "grossLossTRY": 23506.05,
+    "profitFactor": 1.98,
+    "maxDrawdownPercent": 1.19,
     "peakEquityTRY": 276302.89
   },
   "openPositions": [
@@ -104,16 +104,44 @@
       "rationale": "Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (39.8) Teyitli."
     },
     {
+      "id": "TRD-BTCUSD-98908",
+      "symbol": "BTC/USD",
+      "name": "Bitcoin / ABD Doları",
+      "digits": 2,
+      "direction": "SAT (SHORT)",
+      "status": "ACIK",
+      "entryTime": "2026-11-14T16:56:38.908Z",
+      "entryTimestamp": 1794675398908,
+      "entryPrice": 65367.72,
+      "currentPrice": 65367.72,
+      "takeProfit1": 63283.59,
+      "takeProfit2": 61857.61,
+      "stopLoss": 66738.86,
+      "initialStopLoss": 66738.86,
+      "allocatedCapitalTRY": 40952.4,
+      "riskAmountTRY": 3071.43,
+      "positionSizeUnits": 0.0124,
+      "tp1Hit": false,
+      "breakevenActive": false,
+      "realizedPnL_TRY": 0,
+      "unrealizedPnL_TRY": 0,
+      "totalPnL_TRY": 0,
+      "totalPnL_Percent": 0,
+      "rationale": "Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış."
+    }
+  ],
+  "closedTrades": [
+    {
       "id": "TRD-BTCUSD-58023",
       "symbol": "BTC/USD",
       "name": "Bitcoin / ABD Doları",
       "digits": 2,
       "direction": "AL (LONG)",
-      "status": "ACIK",
+      "status": "MANUEL_KAPANDI",
       "entryTime": "2026-11-14T14:10:58.023Z",
       "entryTimestamp": 1794665458023,
       "entryPrice": 66413.03,
-      "currentPrice": 66413.03,
+      "currentPrice": 65367.72,
       "takeProfit1": 68416.48,
       "takeProfit2": 69787.26,
       "stopLoss": 65094.97,
@@ -123,14 +151,16 @@
       "positionSizeUnits": 0.0165,
       "tp1Hit": false,
       "breakevenActive": false,
-      "realizedPnL_TRY": 0,
+      "realizedPnL_TRY": -3286.9,
       "unrealizedPnL_TRY": 0,
-      "totalPnL_TRY": 0,
-      "totalPnL_Percent": 0,
-      "rationale": "Aşırı Satım Tepki Bölgesi (Wilder RSI: 22.6) + Kurumsal Destek Alımı."
-    }
-  ],
-  "closedTrades": [
+      "totalPnL_TRY": -3286.9,
+      "totalPnL_Percent": -1.31,
+      "rationale": "Aşırı Satım Tepki Bölgesi (Wilder RSI: 22.6) + Kurumsal Destek Alımı.",
+      "closePrice": 65367.72,
+      "closeTime": "2026-11-14T16:56:38.908Z",
+      "closeTimestamp": 1794675398908,
+      "exitReason": "Canlı Haber Risk Kalkanı: \"Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi\" (CoinDesk) ters yönlü haber şoku nedeniyle tam stop beklenmeden savunma çıkışı yapıldı."
+    },
     {
       "id": "TRD-EURUSD-00000",
       "symbol": "EUR/USD",
@@ -540,9 +570,36 @@
       "timeStr": "14/11 17:10",
       "equityTRY": 276302.89,
       "cashTRY": 276302.89
+    },
+    {
+      "timestamp": 1794673390543,
+      "timeStr": "14/11 19:23",
+      "equityTRY": 273350.12,
+      "cashTRY": 276302.89
+    },
+    {
+      "timestamp": 1794675398908,
+      "timeStr": "14/11 19:56",
+      "equityTRY": 273015.99,
+      "cashTRY": 273015.99
     }
   ],
   "activityLog": [
+    {
+      "id": "ACT-ENT-1794675398908-BTC/USD",
+      "timestamp": "2026-11-14T16:56:38.908Z",
+      "type": "ENTRY",
+      "symbol": "BTC/USD",
+      "message": "YENİ İŞLEM AÇILDI: BTC/USD (SAT (SHORT)) @ 65367.72 | TP1: 63283.59 | TP2: 61857.61 | SL: 66738.86 | Gerekçe: Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış."
+    },
+    {
+      "id": "ACT-NEWS-SHIELD-1794675398908-BTC/USD",
+      "timestamp": "2026-11-14T16:56:38.908Z",
+      "type": "SYSTEM",
+      "symbol": "BTC/USD",
+      "message": "HABER RİSK KALKANI DEVREDE: BTC/USD (AL (LONG)) pozisyonu \"Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi\" olumsuz haberi nedeniyle tam stop zararını beklemeden 65367.72 seviyesinden savunma amaçlı kapatıldı (-3.286,9 TL).",
+      "pnlImpactTRY": -3286.9
+    },
     {
       "id": "ACT-ENT-1794665458023-BTC/USD",
       "timestamp": "2026-11-14T14:10:58.023Z",

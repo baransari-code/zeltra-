@@ -137,9 +137,39 @@ export const Navbar: React.FC<NavbarProps> = ({
                           n.read ? 'bg-zinc-950/40 border-zinc-800 text-zinc-400' : 'bg-zinc-800/60 border-zinc-700 text-zinc-200'
                         }`}
                       >
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+                        <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1.5">
                           <span className="font-semibold text-zinc-300">{n.source}</span>
                           <span>{n.publishedAt}</span>
+                        </div>
+                        {/* Canlı Haber Duyarlılık (Olumlu/Olumsuz) & Varlık Etki Rozetleri */}
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5 font-mono text-[10px]">
+                          <span
+                            className={`px-1.5 py-0.5 rounded border font-semibold ${
+                              n.sentiment === 'POZİTİF'
+                                ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                                : n.sentiment === 'NEGATİF'
+                                ? 'bg-rose-950/60 border-rose-800 text-rose-300'
+                                : 'bg-zinc-900 border-zinc-700 text-zinc-300'
+                            }`}
+                          >
+                            {n.sentiment === 'POZİTİF'
+                              ? 'OLUMLU (ALIM DESTEĞİ)'
+                              : n.sentiment === 'NEGATİF'
+                              ? 'OLUMSUZ (SATIŞ RİSKİ)'
+                              : 'NÖTR DENGE'}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+                            Etki: {n.impact}
+                          </span>
+                          {Array.isArray(n.affectedAssets) &&
+                            n.affectedAssets.map((sym) => (
+                              <span
+                                key={sym}
+                                className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-zinc-200"
+                              >
+                                {sym}
+                              </span>
+                            ))}
                         </div>
                         <div className="font-medium text-white mb-1">{n.title}</div>
                         <div className="text-zinc-400 text-[11px] leading-relaxed mb-1.5">{n.summary}</div>

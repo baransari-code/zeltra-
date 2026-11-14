@@ -253,15 +253,199 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<{ timestam
   return list;
 }
 
-// Multi-Source Financial Feeds (Strictly Last 24 Hours)
+// Multi-Source Financial Feeds (Strictly Pure Financial & Market Feeds — Last 24 Hours)
 const FINANCIAL_NEWS_FEEDS = [
   { source: 'CNBC Markets', url: 'https://www.cnbc.com/id/10000664/device/rss/rss.html' },
   { source: 'CNBC Economy', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html' },
-  { source: 'MarketWatch / Dow Jones', url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories' },
+  { source: 'MarketWatch / Dow Jones', url: 'https://feeds.content.dowjones.io/public/rss/mw_marketpulse' },
   { source: 'Wall Street Journal', url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml' },
   { source: 'Investing.com Forex', url: 'https://www.investing.com/rss/forex.rss' },
   { source: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
 ];
+
+// Magazin, Yaşam, Seyahat ve Kişisel Tüketici Şikayeti Filtresi (Örn: "Uçmaktan bıktım / bagaj" vb. haberleri kesin olarak eler)
+const NON_FINANCIAL_LIFESTYLE_BLOCKLIST = [
+  'boarding', 'luggage', 'baggage', 'overhead bin', 'sick of flying', 'vacation',
+  'wedding', 'divorce', 'mother-in-law', 'stepchild', 'inheritance', 'etiquette',
+  'tipping', 'horoscope', 'celebrity', 'recipe', 'diet', 'workout', 'cruise ship',
+  'hotel room', 'dating', 'spouse', 'funeral', 'pet', 'dog', 'cat',
+];
+
+// Enstrüman Bazlı Kurumsal Anahtar Kelime Haritası (Tam Kelime Sınırı Kontrollü)
+const ASSET_KEYWORD_MAP: Record<string, string[]> = {
+  'EUR/USD': ['eur/usd', 'eurusd', 'eurozone', 'ecb', 'lagarde', 'avrupa merkez bankası', 'euro'],
+  'GBP/USD': ['gbp/usd', 'gbpusd', 'pound', 'sterling', 'boe', 'bailey', 'bank of england', 'uk inflation', 'britain', 'sterlin'],
+  'USD/TRY': ['usd/try', 'usdtry', 'turkey', 'lira', 'cbrt', 'tcmb', 'turkish lira', 'merkez bankası'],
+  'USD/JPY': ['usd/jpy', 'usdjpy', 'japanese yen', 'boj', 'ueda', 'bank of japan', 'japon yeni', 'yen'],
+  'XAU/USD': ['xau/usd', 'xauusd', 'gold', 'bullion', 'precious metal', 'safe haven', 'safe-haven', 'ons altın', 'altın'],
+  'WTI': ['wti', 'crude oil', 'west texas', 'opec', 'petroleum', 'oil prices', 'barrel', 'ham petrol', 'petrol'],
+  'BRENT': ['brent', 'brent crude', 'opec', 'north sea oil', 'oil prices', 'petrol'],
+  'BTC/USD': ['btc/usd', 'btc', 'bitcoin', 'crypto', 'coindesk', 'bitcoin etf', 'crypto etf', 'mining', 'capitulation', 'halving', 'binance', 'coinbase', 'kripto'],
+  'ETH/USD': ['eth/usd', 'ethereum', 'ether', 'defi', 'ether etf', 'staking'],
+  'NVDA': ['nvidia', 'nvda', 'jensen huang', 'huang', 'blackwell', 'semiconductor', 'chips', 'gpu', 'ai chip', 'yapay zeka çip'],
+  'AAPL': ['apple', 'aapl', 'iphone', 'tim cook', 'cupertino'],
+  'TSLA': ['tesla', 'tsla', 'elon musk', 'musk', 'electric vehicle', 'cybertruck'],
+  'SPX500': ['s&p 500', 's&p500', 'spx', 'wall street', 'equities', 'us stocks', 'dow jones'],
+  'NAS100': ['nasdaq', 'tech stocks', 'big tech', 'qqq', 'ai trade', 'yapay zeka ticaret'],
+};
+
+// Küresel Makro / Merkez Bankası Anahtar Kelimeleri (Tüm Pariteleri ve Riskli Varlıkları Etkiler)
+const GLOBAL_MACRO_KEYWORDS = [
+  'federal reserve', 'powell', 'fomc', 'interest rate', 'interest rates', 'rate cut', 'rate hike',
+  'inflation', 'cpi', 'pce', 'ppi', 'nonfarm', 'payrolls', 'unemployment', 'jobless',
+  'gdp', 'recession', 'treasury yield', 'treasury yields', 'tariff', 'tariffs', 'trade war',
+  'central bank', 'dxy', 'greenback', 'enflasyon', 'faiz kararı',
+];
+
+// Alt-kelime (substring) tuzaklarını önleyen kelime sınırı kontrolcüsü (Örn: "turmoil" != "oil", "yeniden" != "yen")
+function matchesKeywordWithBoundary(text: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Kısa veya ek alabilecek kelimelerde tam kelime sınırı ara
+  const regex = new RegExp(`(^|[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ])${escaped}($|[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ])`, 'i');
+  return regex.test(text);
+}
+
+// Ham İngilizce ve Türkçe Metin Üzerinden Varlık Eşleştirme ve Bağlamsal Duyarlılık (NLP) Analizi
+export function analyzeFinancialHeadline(rawTitle: string, rawDesc: string, source: string, trTitle?: string, trDesc?: string) {
+  const rawCombined = `${rawTitle} ${rawDesc}`.toLowerCase();
+  const fullCombined = `${rawTitle} ${rawDesc} ${trTitle || ''} ${trDesc || ''}`.toLowerCase();
+
+  // 1. Yaşam / Magazin / Seyahat Haberi Kontrolü
+  for (const blocked of NON_FINANCIAL_LIFESTYLE_BLOCKLIST) {
+    if (matchesKeywordWithBoundary(rawCombined, blocked)) {
+      return null; // Finans dışı haberi tamamen reddet
+    }
+  }
+
+  // 2. Etkilenen Varlıkları Tespit Et (Öncelikle Orjinal İngilizce Metin Üzerinden Tam Sınırla)
+  const affectedAssets: string[] = [];
+  for (const [symbol, keys] of Object.entries(ASSET_KEYWORD_MAP)) {
+    if (keys.some((k) => matchesKeywordWithBoundary(rawCombined, k) || (k.length > 5 && matchesKeywordWithBoundary(fullCombined, k)))) {
+      affectedAssets.push(symbol);
+    }
+  }
+
+  if (source === 'CoinDesk' && !affectedAssets.includes('BTC/USD')) {
+    affectedAssets.push('BTC/USD');
+  }
+
+  const isMacro = GLOBAL_MACRO_KEYWORDS.some((k) => matchesKeywordWithBoundary(rawCombined, k));
+  if (isMacro) {
+    if (!affectedAssets.includes('XAU/USD')) affectedAssets.push('XAU/USD');
+    if (!affectedAssets.includes('EUR/USD')) affectedAssets.push('EUR/USD');
+    if (!affectedAssets.includes('SPX500')) affectedAssets.push('SPX500');
+  }
+
+  // Hiçbir finansal varlık veya makro göstergeyle ilgisi yoksa elenir
+  if (affectedAssets.length === 0 && !rawCombined.includes('market') && !rawCombined.includes('stock') && !rawCombined.includes('investor') && !rawCombined.includes('bank') && !rawCombined.includes('economy') && !rawCombined.includes('earnings') && !rawCombined.includes('shares')) {
+    return null;
+  }
+  if (affectedAssets.length === 0) {
+    affectedAssets.push('SPX500');
+  }
+
+  // 3. Bağlamsal (Phrase-First) Duyarlılık ve Risk Skoru Hesabı (-1.0 ile +1.0 arası)
+  let rawScore = 0;
+  let cleanedForSingleWords = fullCombined;
+
+  // Önce bileşik makro ifadeler (Ters anlam tuzaklarını önler: örn. "interest rates surge" yükseliş değil, faiz şokudur!)
+  const compoundBearishPhrases: { phrase: string; weight: number }[] = [
+    { phrase: 'interest rates surge', weight: -0.75 },
+    { phrase: 'rates surge', weight: -0.70 },
+    { phrase: 'yields surge', weight: -0.65 },
+    { phrase: 'yields jump', weight: -0.60 },
+    { phrase: 'inflation surges', weight: -0.70 },
+    { phrase: 'inflation rises', weight: -0.55 },
+    { phrase: 'capitulation wave', weight: -0.85 },
+    { phrase: 'teslimiyet dalgası', weight: -0.85 },
+    { phrase: '3-month low', weight: -0.75 },
+    { phrase: 'en düşük seviye', weight: -0.75 },
+    { phrase: 'falls to', weight: -0.65 },
+    { phrase: 'fell to', weight: -0.65 },
+    { phrase: 'slumps below', weight: -0.80 },
+    { phrase: 'drops below', weight: -0.70 },
+    { phrase: 'rate hike', weight: -0.60 },
+    { phrase: 'resigns', weight: -0.65 },
+  ];
+
+  const compoundBullishPhrases: { phrase: string; weight: number }[] = [
+    { phrase: 'rate cut', weight: 0.75 },
+    { phrase: 'cuts rate', weight: 0.75 },
+    { phrase: 'faiz indirimi', weight: 0.75 },
+    { phrase: 'record high', weight: 0.75 },
+    { phrase: 'all-time high', weight: 0.80 },
+    { phrase: 'beats expectations', weight: 0.65 },
+    { phrase: 'beats estimates', weight: 0.65 },
+    { phrase: 'inflation cools', weight: 0.65 },
+    { phrase: 'inflation eases', weight: 0.65 },
+    { phrase: 'strong inflows', weight: 0.60 },
+  ];
+
+  for (const item of compoundBearishPhrases) {
+    if (cleanedForSingleWords.includes(item.phrase)) {
+      rawScore += item.weight;
+      cleanedForSingleWords = cleanedForSingleWords.replace(item.phrase, ' ');
+    }
+  }
+  for (const item of compoundBullishPhrases) {
+    if (cleanedForSingleWords.includes(item.phrase)) {
+      rawScore += item.weight;
+      cleanedForSingleWords = cleanedForSingleWords.replace(item.phrase, ' ');
+    }
+  }
+
+  // Tekil Bearish (Negatif / Satış Baskısı) Kelimeler
+  const bearishWords = [
+    'fall', 'falls', 'fell', 'drop', 'drops', 'plunge', 'plunges', 'slump', 'slumps',
+    'tumble', 'tumbles', 'crash', 'crashes', 'sink', 'sinks', 'slide', 'slides',
+    'decline', 'declines', 'low', 'lower', 'bearish', 'capitulation', 'selloff', 'sell-off',
+    'crisis', 'war', 'tariff', 'probe', 'lawsuit', 'default', 'recession', 'fear',
+    'weak', 'weaker', 'miss', 'misses', 'downgrade', 'warning', 'outflows', 'hawkish',
+    'geriledi', 'düştü', 'düşüş', 'çakıldı', 'teslimiyet', 'kriz', 'satış baskısı', 'zarar', 'endişe',
+  ];
+
+  // Tekil Bullish (Pozitif / Alım İvmesi) Kelimeler
+  const bullishWords = [
+    'surge', 'surges', 'jump', 'jumps', 'rally', 'rallies', 'gain', 'gains',
+    'rise', 'rises', 'rose', 'soar', 'soars', 'climb', 'climbs', 'rebound', 'rebounds',
+    'bullish', 'record', 'beat', 'beats', 'upgrade', 'optimism', 'inflows', 'dovish',
+    'recovery', 'strong', 'higher', 'boost', 'boosts', 'approval',
+    'yükseldi', 'arttı', 'ralli', 'rekor', 'iyimserlik', 'güçlü', 'destek', 'toparlanma',
+  ];
+
+  for (const w of bearishWords) {
+    if (cleanedForSingleWords.includes(w)) rawScore -= 0.28;
+  }
+  for (const w of bullishWords) {
+    if (cleanedForSingleWords.includes(w)) rawScore += 0.28;
+  }
+
+  const sentimentScore = Math.max(-0.95, Math.min(0.95, +rawScore.toFixed(2)));
+  const absScore = Math.abs(sentimentScore);
+
+  let sentiment: 'POZİTİF' | 'NEGATİF' | 'NÖTR' = 'NÖTR';
+  if (sentimentScore >= 0.2) sentiment = 'POZİTİF';
+  else if (sentimentScore <= -0.2) sentiment = 'NEGATİF';
+
+  const isHighImpact =
+    isMacro ||
+    absScore >= 0.55 ||
+    rawCombined.includes('breaking') ||
+    rawCombined.includes('capitulation') ||
+    rawCombined.includes('slump') ||
+    rawCombined.includes('plunge') ||
+    rawCombined.includes('record');
+
+  const impact: 'YÜKSEK' | 'ORTA' | 'DÜŞÜK' = isHighImpact ? 'YÜKSEK' : absScore >= 0.25 ? 'ORTA' : 'DÜŞÜK';
+
+  return {
+    sentiment,
+    sentimentScore,
+    impact,
+    affectedAssets: affectedAssets.slice(0, 4),
+    isMacro,
+  };
+}
 
 // In-Memory Translation Cache & News Cache
 const translationCache = new Map<string, string>();
@@ -356,16 +540,23 @@ export async function fetchRealFinancialNews() {
           const ageMs = now - pubDate.getTime();
 
           if (!isNaN(pubDate.getTime()) && ageMs >= 0 && ageMs <= ONE_DAY_MS) {
+            // Çeviri öncesi ham İngilizce metin üzerinden finansal alaka ve duyarlılık analizi yap
+            const nlp = analyzeFinancialHeadline(rawTitle, rawDesc, feed.source);
+            if (!nlp) continue; // Magazin / seyahat / finans dışı haberleri eler
+
             allNews.push({
               id: `news-${feed.source.replace(/[\/\s]/g, '')}-${pubDate.getTime()}-${Math.random().toString(36).slice(2, 6)}`,
               originalTitle: rawTitle,
               title: rawTitle,
-              originalSummary: rawDesc.slice(0, 220),
-              summary: rawDesc.slice(0, 220) + (rawDesc.length > 220 ? '...' : ''),
+              originalSummary: rawDesc.slice(0, 240),
+              summary: rawDesc.slice(0, 240) + (rawDesc.length > 240 ? '...' : ''),
               source: feed.source,
               sourceUrl: rawLink,
-              impact: rawTitle.toLowerCase().includes('fed') || rawTitle.toLowerCase().includes('rate') || rawTitle.toLowerCase().includes('cpi') || rawTitle.toLowerCase().includes('inflation') ? 'YÜKSEK' : 'ORTA',
-              sentiment: rawTitle.toLowerCase().includes('fall') || rawTitle.toLowerCase().includes('drop') || rawTitle.toLowerCase().includes('crisis') || rawTitle.toLowerCase().includes('probe') ? 'NEGATİF' : 'POZİTİF',
+              impact: nlp.impact,
+              sentiment: nlp.sentiment,
+              sentimentScore: nlp.sentimentScore,
+              affectedAssets: nlp.affectedAssets,
+              isMacro: nlp.isMacro,
               publishedAt: formatTimeAgo(pubDate),
               publishedTimestamp: pubDate.getTime(),
               read: false,
@@ -381,7 +572,7 @@ export async function fetchRealFinancialNews() {
   allNews.sort((a, b) => b.publishedTimestamp - a.publishedTimestamp);
   const selectedNews = allNews.slice(0, 25);
 
-  // Başlıkları ve Özetleri Türkçe Bilgilendirmeye Çevir
+  // Başlıkları ve Özetleri Türkçe Bilgilendirmeye Çevir + Türkçe Metinle NLP Skorunu Teyit Et
   await Promise.allSettled(
     selectedNews.map(async (n) => {
       try {
@@ -391,6 +582,13 @@ export async function fetchRealFinancialNews() {
         ]);
         if (trTitle) n.title = trTitle;
         if (trSummary) n.summary = trSummary;
+        const refined = analyzeFinancialHeadline(n.originalTitle || '', n.originalSummary || '', n.source, n.title, n.summary);
+        if (refined) {
+          n.sentiment = refined.sentiment;
+          n.sentimentScore = refined.sentimentScore;
+          n.impact = refined.impact;
+          n.affectedAssets = refined.affectedAssets;
+        }
       } catch {
         // Hata durumunda orijinal başlık korunur
       }
@@ -481,73 +679,75 @@ export function extractNewsSentimentForAsset(symbol: string, newsList: any[]): N
     };
   }
 
-  // Enstrüman ilişkili anahtar kelimeler
-  const keywordMap: Record<string, string[]> = {
-    'EUR/USD': ['euro', 'dollar', 'ecb', 'fed', 'powell', 'lagarde', 'inflation', 'cpi', 'rate'],
-    'GBP/USD': ['pound', 'sterling', 'boe', 'bailey', 'uk inflation', 'dollar', 'britain'],
-    'USD/TRY': ['turkey', 'lira', 'cbrt', 'tcmb', 'inflation', 'dollar'],
-    'USD/JPY': ['yen', 'boj', 'ueda', 'japan', 'intervention', 'carry'],
-    'XAU/USD': ['gold', 'bullion', 'precious metal', 'yields', 'safe haven', 'inflation', 'fed'],
-    'BRENT': ['oil', 'brent', 'crude', 'opec', 'saudi', 'energy', 'middle east', 'supply'],
-    'BTC/USD': ['bitcoin', 'crypto', 'btc', 'sec', 'etf', 'mining', 'binance', 'coinbase'],
-    'NVDA': ['nvidia', 'huang', 'ai', 'semiconductor', 'chips', 'gpu', 'tech', 'probe'],
-    'SPX500': ['s&p', 'wall street', 'stocks', 'equities', 'fed', 'inflation', 'yields'],
-  };
+  const assetKeys = ASSET_KEYWORD_MAP[symbol] || [symbol.toLowerCase().replace('/', '')];
 
-  const assetKeys = keywordMap[symbol] || [symbol.toLowerCase().replace('/', ''), 'market', 'fed'];
-
-  // Aday haberleri alakalılık derecesine göre puanla
+  // Sadece gerçekten bu enstrümanla veya doğrudan küresel makro/Fed ile ilişkili haberleri filtrele
   let bestNews: any = null;
-  let maxScore = 0;
+  let maxRelevance = 0;
 
   for (const n of newsList) {
-    const text = ((n.title || '') + ' ' + (n.summary || '')).toLowerCase();
-    let score = 0;
-    assetKeys.forEach((k) => {
-      if (text.includes(k)) score += 2;
-    });
+    const rawText = `${n.originalTitle || ''} ${n.originalSummary || ''}`.toLowerCase();
+    const fullText = `${rawText} ${n.title || ''} ${n.summary || ''}`.toLowerCase();
+    let relevance = 0;
 
-    if (score > maxScore) {
-      maxScore = score;
+    if (Array.isArray(n.affectedAssets) && n.affectedAssets.includes(symbol)) {
+      relevance += 5;
+    }
+    assetKeys.forEach((k) => {
+      if (matchesKeywordWithBoundary(rawText, k) || (k.length > 5 && matchesKeywordWithBoundary(fullText, k))) {
+        relevance += 3;
+      }
+    });
+    if (n.isMacro) {
+      relevance += 1;
+    }
+
+    if (relevance > maxRelevance) {
+      maxRelevance = relevance;
       bestNews = n;
     }
   }
 
-  // Doğrudan eşleşme yoksa en son piyasa manşetini al
-  if (!bestNews && newsList.length > 0) {
-    bestNews = newsList[0];
-  }
-
-  if (!bestNews) {
+  // Enstrümanla alakalı hiçbir haber yoksa alakasız manşet atama!
+  if (!bestNews || maxRelevance < 3) {
     return {
       sentimentScore: 0,
       shockLevel: 0,
       impactingHeadline: '',
       source: '',
-      biasDescription: 'Doğrudan etkileyen flaş haber yok.',
+      biasDescription: `${symbol} için son 24 saatte ters bir haber şoku yok; teknik rejim geçerli.`,
       newsTimeAgo: '',
     };
   }
 
-  const text = ((bestNews.title || '') + ' ' + (bestNews.summary || '')).toLowerCase();
+  // NLP Duyarlılık Skorunu Al (Hem İngilizce hem Türkçe metin üzerinden)
+  const nlp = analyzeFinancialHeadline(
+    bestNews.originalTitle || bestNews.title || '',
+    bestNews.originalSummary || bestNews.summary || '',
+    bestNews.source || '',
+    bestNews.title,
+    bestNews.summary
+  );
 
-  const positiveWords = ['surge', 'jump', 'rally', 'gain', 'rise', 'beat', 'record', 'bullish', 'cut rate', 'ease', 'soar', 'strong', 'higher'];
-  const negativeWords = ['fall', 'drop', 'plunge', 'probe', 'crisis', 'war', 'tariff', 'crash', 'down', 'miss', 'bearish', 'hike rate', 'slips', 'declines', 'stress'];
+  let sentimentScore = typeof bestNews.sentimentScore === 'number'
+    ? bestNews.sentimentScore
+    : (nlp ? nlp.sentimentScore : 0);
 
-  let posCount = 0;
-  let negCount = 0;
-  positiveWords.forEach((w) => { if (text.includes(w)) posCount++; });
-  negativeWords.forEach((w) => { if (text.includes(w)) negCount++; });
+  // Dolar Bazlı Ters Korelasyon Düzeltmesi (Örn: Faiz/Dolar şoku USD/JPY ve USD/TRY için yukarı yönlüdür)
+  const rawLower = `${bestNews.originalTitle || ''} ${bestNews.originalSummary || ''}`.toLowerCase();
+  if ((symbol === 'USD/JPY' || symbol === 'USD/TRY') && (rawLower.includes('rates surge') || rawLower.includes('yields surge') || rawLower.includes('strong dollar'))) {
+    sentimentScore = Math.abs(sentimentScore);
+  }
 
-  let sentimentScore = 0;
-  if (posCount > negCount) sentimentScore = Math.min(0.85, 0.35 + posCount * 0.15);
-  else if (negCount > posCount) sentimentScore = Math.max(-0.85, -0.35 - negCount * 0.15);
-
-  const shockLevel = Math.min(1.0, 0.2 + (posCount + negCount) * 0.25 + (bestNews.impact === 'YÜKSEK' ? 0.3 : 0.1));
+  const absSent = Math.abs(sentimentScore);
+  const shockLevel = Math.min(1.0, +(0.25 + absSent * 0.65 + (bestNews.impact === 'YÜKSEK' ? 0.2 : 0)).toFixed(2));
 
   let biasDescription = 'Nötr piyasa haber akışı';
-  if (sentimentScore > 0.2) biasDescription = `Pozitif Haber Desteği (+%${(sentimentScore * 100).toFixed(0)} ivme)`;
-  else if (sentimentScore < -0.2) biasDescription = `Negatif Haber Baskısı (%${(sentimentScore * 100).toFixed(0)} baskı)`;
+  if (sentimentScore >= 0.2) {
+    biasDescription = `Pozitif Haber Desteği (+%${Math.round(sentimentScore * 100)} Alım İvmesi)`;
+  } else if (sentimentScore <= -0.2) {
+    biasDescription = `Negatif Haber Baskısı (-%${Math.round(absSent * 100)} Satış Riski)`;
+  }
 
   return {
     sentimentScore,

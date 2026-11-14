@@ -137,8 +137,8 @@ export const App: React.FC = () => {
   }, [candles]);
 
   const currentSignal = useMemo(() => {
-    return generateQuantitativeSignal(selectedAsset, candles, liveUsdTry);
-  }, [selectedAsset, candles, liveUsdTry]);
+    return generateQuantitativeSignal(selectedAsset, candles, liveUsdTry, notifications);
+  }, [selectedAsset, candles, liveUsdTry, notifications]);
 
   const handleMarkAllAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
