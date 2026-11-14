@@ -17,6 +17,7 @@ import {
   executeAutonomousTradingTick,
   toggleAutonomousBot,
   resetAutonomousBot,
+  resetAutonomousBotCleanZero,
 } from './server/autonomousTrader'
 
 // https://vite.dev/config/
@@ -125,6 +126,8 @@ export default defineConfig({
               state = await toggleAutonomousBot(running);
             } else if (action === 'reset') {
               state = await resetAutonomousBot(250000);
+            } else if (action === 'reset-zero') {
+              state = await resetAutonomousBotCleanZero(250000);
             } else {
               state = await executeAutonomousTradingTick(false);
             }

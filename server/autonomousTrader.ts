@@ -2029,3 +2029,107 @@ export async function resetAutonomousBot(newCapitalTRY = 250000): Promise<Autono
   await bootstrapHistoricalRealTrades(newCapitalTRY);
   return await executeAutonomousTradingTick(true);
 }
+
+// Kullanıcı "Sıfırdan Başlat (0 İşlem)" butonuna bastığında geçmiş 5 günlük simülasyonu dahil etmeden,
+// tam o saniyeden itibaren 250.000 TL nakit ve 0 işlem ile tertemiz başlatır.
+export async function resetAutonomousBotCleanZero(newCapitalTRY = 250000): Promise<AutonomousLedgerState> {
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const usdTry = await fetchLiveUsdTryRate();
+
+  const cleanState: AutonomousLedgerState = {
+    botId: 'ZELTRA-QUANT-AUTO-250K',
+    isRunning: true,
+    startedAt: nowIso,
+    lastTickAt: nowIso,
+    liveUsdTry: usdTry,
+    initialCapitalTRY: newCapitalTRY,
+    cashBalanceTRY: newCapitalTRY,
+    allocatedMarginTRY: 0,
+    availableCashTRY: newCapitalTRY,
+    openFloatingPnL_TRY: 0,
+    totalEquityTRY: newCapitalTRY,
+    netProfitTRY: 0,
+    netProfitPercent: 0,
+    metrics: {
+      totalClosedTrades: 0,
+      openPositionsCount: 0,
+      winningTrades: 0,
+      losingTrades: 0,
+      winRatePercent: 0,
+      grossProfitTRY: 0,
+      grossLossTRY: 0,
+      profitFactor: 0,
+      maxDrawdownPercent: 0,
+      peakEquityTRY: newCapitalTRY,
+      avgWinTRY: 0,
+      avgLossTRY: 0,
+      payoffRatio: 0,
+      expectancyTRY: 0,
+      expectancyR: 0,
+      realizedRMultipleTotal: 0,
+      sharpeRatio: 0,
+      sortinoRatio: 0,
+      totalSpreadAndCommissionTRY: 0,
+      totalCumulativeVolumeTRY: 0,
+      activeNotionalVolumeTRY: 0,
+      avgMarginLeverage: 0,
+      portfolioEffectiveLeverage: 0,
+      spot1xTotalNetProfitTRY: 0,
+      currentStreak: { type: 'NONE', count: 0 },
+      maxWinStreak: 0,
+      maxLossStreak: 0,
+    },
+    attribution: {
+      byAsset: CORE_UNIVERSE.map((u) => ({
+        symbol: u.symbol,
+        name: u.name,
+        closedCount: 0,
+        openCount: 0,
+        wins: 0,
+        losses: 0,
+        winRatePercent: 0,
+        netRealizedPnL_TRY: 0,
+        floatingPnL_TRY: 0,
+        totalNetPnL_TRY: 0,
+        avgRMultiple: 0,
+        totalRMultiple: 0,
+        executionCostTRY: 0,
+      })),
+      byDirection: {
+        long: { direction: 'AL (LONG)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
+        short: { direction: 'SAT (SHORT)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
+      },
+    },
+    marketScanner: [],
+    openPositions: [],
+    closedTrades: [],
+    equityCurve: [
+      {
+        timestamp: now,
+        timeStr: new Date(now).toLocaleString('tr-TR', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        equityTRY: newCapitalTRY,
+        cashTRY: newCapitalTRY,
+        drawdownPercent: 0,
+      },
+    ],
+    activityLog: [
+      {
+        id: `ACT-ZERO-${now}`,
+        timestamp: nowIso,
+        type: 'SYSTEM',
+        symbol: 'SİSTEM',
+        message: `250.000,00 TL Otonom Portföy geçmiş işlemler olmadan sıfırdan (0 işlemle) başlatıldı. Yalnızca bu andan itibaren oluşan canlı piyasa sinyalleriyle işlem açılacaktır.`,
+        equityAfterTRY: newCapitalTRY,
+      },
+    ],
+  };
+
+  saveLedger(cleanState);
+  return cleanState;
+}

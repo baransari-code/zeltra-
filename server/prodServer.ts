@@ -18,6 +18,7 @@ import {
   executeAutonomousTradingTick,
   toggleAutonomousBot,
   resetAutonomousBot,
+  resetAutonomousBotCleanZero,
 } from './autonomousTrader';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -176,6 +177,8 @@ const server = http.createServer(async (req, res) => {
         state = await toggleAutonomousBot(running);
       } else if (action === 'reset') {
         state = await resetAutonomousBot(250000);
+      } else if (action === 'reset-zero') {
+        state = await resetAutonomousBotCleanZero(250000);
       } else {
         state = await executeAutonomousTradingTick(false);
       }

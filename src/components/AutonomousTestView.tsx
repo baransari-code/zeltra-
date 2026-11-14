@@ -338,6 +338,24 @@ export const AutonomousTestView: React.FC = () => {
     }
   };
 
+  const handleResetCleanZero = async () => {
+    const confirmed = window.confirm(
+      'Geçmiş tüm işlemleri silip 250.000,00 TL nakit ve 0 işlem ile tam şu andan itibaren sıfırdan başlatmak istediğinize emin misiniz?'
+    );
+    if (!confirmed) return;
+    setScanning(true);
+    try {
+      const res = await fetch('/api/autonomous-test?action=reset-zero');
+      if (res.ok) {
+        const data = await res.json();
+        setLedger(data);
+        setSelectedTradeId(null);
+      }
+    } finally {
+      setScanning(false);
+    }
+  };
+
   if (loading || !ledger) {
     return (
       <div className="p-8 border border-zinc-800 bg-zinc-900 rounded text-center space-y-2">
@@ -476,13 +494,23 @@ export const AutonomousTestView: React.FC = () => {
             </button>
 
             <button
+              onClick={handleResetCleanZero}
+              disabled={scanning}
+              className="inline-flex items-center space-x-1 text-xs px-2.5 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-colors"
+              title="Geçmiş 5 günlük simülasyonu silip tam şu andan itibaren 250.000 TL ve 0 işlemle başlat"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Sıfırdan Başlat (0 İşlem)</span>
+            </button>
+
+            <button
               onClick={handleReset}
               disabled={scanning}
               className="inline-flex items-center space-x-1 text-xs px-2.5 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
-              title="250.000 TL Kasayı Sıfırla"
+              title="Son 5 günlük gerçek saatlik borsa verileriyle yeniden başlat"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Sıfırla</span>
+              <span>5 Günlük Testi Yenile</span>
             </button>
           </div>
         </div>
