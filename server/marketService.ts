@@ -1,5 +1,6 @@
 // Real Financial Market Data & Multi-Source News Engine with Dynamic News-Sentiment Adaptation
 // Connects directly to Yahoo Finance and Real Multi-Source Financial RSS Feeds
+import { analyzeArticleWithAI, synthesizeAssetNewsAI } from './newsAiEngine';
 
 export const SYMBOL_MAP: Record<string, string> = {
   // Majör
@@ -612,6 +613,23 @@ export async function fetchRealFinancialNews() {
           n.impact = refined.impact;
           n.affectedAssets = refined.affectedAssets;
         }
+        // Yapay Zeka Nedensel Karar & Fırsat Analizini Üret
+        const aiAnalysis = analyzeArticleWithAI({
+          rawTitle: n.originalTitle || n.title || '',
+          rawSummary: n.originalSummary || n.summary || '',
+          trTitle: n.title || '',
+          trSummary: n.summary || '',
+          source: n.source || '',
+          sentimentScore: n.sentimentScore ?? 0,
+          affectedAssets: n.affectedAssets || [],
+          isMacro: n.isMacro,
+        });
+        n.aiAnalysis = aiAnalysis;
+        // AI'nın nedensel olarak tespit ettiği tüm varlıkları da habere bağla
+        if (Array.isArray(aiAnalysis.assetImpacts)) {
+          const merged = new Set([...(n.affectedAssets || []), ...aiAnalysis.assetImpacts.map((i) => i.symbol)]);
+          n.affectedAssets = Array.from(merged).slice(0, 5);
+        }
       } catch {
         // Hata durumunda orijinal başlık korunur
       }
@@ -699,6 +717,21 @@ export function extractNewsSentimentForAsset(symbol: string, newsList: any[]): N
       source: '',
       biasDescription: 'Haber akışı sakin; saf teknik model devrede.',
       newsTimeAgo: '',
+    };
+  }
+
+  // Yapay Zeka Çoklu Haber Sentezini Çalıştır
+  const aiSynth = synthesizeAssetNewsAI(symbol, newsList);
+  if (aiSynth.hasNews && aiSynth.primaryHeadline) {
+    const absSent = Math.abs(aiSynth.netAiScore);
+    const shockLevel = Math.min(1.0, +(0.25 + absSent * 0.70).toFixed(2));
+    return {
+      sentimentScore: aiSynth.netAiScore,
+      shockLevel,
+      impactingHeadline: aiSynth.primaryHeadline,
+      source: aiSynth.primarySource,
+      biasDescription: `${aiSynth.aiDecision} (%${aiSynth.convictionScore} Güven) — ${aiSynth.causalMechanism}`,
+      newsTimeAgo: aiSynth.publishedAt,
     };
   }
 

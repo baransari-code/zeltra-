@@ -251,7 +251,11 @@ export const App: React.FC = () => {
 
             {activeTab === 'news' && (
               <div className="space-y-4">
-                <InstitutionTracker institutions={INSTITUTIONS_DATA} news={notifications} />
+                <InstitutionTracker
+                  institutions={INSTITUTIONS_DATA}
+                  news={notifications}
+                  onSelectAsset={handleGoToAnalysis}
+                />
               </div>
             )}
 

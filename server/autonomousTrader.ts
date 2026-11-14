@@ -8,6 +8,7 @@ import {
   fetchRealFinancialNews,
   extractNewsSentimentForAsset,
 } from './marketService';
+import { synthesizeAssetNewsAI } from './newsAiEngine';
 
 export interface GateCheckItem {
   step: number;
@@ -1705,6 +1706,7 @@ export async function executeAutonomousTradingTick(_forceScan = false): Promise<
       const tradeAtr = dailyAtr * 0.45;
 
       const newsCtx = extractNewsSentimentForAsset(candidate.symbol, liveNews);
+      const aiNews = synthesizeAssetNewsAI(candidate.symbol, liveNews);
       const newsScore = newsCtx.sentimentScore;
       const hasNewsHeadline = Boolean(newsCtx.impactingHeadline);
 
@@ -1782,6 +1784,17 @@ export async function executeAutonomousTradingTick(_forceScan = false): Promise<
         } else {
           isNewsVeto = true;
           vetoReason = `RSI (${rsi}) aşırı alımda ancak güçlü pozitif haber (+${newsScore}) nedeniyle erken satış veto edildi.`;
+        }
+      } else if (aiNews.hasNews && aiNews.convictionScore >= 70 && Math.abs(aiNews.netAiScore) >= 0.40) {
+        // Yapay Zeka Haber Fırsatı: Güçlü nedensel haber + kısa vadeli EMA8/EMA21 momentum uyumu
+        if (aiNews.direction === 'AL (LONG)' && ema8 >= ema21 * 0.998 && rsi <= 68) {
+          direction = 'AL (LONG)';
+          rationale = `Yapay Zeka Haber Fırsatı (%${aiNews.convictionScore} Güven): ${aiNews.whatHappened} (${aiNews.causalMechanism})`;
+        } else if (aiNews.direction === 'SAT (SHORT)' && ema8 <= ema21 * 1.002 && rsi >= 32) {
+          direction = 'SAT (SHORT)';
+          rationale = `Yapay Zeka Haber Fırsatı (%${aiNews.convictionScore} Güven): ${aiNews.whatHappened} (${aiNews.causalMechanism})`;
+        } else {
+          vetoReason = `Yapay Zeka ${aiNews.aiDecision} (%${aiNews.convictionScore} Güven) tespit etti ancak kısa vadeli fiyat momentumu (EMA8/21) henüz haberi teyit etmedi.`;
         }
       } else {
         vetoReason = `Fiyat (${midPrice}) vs EMA50 (${ema50.toFixed(candidate.digits)}) ve Wilder RSI (${rsi}) — EMA8/21 kurumsal momentum kesişimi bekleniyor.`;

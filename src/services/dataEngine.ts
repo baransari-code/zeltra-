@@ -396,15 +396,28 @@ export function generateQuantitativeSignal(
   let newsBias: 'POZİTİF' | 'NEGATİF' | 'NÖTR' = 'NÖTR';
   let newsScore = 0;
   let newsImpact: 'YÜKSEK' | 'ORTA' | 'DÜŞÜK' = 'DÜŞÜK';
+  let aiCausalReason = '';
 
   if (matchedNews && bestMatchScore > 0) {
-    newsScore = typeof matchedNews.sentimentScore === 'number'
-      ? matchedNews.sentimentScore
-      : matchedNews.sentiment === 'POZİTİF'
-      ? 0.55
-      : matchedNews.sentiment === 'NEGATİF'
-      ? -0.55
-      : 0;
+    // Öncelikle Yapay Zeka Nedensel Karar Motorunun bu varlık için çıkardığı yönü kontrol et
+    const aiAssetImpact = matchedNews.aiAnalysis?.assetImpacts?.find((i) => i.symbol === asset.symbol);
+    if (aiAssetImpact) {
+      newsScore = aiAssetImpact.direction === 'AL (LONG)'
+        ? +(aiAssetImpact.conviction / 100).toFixed(2)
+        : aiAssetImpact.direction === 'SAT (SHORT)'
+        ? -(aiAssetImpact.conviction / 100).toFixed(2)
+        : 0;
+      aiCausalReason = `${matchedNews.aiAnalysis?.causalMechanism || aiAssetImpact.reason}`;
+    } else {
+      newsScore = typeof matchedNews.sentimentScore === 'number'
+        ? matchedNews.sentimentScore
+        : matchedNews.sentiment === 'POZİTİF'
+        ? 0.55
+        : matchedNews.sentiment === 'NEGATİF'
+        ? -0.55
+        : 0;
+      aiCausalReason = matchedNews.aiAnalysis?.causalMechanism || '';
+    }
     newsBias = newsScore >= 0.2 ? 'POZİTİF' : newsScore <= -0.2 ? 'NEGATİF' : 'NÖTR';
     newsImpact = matchedNews.impact || 'ORTA';
   }
@@ -643,12 +656,13 @@ export function generateQuantitativeSignal(
         headline: matchedNews.title,
         source: matchedNews.source,
         publishedAt: matchedNews.publishedAt,
-        simpleImpact:
-          newsBias === 'NEGATİF'
-            ? `Bu haber ${asset.symbol} üzerinde satış baskısı oluşturuyor. ${riskAdjustmentLabel}.`
-            : newsBias === 'POZİTİF'
-            ? `Bu haber ${asset.symbol} üzerinde alıcı iştahını destekliyor. ${riskAdjustmentLabel}.`
-            : `Haber akışı nötr dengede; fiyat hareketinde destek/direnç seviyeleri belirleyici.`,
+        simpleImpact: aiCausalReason
+          ? `Yapay Zeka Analizi: ${aiCausalReason} (${riskAdjustmentLabel})`
+          : newsBias === 'NEGATİF'
+          ? `Bu haber ${asset.symbol} üzerinde satış baskısı oluşturuyor. ${riskAdjustmentLabel}.`
+          : newsBias === 'POZİTİF'
+          ? `Bu haber ${asset.symbol} üzerinde alıcı iştahını destekliyor. ${riskAdjustmentLabel}.`
+          : `Haber akışı nötr dengede; fiyat hareketinde destek/direnç seviyeleri belirleyici.`,
         riskAdjustmentLabel,
         recommendedRiskMultiplier,
       }

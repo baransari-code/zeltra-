@@ -159,7 +159,23 @@ export interface NewsNotification {
   isMacro?: boolean;
   affectedAssets: string[];
   publishedAt: string;
+  publishedTimestamp?: number;
   read: boolean;
+  aiAnalysis?: {
+    eventCategory: string;
+    whatHappened: string;
+    causalMechanism: string;
+    opportunityVerdict: string;
+    primarySymbol: string;
+    primaryDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
+    confidencePercent: number;
+    assetImpacts: {
+      symbol: string;
+      direction: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
+      conviction: number;
+      reason: string;
+    }[];
+  };
 }
 
 export interface InstitutionalEntity {
