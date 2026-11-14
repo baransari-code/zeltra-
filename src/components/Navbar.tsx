@@ -32,9 +32,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="text-base font-bold tracking-tight text-white flex items-center space-x-2.5"
           >
             <img
-              src="/zeltra-logo.png"
+              src="/zeltra-logo.png?v=2"
               alt="ZELTRA Logo"
-              className="h-8 w-auto object-contain select-none"
+              className="h-9 w-auto object-contain select-none"
             />
             <span>ZELTRA</span>
             <span className="text-[11px] font-normal text-zinc-400 font-mono hidden sm:inline">
