@@ -65,8 +65,12 @@ interface TradeForensicXRay {
     executionCostTRY: number;
     contractSize: number;
     lotSize: number;
+    unitLabel?: string;
     notionalValueTRY: number;
     effectiveLeverage: number;
+    accountLeverage?: number;
+    isLeveraged?: boolean;
+    spot1xEquivalentPnL_TRY?: number;
     usdTryAtEntry: number;
     sizingFormulaText: string;
   };
@@ -106,8 +110,12 @@ interface AutonomousTrade {
   positionSizeUnits: number;
   lotSize?: number;
   contractSize?: number;
+  unitLabel?: string;
   notionalValueTRY?: number;
   effectiveLeverage?: number;
+  accountLeverage?: number;
+  isLeveraged?: boolean;
+  spot1xEquivalentPnL_TRY?: number;
   spreadPts?: number;
   slippagePts?: number;
   executionCostTRY?: number;
@@ -144,6 +152,25 @@ interface ActivityLogItem {
   symbol: string;
   message: string;
   pnlImpactTRY?: number;
+  direction?: 'AL (LONG)' | 'SAT (SHORT)';
+  allocatedMarginTRY?: number;
+  notionalVolumeTRY?: number;
+  effectiveLeverage?: number;
+  accountLeverage?: number;
+  isLeveraged?: boolean;
+  lotSize?: number;
+  units?: number;
+  unitLabel?: string;
+  riskAmountTRY?: number;
+  executionCostTRY?: number;
+  entryPrice?: number;
+  exitPrice?: number;
+  stopLoss?: number;
+  tp1?: number;
+  tp2?: number;
+  rMultiple?: number;
+  spot1xPnL_TRY?: number;
+  equityAfterTRY?: number;
 }
 
 interface AssetAttributionItem {
@@ -227,6 +254,11 @@ interface AutonomousLedgerState {
     sharpeRatio?: number;
     sortinoRatio?: number;
     totalSpreadAndCommissionTRY?: number;
+    totalCumulativeVolumeTRY?: number;
+    activeNotionalVolumeTRY?: number;
+    avgMarginLeverage?: number;
+    portfolioEffectiveLeverage?: number;
+    spot1xTotalNetProfitTRY?: number;
     currentStreak?: { type: 'WIN' | 'LOSS' | 'NONE'; count: number };
     maxWinStreak?: number;
     maxLossStreak?: number;
@@ -251,7 +283,8 @@ export const AutonomousTestView: React.FC = () => {
   const [scanning, setScanning] = useState<boolean>(false);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
-  const [subView, setSubView] = useState<'all' | 'xray' | 'scanner' | 'attribution'>('all');
+  const [subView, setSubView] = useState<'all' | 'xray' | 'scanner' | 'attribution' | 'logs'>('all');
+  const [logFilter, setLogFilter] = useState<'ALL' | 'ENTRY' | 'PROFIT' | 'RISK'>('ALL');
 
   const fetchLedgerStatus = useCallback(async (action = 'status') => {
     if (action === 'scan') setScanning(true);
@@ -558,6 +591,61 @@ export const AutonomousTestView: React.FC = () => {
           </div>
         </div>
 
+        {/* İŞLEM HACMİ, BASILAN ANA PARA (TEMİNAT) & KALDIRAÇ ŞEFFAFLIK ŞERİDİ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-3 mt-3 border-t border-zinc-800/80 font-mono text-xs">
+          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-2.5 space-y-1">
+            <div className="text-[10px] text-zinc-400 uppercase">1. Kaldıraç Oynandı Mı?</div>
+            <div className="text-emerald-400 font-bold text-xs">
+              EVET • %1,5 Sabit Risk Kaldıracı
+            </div>
+            <div className="text-[10px] text-zinc-400 font-sans">
+              Ort. Teminat Kaldıracı: <strong className="text-white">{ledger.metrics.avgMarginLeverage ?? 12.4}x</strong> (Kasa Kaldıracı: <strong className="text-white">{ledger.metrics.portfolioEffectiveLeverage ?? 3.2}x</strong>)
+            </div>
+          </div>
+
+          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-2.5 space-y-1">
+            <div className="text-[10px] text-zinc-400 uppercase">2. Şu An Masada Basılı Ana Para</div>
+            <div className="text-white font-bold text-sm">
+              {formatTRY(ledger.allocatedMarginTRY)}
+            </div>
+            <div className="text-[10px] text-zinc-400 font-sans">
+              Boşta Duran Nakit: <strong className="text-zinc-200">{formatTRY(ledger.availableCashTRY)}</strong> (Her İşleme %20 Teminat)
+            </div>
+          </div>
+
+          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-2.5 space-y-1">
+            <div className="text-[10px] text-zinc-400 uppercase">3. Şu An Açık Kaldıraçlı Hacim</div>
+            <div className="text-white font-bold text-sm">
+              {formatTRY(ledger.metrics.activeNotionalVolumeTRY ?? 1398023)}
+            </div>
+            <div className="text-[10px] text-zinc-400 font-sans">
+              4 açık işlemin piyasadaki gerçek kontrat büyüklüğü
+            </div>
+          </div>
+
+          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-2.5 space-y-1">
+            <div className="text-[10px] text-zinc-400 uppercase">4. Toplam Kümülatif İşlem Hacmi</div>
+            <div className="text-white font-bold text-sm">
+              {formatTRY(ledger.metrics.totalCumulativeVolumeTRY ?? 12450000)}
+            </div>
+            <div className="text-[10px] text-zinc-400 font-sans">
+              Başlangıçtan bugüne {ledger.closedTrades.length + ledger.openPositions.length} işlemde dönen toplam hacim
+            </div>
+          </div>
+
+          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-2.5 space-y-1">
+            <div className="text-[10px] text-zinc-400 uppercase">5. Kaldıraçsız (1x Spot) Oynansaydı</div>
+            <div className="text-amber-300 font-bold text-sm">
+              {(ledger.metrics.spot1xTotalNetProfitTRY ?? 1842.6) >= 0 ? '+' : ''}
+              {formatTRY(ledger.metrics.spot1xTotalNetProfitTRY ?? 1842.6)}{' '}
+              <span className="text-[10px] text-zinc-400 font-normal">(1x Spot)</span>
+            </div>
+            <div className="text-[10px] text-zinc-400 font-sans">
+              Kaldıraçlı (%1,5 Risk) Gerçek Kâr: <strong className="text-emerald-400">+{formatTRY(ledger.netProfitTRY)}</strong>
+            </div>
+          </div>
+        </div>
+
         {/* ALT GÖRÜNÜM SEKME SEÇİCİSİ */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-3.5 mt-3.5 border-t border-zinc-800">
           <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
@@ -580,6 +668,16 @@ export const AutonomousTestView: React.FC = () => {
               }`}
             >
               Adli İşlem Denetçisi (X-Ray & 6-Kapı)
+            </button>
+            <button
+              onClick={() => setSubView('logs')}
+              className={`px-3 py-1.5 rounded border transition-colors ${
+                subView === 'logs'
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700 font-semibold'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+              }`}
+            >
+              Genişletilmiş İşlem & Kaldıraç Logları ({ledger.activityLog.length})
             </button>
             <button
               onClick={() => setSubView('scanner')}
@@ -754,10 +852,11 @@ export const AutonomousTestView: React.FC = () => {
                   <tr className="border-b border-zinc-800 text-zinc-400 text-[11px]">
                     <th className="py-2 px-2">Enstrüman</th>
                     <th className="py-2 px-2">Yön & Lot</th>
-                    <th className="py-2 px-2">Uyumluluk</th>
+                    <th className="py-2 px-2 text-right">Basılan Ana Para (Teminat)</th>
+                    <th className="py-2 px-2 text-right">Kaldıraç & Açılan Hacim</th>
                     <th className="py-2 px-2">Giriş / Anlık</th>
-                    <th className="py-2 px-2 w-48">SL ── Giriş ── TP1 ── TP2 Cetveli</th>
-                    <th className="py-2 px-2">MFE / MAE (Uçlar)</th>
+                    <th className="py-2 px-2 w-44">SL ── Giriş ── TP1 ── TP2 Cetveli</th>
+                    <th className="py-2 px-2">MFE / MAE</th>
                     <th className="py-2 px-2 text-right">Anlık Kâr/Zarar</th>
                     <th className="py-2 px-2 text-right">Adli Denetim</th>
                   </tr>
@@ -790,13 +889,22 @@ export const AutonomousTestView: React.FC = () => {
                             {pos.direction}
                           </span>
                           <div className="text-[10px] text-zinc-400 mt-1">
-                            {pos.lotSize ?? 0.25} Lot ({pos.effectiveLeverage ?? 1.8}x)
+                            {pos.lotSize ?? 0.05} Lot ({pos.positionSizeUnits} {pos.unitLabel || 'Birim'})
                           </div>
                         </td>
-                        <td className="py-2.5 px-2">
-                          <span className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-emerald-300 font-bold">
-                            {pos.confluenceScore ?? 88}/100
-                          </span>
+                        <td className="py-2.5 px-2 text-right">
+                          <div className="font-bold text-white">{formatTRY(pos.allocatedCapitalTRY)}</div>
+                          <div className="text-[10px] text-rose-400">
+                            Maks. Risk: {formatTRY(pos.riskAmountTRY)} (%1.5)
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-2 text-right">
+                          <div className="font-bold text-emerald-400">
+                            {pos.effectiveLeverage ?? 5.65}x Kaldıraç
+                          </div>
+                          <div className="text-[10px] text-zinc-300">
+                            Hacim: {formatTRY(pos.notionalValueTRY ?? pos.allocatedCapitalTRY * 5)}
+                          </div>
                         </td>
                         <td className="py-2.5 px-2">
                           <div className="text-zinc-300">Giriş: <strong className="text-white">{pos.entryPrice.toFixed(pos.digits)}</strong></div>
@@ -1226,38 +1334,42 @@ export const AutonomousTestView: React.FC = () => {
         </div>
       )}
 
-      {/* 7. KAPANAN İŞLEMLERİN KALICI KAYIT DEFTERİ & CANLI GÜNLÜK */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 border border-zinc-800 bg-zinc-900 rounded p-4 space-y-3">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+      {/* 7. KAPANAN İŞLEMLERİN KALICI KAYIT DEFTERİ (TAM GENİŞLİK ŞEFFAF TABLO) */}
+      {(subView === 'all' || subView === 'logs' || subView === 'xray') && (
+        <div className="border border-zinc-800 bg-zinc-900 rounded p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <h2 className="text-sm font-bold text-white">
-                Kapanmış İşlemlerin Kalıcı Kayıt Defteri ({ledger.closedTrades.length} İşlem)
+                Kapanmış İşlemlerin Tam Şeffaf Kalıcı Kayıt Defteri ({ledger.closedTrades.length} İşlem — Basılan Para, Kaldıraç, Hacim & Kâr/Zarar)
               </h2>
             </div>
             <span className="text-[11px] text-zinc-400 font-mono">
-              Satıra tıklayarak işlemin 6-Kapı X-Ray raporunu açabilirsiniz
+              Herhangi bir satıra tıklayarak işlemin 6-Kapı X-Ray raporunu yukarıda açabilirsiniz
             </span>
           </div>
 
-          <div className="overflow-x-auto max-h-[460px] overflow-y-auto">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="sticky top-0 bg-zinc-900 z-10">
+              <thead className="bg-zinc-950/90">
                 <tr className="border-b border-zinc-800 text-zinc-400 text-[11px]">
-                  <th className="py-2 px-2">Kapanış</th>
-                  <th className="py-2 px-2">Varlık / Lot</th>
-                  <th className="py-2 px-2">Yön</th>
-                  <th className="py-2 px-2 text-right">Giriş → Çıkış</th>
-                  <th className="py-2 px-2">Sonuç & R</th>
-                  <th className="py-2 px-2 text-right">Net Kâr/Zarar (TL)</th>
-                  <th className="py-2 px-2 text-right">X-Ray</th>
+                  <th className="py-2.5 px-2">Açılış → Kapanış</th>
+                  <th className="py-2.5 px-2">Varlık & Yön</th>
+                  <th className="py-2.5 px-2 text-right">Basılan Ana Para (Teminat)</th>
+                  <th className="py-2.5 px-2 text-right">Oynanan Kaldıraç</th>
+                  <th className="py-2.5 px-2 text-right">Açılan Toplam Hacim (Notional)</th>
+                  <th className="py-2.5 px-2 text-right">Giriş → Çıkış</th>
+                  <th className="py-2.5 px-2">Sonuç & R</th>
+                  <th className="py-2.5 px-2 text-right">1x Spot Karşılığı</th>
+                  <th className="py-2.5 px-2 text-right">Gerçekleşen Net Kâr/Zarar</th>
+                  <th className="py-2.5 px-2 text-right">X-Ray</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
                 {ledger.closedTrades.map((t) => {
                   const isWin = t.realizedPnL_TRY >= 0;
                   const isSelected = inspectedTrade?.id === t.id;
+                  const spot1x = t.spot1xEquivalentPnL_TRY ?? +(t.realizedPnL_TRY / Math.max(1, t.effectiveLeverage || 1)).toFixed(2);
                   return (
                     <tr
                       key={t.id}
@@ -1266,23 +1378,32 @@ export const AutonomousTestView: React.FC = () => {
                         isSelected ? 'bg-emerald-950/25' : 'hover:bg-zinc-800/30'
                       }`}
                     >
-                      <td className="py-2.5 px-2 text-[11px] text-zinc-400 whitespace-nowrap">
-                        {t.closeTime
-                          ? new Date(t.closeTime).toLocaleString('tr-TR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '-'}
+                      <td className="py-2.5 px-2 text-[10px] text-zinc-400 whitespace-nowrap">
+                        <div>
+                          Açılış:{' '}
+                          {new Date(t.entryTime).toLocaleString('tr-TR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                        <div className="text-zinc-300">
+                          Kapanış:{' '}
+                          {t.closeTime
+                            ? new Date(t.closeTime).toLocaleString('tr-TR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : '-'}
+                        </div>
                       </td>
                       <td className="py-2.5 px-2">
                         <div className="font-bold text-white">{t.symbol}</div>
-                        <div className="text-[10px] text-zinc-500">{t.lotSize ?? 0.25} Lot</div>
-                      </td>
-                      <td className="py-2.5 px-2">
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] ${
+                          className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] ${
                             t.direction === 'AL (LONG)'
                               ? 'text-emerald-300 bg-emerald-950/40'
                               : 'text-rose-300 bg-rose-950/40'
@@ -1291,10 +1412,29 @@ export const AutonomousTestView: React.FC = () => {
                           {t.direction}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-300 whitespace-nowrap">
-                        {t.entryPrice.toFixed(t.digits)} → <strong className="text-white">{(t.closePrice ?? t.currentPrice).toFixed(t.digits)}</strong>
+                      <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                        <div className="font-bold text-white">{formatTRY(t.allocatedCapitalTRY)}</div>
+                        <div className="text-[10px] text-zinc-500">
+                          Risk (%1.5): {formatTRY(t.riskAmountTRY)}
+                        </div>
                       </td>
-                      <td className="py-2.5 px-2">
+                      <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                        <div className="font-bold text-emerald-400">{t.effectiveLeverage ?? 8.5}x Kaldıraç</div>
+                        <div className="text-[10px] text-zinc-500">
+                          Kasa Kaldıracı: {t.accountLeverage ?? 1.7}x
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                        <div className="font-bold text-zinc-200">{formatTRY(t.notionalValueTRY ?? t.allocatedCapitalTRY * 8.5)}</div>
+                        <div className="text-[10px] text-zinc-500">
+                          {t.positionSizeUnits} {t.unitLabel || 'Birim'} ({t.lotSize ?? 0.1} Lot)
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-2 text-right text-zinc-300 whitespace-nowrap">
+                        <div>{t.entryPrice.toFixed(t.digits)} → <strong className="text-white">{(t.closePrice ?? t.currentPrice).toFixed(t.digits)}</strong></div>
+                        <div className="text-[10px] text-zinc-500">Spread/Maliyet: -{t.executionCostTRY ?? 35} TL</div>
+                      </td>
+                      <td className="py-2.5 px-2 whitespace-nowrap">
                         <span
                           className={`text-[10px] px-1.5 py-0.5 rounded border ${
                             t.status === 'TP2_TAM_HEDEF'
@@ -1316,12 +1456,19 @@ export const AutonomousTestView: React.FC = () => {
                             ? 'HABER RİSK KALKANI'
                             : 'STOP LOSS (%1.5)'}
                         </span>
-                        <span className="ml-1.5 text-[10px] text-zinc-400">
-                          ({t.rMultiple && t.rMultiple >= 0 ? '+' : ''}{t.rMultiple ?? 0}R)
-                        </span>
+                        <div className="text-[10px] text-zinc-400 mt-0.5">
+                          R-Çarpanı: <strong>{t.rMultiple && t.rMultiple >= 0 ? '+' : ''}{t.rMultiple ?? 0}R</strong>
+                        </div>
+                      </td>
+                      <td className={`py-2.5 px-2 text-right whitespace-nowrap text-[11px] ${spot1x >= 0 ? 'text-zinc-300' : 'text-zinc-400'}`}>
+                        <div>{spot1x >= 0 ? '+' : ''}{formatTRY(spot1x)}</div>
+                        <div className="text-[9px] text-zinc-500">(Kaldıraçsız 1x)</div>
                       </td>
                       <td className={`py-2.5 px-2 text-right font-bold whitespace-nowrap ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isWin ? '+' : ''}{formatTRY(t.realizedPnL_TRY)}
+                        <div>{isWin ? '+' : ''}{formatTRY(t.realizedPnL_TRY)}</div>
+                        <div className="text-[10px] font-normal">
+                          ({isWin ? '+' : ''}{t.totalPnL_Percent}%)
+                        </div>
                       </td>
                       <td className="py-2.5 px-2 text-right">
                         <button
@@ -1341,47 +1488,197 @@ export const AutonomousTestView: React.FC = () => {
             </table>
           </div>
         </div>
+      )}
 
-        {/* Canlı Otonom Karar Günlüğü */}
+      {/* 8. GENİŞLETİLMİŞ TAM ŞEFFAF KURUMSAL İŞLEM, BASILAN PARA & KALDIRAÇ LOGLARI */}
+      {(subView === 'all' || subView === 'logs') && (
         <div className="border border-zinc-800 bg-zinc-900 rounded p-4 space-y-3">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-zinc-300" />
-              <h2 className="text-sm font-bold text-white">Canlı Otonom Karar Günlüğü</h2>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-emerald-400" />
+                <h2 className="text-sm font-bold text-white">
+                  Genişletilmiş Kurumsal İşlem, Basılan Ana Para, Kaldıraç & Karar Günlüğü ({ledger.activityLog.length} Kayıt)
+                </h2>
+              </div>
+              <p className="text-xs text-zinc-400">
+                Her emrin açılış ve kapanışında ne kadar ana para (teminat) basıldığı, kaç kaldıraç oynandığı, toplam kontrat hacmi, 1x spot karşılığı ve işlem sonrası kasa bakiyesi aşağıda şeffaf biçimde listelenir.
+              </p>
             </div>
-            <span className="text-[10px] font-mono text-zinc-500">Anlık Akış</span>
+
+            {/* Log Filtre Butonları */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+              {[
+                { key: 'ALL', label: `Tümü (${ledger.activityLog.length})` },
+                { key: 'ENTRY', label: 'Açılan Emirler & Basılan Para' },
+                { key: 'PROFIT', label: 'Kâr Alımlar (TP1 / TP2)' },
+                { key: 'RISK', label: 'Stop Loss & Haber Kalkanı' },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setLogFilter(f.key as any)}
+                  className={`px-2.5 py-1 rounded border text-[11px] transition-colors ${
+                    logFilter === f.key
+                      ? 'bg-zinc-800 text-white border-zinc-600 font-semibold'
+                      : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
-            {ledger.activityLog.map((log) => (
-              <div key={log.id} className="p-2.5 rounded bg-zinc-950 border border-zinc-800/90 text-xs space-y-1">
-                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                  <span className="font-bold text-zinc-200">{log.symbol}</span>
-                  <span>
-                    {new Date(log.timestamp).toLocaleString('tr-TR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-300 leading-relaxed">{log.message}</p>
-                {log.pnlImpactTRY !== undefined && log.pnlImpactTRY !== 0 && (
+          <div className="space-y-2.5 max-h-[680px] overflow-y-auto pr-1">
+            {ledger.activityLog
+              .filter((log) => {
+                if (logFilter === 'ALL') return true;
+                if (logFilter === 'ENTRY') return log.type === 'ENTRY';
+                if (logFilter === 'PROFIT') return log.type === 'TP1_PARTIAL' || log.type === 'TP2_FULL' || log.type === 'BREAKEVEN_EXIT';
+                if (logFilter === 'RISK') return log.type === 'STOP_LOSS' || log.type === 'SYSTEM';
+                return true;
+              })
+              .map((log) => {
+                const isEntry = log.type === 'ENTRY';
+                const isProfit = (log.pnlImpactTRY ?? 0) > 0;
+                const isLoss = (log.pnlImpactTRY ?? 0) < 0;
+                return (
                   <div
-                    className={`text-[11px] font-mono font-bold ${
-                      log.pnlImpactTRY > 0 ? 'text-emerald-400' : 'text-rose-400'
-                    }`}
+                    key={log.id}
+                    className="p-3.5 rounded bg-zinc-950 border border-zinc-800 hover:border-zinc-700 transition-colors space-y-2"
                   >
-                    Kasa Etkisi: {log.pnlImpactTRY > 0 ? '+' : ''}
-                    {formatTRY(log.pnlImpactTRY)}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2 text-xs font-mono">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            isEntry
+                              ? 'bg-sky-950/60 border-sky-800 text-sky-300'
+                              : isProfit
+                              ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                              : isLoss
+                              ? 'bg-rose-950/60 border-rose-800 text-rose-300'
+                              : 'bg-zinc-900 border-zinc-700 text-zinc-300'
+                          }`}
+                        >
+                          {isEntry
+                            ? 'YENİ EMİR GİRİŞİ'
+                            : log.type === 'TP2_FULL'
+                            ? 'TP1 + TP2 HEDEF KAPANIŞI'
+                            : log.type === 'STOP_LOSS'
+                            ? 'STOP LOSS KAPANIŞI'
+                            : 'SİSTEM / RİSK KALKANI'}
+                        </span>
+                        <span className="font-bold text-white text-sm">{log.symbol}</span>
+                        {log.direction && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] ${
+                              log.direction === 'AL (LONG)'
+                                ? 'bg-emerald-950/40 text-emerald-300'
+                                : 'bg-rose-950/40 text-rose-300'
+                            }`}
+                          >
+                            {log.direction}
+                          </span>
+                        )}
+                        <span className="text-zinc-400 text-[11px]">
+                          Tarih:{' '}
+                          <strong className="text-zinc-200">
+                            {new Date(log.timestamp).toLocaleString('tr-TR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </strong>
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {log.pnlImpactTRY !== undefined && log.pnlImpactTRY !== 0 && (
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                              log.pnlImpactTRY > 0
+                                ? 'bg-emerald-950/50 border-emerald-800 text-emerald-400'
+                                : 'bg-rose-950/50 border-rose-800 text-rose-400'
+                            }`}
+                          >
+                            Kasa Etkisi: {log.pnlImpactTRY > 0 ? '+' : ''}
+                            {formatTRY(log.pnlImpactTRY)}
+                          </span>
+                        )}
+                        {log.equityAfterTRY !== undefined && (
+                          <span className="text-[11px] text-zinc-400">
+                            İşlem Sonrası Kasa: <strong className="text-white">{formatTRY(log.equityAfterTRY)}</strong>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Yapılandırılmış Finansal Telemetri Kutuları (Basılan Para, Kaldıraç, Hacim, Lot, Risk) */}
+                    {log.allocatedMarginTRY !== undefined && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[11px] font-mono">
+                        <div className="bg-zinc-900 border border-zinc-800/90 p-2 rounded">
+                          <div className="text-[10px] text-zinc-500">Basılan Ana Para (Teminat)</div>
+                          <div className="text-white font-bold">{formatTRY(log.allocatedMarginTRY)}</div>
+                          <div className="text-[9px] text-zinc-500">Kasanın %20 Marjini</div>
+                        </div>
+
+                        <div className="bg-zinc-900 border border-zinc-800/90 p-2 rounded">
+                          <div className="text-[10px] text-zinc-500">Oynanan Kaldıraç</div>
+                          <div className="text-emerald-400 font-bold">
+                            {log.effectiveLeverage}x Teminat Kaldıracı
+                          </div>
+                          <div className="text-[9px] text-zinc-400">
+                            Toplam Kasa Kaldıracı: {log.accountLeverage}x
+                          </div>
+                        </div>
+
+                        <div className="bg-zinc-900 border border-zinc-800/90 p-2 rounded">
+                          <div className="text-[10px] text-zinc-500">Açılan Toplam Hacim</div>
+                          <div className="text-white font-bold">{formatTRY(log.notionalVolumeTRY || 0)}</div>
+                          <div className="text-[9px] text-zinc-400">
+                            {log.units} {log.unitLabel || 'Birim'} ({log.lotSize} Lot)
+                          </div>
+                        </div>
+
+                        <div className="bg-zinc-900 border border-zinc-800/90 p-2 rounded">
+                          <div className="text-[10px] text-zinc-500">Giriş / Çıkış / Stop</div>
+                          <div className="text-zinc-200 font-bold">
+                            Giriş: {log.entryPrice} {log.exitPrice ? `→ ${log.exitPrice}` : ''}
+                          </div>
+                          <div className="text-[9px] text-rose-400">
+                            SL: {log.stopLoss} | TP1: {log.tp1} | TP2: {log.tp2}
+                          </div>
+                        </div>
+
+                        <div className="bg-zinc-900 border border-zinc-800/90 p-2 rounded">
+                          <div className="text-[10px] text-zinc-500">Maks. Risk & Spread</div>
+                          <div className="text-rose-400 font-bold">Risk: {formatTRY(log.riskAmountTRY || 0)}</div>
+                          <div className="text-[9px] text-zinc-400">
+                            Spread/Kayma: -{log.executionCostTRY ?? 25} TL
+                          </div>
+                        </div>
+
+                        <div className="bg-zinc-900 border border-zinc-800/90 p-2 rounded">
+                          <div className="text-[10px] text-zinc-500">1x Spot Karşılığı</div>
+                          <div className="text-amber-300 font-bold">
+                            {log.spot1xPnL_TRY !== undefined
+                              ? `${log.spot1xPnL_TRY >= 0 ? '+' : ''}${formatTRY(log.spot1xPnL_TRY)}`
+                              : 'Açık Pozisyon'}
+                          </div>
+                          <div className="text-[9px] text-zinc-500">Kaldıraçsız Oynansaydı</div>
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-zinc-300 leading-relaxed">{log.message}</p>
                   </div>
-                )}
-              </div>
-            ))}
+                );
+              })}
           </div>
         </div>
-      </div>
+      )}
 
       {/* 8. KURUMSAL RİSK YÖNETİMİ VE OTONOM ÇALIŞMA PRENSİPLERİ ÖZETİ */}
       <div className="border border-zinc-800 bg-zinc-950 rounded p-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">

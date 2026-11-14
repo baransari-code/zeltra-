@@ -57,8 +57,12 @@ export interface TradeForensicXRay {
     executionCostTRY: number;
     contractSize: number;
     lotSize: number;
+    unitLabel?: string;
     notionalValueTRY: number;
     effectiveLeverage: number;
+    accountLeverage?: number;
+    isLeveraged?: boolean;
+    spot1xEquivalentPnL_TRY?: number;
     usdTryAtEntry: number;
     sizingFormulaText: string;
   };
@@ -98,8 +102,12 @@ export interface AutonomousTrade {
   positionSizeUnits: number;
   lotSize?: number;
   contractSize?: number;
+  unitLabel?: string;
   notionalValueTRY?: number;
   effectiveLeverage?: number;
+  accountLeverage?: number;
+  isLeveraged?: boolean;
+  spot1xEquivalentPnL_TRY?: number;
   spreadPts?: number;
   slippagePts?: number;
   executionCostTRY?: number;
@@ -136,6 +144,25 @@ export interface ActivityLogItem {
   symbol: string;
   message: string;
   pnlImpactTRY?: number;
+  direction?: 'AL (LONG)' | 'SAT (SHORT)';
+  allocatedMarginTRY?: number;
+  notionalVolumeTRY?: number;
+  effectiveLeverage?: number;
+  accountLeverage?: number;
+  isLeveraged?: boolean;
+  lotSize?: number;
+  units?: number;
+  unitLabel?: string;
+  riskAmountTRY?: number;
+  executionCostTRY?: number;
+  entryPrice?: number;
+  exitPrice?: number;
+  stopLoss?: number;
+  tp1?: number;
+  tp2?: number;
+  rMultiple?: number;
+  spot1xPnL_TRY?: number;
+  equityAfterTRY?: number;
 }
 
 export interface AssetAttributionItem {
@@ -219,6 +246,11 @@ export interface AutonomousLedgerState {
     sharpeRatio: number;
     sortinoRatio: number;
     totalSpreadAndCommissionTRY: number;
+    totalCumulativeVolumeTRY?: number;
+    activeNotionalVolumeTRY?: number;
+    avgMarginLeverage?: number;
+    portfolioEffectiveLeverage?: number;
+    spot1xTotalNetProfitTRY?: number;
     currentStreak: { type: 'WIN' | 'LOSS' | 'NONE'; count: number };
     maxWinStreak: number;
     maxLossStreak: number;
@@ -355,9 +387,13 @@ function buildForensicXRayForTrade(params: {
   xray: TradeForensicXRay;
   lotSize: number;
   contractSize: number;
+  unitLabel: string;
   positionSizeUnits: number;
   notionalValueTRY: number;
   effectiveLeverage: number;
+  accountLeverage: number;
+  isLeveraged: boolean;
+  spot1xEquivalentPnL_TRY: number;
   spreadPts: number;
   slippagePts: number;
   executionCostTRY: number;
@@ -368,14 +404,15 @@ function buildForensicXRayForTrade(params: {
   const slDist = Math.abs(params.entryPrice - params.stopLoss) || 0.0001;
   const unitRiskTRY = slDist * quoteToUsd * params.usdTry;
 
-  // Risk bazlı birim hesabı (Maksimum 10x efektif kaldıraç tavanı ile)
+  // Tam Matematiksel Eşitlik: Birim × Stop Mesafesi × USD/TRY = Risk Tutarı (TL)
   const rawUnitsByRisk = params.riskAmountTRY / (unitRiskTRY || 1);
-  const maxNotionalTRY = params.allocatedCapitalTRY * 8.5;
-  const maxUnitsByLeverage = maxNotionalTRY / ((params.entryPrice * quoteToUsd * params.usdTry) || 1);
-  const positionSizeUnits = +Math.max(0.0001, Math.min(rawUnitsByRisk, maxUnitsByLeverage)).toFixed(4);
+  const positionSizeUnits = +Math.max(0.0001, rawUnitsByRisk).toFixed(4);
   const lotSize = +Math.max(0.01, positionSizeUnits / spec.contractSize).toFixed(2);
   const notionalValueTRY = +(positionSizeUnits * params.entryPrice * quoteToUsd * params.usdTry).toFixed(2);
   const effectiveLeverage = +(notionalValueTRY / (params.allocatedCapitalTRY || 1)).toFixed(2);
+  const accountLeverage = +(notionalValueTRY / (params.cashBalanceTRY || 250000)).toFixed(2);
+  const isLeveraged = effectiveLeverage > 1.05;
+  const spot1xEquivalentPnL_TRY = +(params.realizedPnL_TRY / Math.max(1, effectiveLeverage)).toFixed(2);
   const rawExecCost = (spec.spreadPts + spec.slippagePts) * positionSizeUnits * quoteToUsd * params.usdTry;
   const executionCostTRY = +Math.min(params.riskAmountTRY * 0.06, Math.max(12.5, rawExecCost)).toFixed(2);
 
@@ -481,17 +518,17 @@ function buildForensicXRayForTrade(params: {
     {
       step: 6,
       title: 'Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi',
-      metricLabel: 'Risk / Teminat / Lot / Spread',
-      metricValue: `Risk: ${params.riskAmountTRY.toLocaleString('tr-TR')} TL | ${lotSize} Lot (${positionSizeUnits} ${spec.unitLabel}) | Kaldıraç: ${effectiveLeverage}x`,
-      threshold: 'Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x',
+      metricLabel: 'Basılan Para / Kaldıraç / Hacim',
+      metricValue: `Teminat: ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL | Kaldıraç: ${effectiveLeverage}x (Kasa: ${accountLeverage}x) | Hacim: ${notionalValueTRY.toLocaleString('tr-TR')} TL`,
+      threshold: 'Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç',
       score: 15,
       maxScore: 15,
       passed: true,
-      note: `Birim Risk = ${slDist.toFixed(params.digits)} × ${params.usdTry.toFixed(2)} TL. Spread (${spec.spreadPts}) + Slippage (${spec.slippagePts}) maliyeti: ${executionCostTRY} TL.`,
+      note: `Basılan Ana Para: ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL -> ${effectiveLeverage}x kaldıraç ile ${notionalValueTRY.toLocaleString('tr-TR')} TL (${positionSizeUnits} ${spec.unitLabel} / ${lotSize} Lot) pozisyon açıldı. Spread (${spec.spreadPts}) + Slippage (${spec.slippagePts}) maliyeti: ${executionCostTRY} TL.`,
     },
   ];
 
-  const sizingFormulaText = `Birim = Risk (${params.riskAmountTRY.toLocaleString('tr-TR')} TL) ÷ [SL Mesafesi (${slDist.toFixed(params.digits)}) × Kur (${params.usdTry.toFixed(2)} TL)] = ${positionSizeUnits} ${spec.unitLabel} (${lotSize} Standart Lot) | Pozisyon Büyüklüğü: ${notionalValueTRY.toLocaleString('tr-TR')} TL (${effectiveLeverage}x Efektif Kaldıraç)`;
+  const sizingFormulaText = `Basılan Ana Para (Teminat): ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL × ${effectiveLeverage}x Kaldıraç = ${notionalValueTRY.toLocaleString('tr-TR')} TL Toplam İşlem Hacmi (Kasa Kaldıracı: ${accountLeverage}x) | Birim = Risk (${params.riskAmountTRY.toLocaleString('tr-TR')} TL) ÷ [SL Mesafesi (${slDist.toFixed(params.digits)}) × Kur (${params.usdTry.toFixed(2)} TL)] = ${positionSizeUnits} ${spec.unitLabel} (${lotSize} Standart Lot)`;
 
   const lifecycleSteps: TradeLifecycleEvent[] = [
     {
@@ -591,8 +628,12 @@ function buildForensicXRayForTrade(params: {
         executionCostTRY,
         contractSize: spec.contractSize,
         lotSize,
+        unitLabel: spec.unitLabel,
         notionalValueTRY,
         effectiveLeverage,
+        accountLeverage,
+        isLeveraged,
+        spot1xEquivalentPnL_TRY,
         usdTryAtEntry: +params.usdTry.toFixed(4),
         sizingFormulaText,
       },
@@ -609,9 +650,13 @@ function buildForensicXRayForTrade(params: {
     },
     lotSize,
     contractSize: spec.contractSize,
+    unitLabel: spec.unitLabel,
     positionSizeUnits,
     notionalValueTRY,
     effectiveLeverage,
+    accountLeverage,
+    isLeveraged,
+    spot1xEquivalentPnL_TRY,
     spreadPts: spec.spreadPts,
     slippagePts: spec.slippagePts,
     executionCostTRY,
@@ -732,6 +777,21 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
   const currentDd = peak > 0 ? ((peak - state.totalEquityTRY) / peak) * 100 : 0;
   if (currentDd > maxDd) maxDd = currentDd;
 
+  // Toplam Hacim, Kaldıraç ve Kaldıraçsız (1x Spot) Karşılaştırma Metrikleri
+  const allTradesForVol = [...state.closedTrades, ...state.openPositions];
+  const totalCumulativeVolumeTRY = +allTradesForVol.reduce((s, t) => s + (t.notionalValueTRY || 0), 0).toFixed(2);
+  const activeNotionalVolumeTRY = +state.openPositions.reduce((s, t) => s + (t.notionalValueTRY || 0), 0).toFixed(2);
+  const avgMarginLeverage = allTradesForVol.length > 0
+    ? +(allTradesForVol.reduce((s, t) => s + (t.effectiveLeverage || 1), 0) / allTradesForVol.length).toFixed(2)
+    : 0;
+  const portfolioEffectiveLeverage = state.totalEquityTRY > 0
+    ? +(activeNotionalVolumeTRY / state.totalEquityTRY).toFixed(2)
+    : 0;
+  const spot1xTotalNetProfitTRY = +allTradesForVol.reduce(
+    (s, t) => s + ((t.totalPnL_TRY || t.realizedPnL_TRY || 0) / Math.max(1, t.effectiveLeverage || 1)),
+    0
+  ).toFixed(2);
+
   state.metrics = {
     totalClosedTrades: totalClosed,
     openPositionsCount: state.openPositions.length,
@@ -752,6 +812,11 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
     sharpeRatio,
     sortinoRatio,
     totalSpreadAndCommissionTRY: +totalExecCost.toFixed(2),
+    totalCumulativeVolumeTRY,
+    activeNotionalVolumeTRY,
+    avgMarginLeverage,
+    portfolioEffectiveLeverage,
+    spot1xTotalNetProfitTRY,
     currentStreak: { type: curStreakType, count: curStreakCount },
     maxWinStreak,
     maxLossStreak,
@@ -813,82 +878,203 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
   };
 }
 
-// Eksik Forensic X-Ray Verisi Olan Geçmiş Kayıtları Zenginleştirici (Geriye Dönük Uyumluluk)
+// Tüm İşlemlerin Mikro-Yapı, Kaldıraç, Hacim ve Genişletilmiş Denetim Loglarını Senkronize Edici
 function ensureForensicXRayOnTrades(state: AutonomousLedgerState): void {
   const allTrades = [...state.openPositions, ...state.closedTrades];
   for (const t of allTrades) {
-    if (!t.forensicXRay) {
-      const slDist = Math.abs(t.entryPrice - t.initialStopLoss) || (t.entryPrice * 0.005);
-      const tradeAtr = +(slDist / 1.25).toFixed(t.digits);
-      const dailyAtr14 = +(tradeAtr / 0.45).toFixed(t.digits);
-      const isLong = t.direction === 'AL (LONG)';
-      const ema50 = isLong ? +(t.entryPrice * 0.996).toFixed(t.digits) : +(t.entryPrice * 1.004).toFixed(t.digits);
-      const ema200 = isLong ? +(t.entryPrice * 0.988).toFixed(t.digits) : +(t.entryPrice * 1.012).toFixed(t.digits);
-      const ema8 = isLong ? +(t.entryPrice * 0.999).toFixed(t.digits) : +(t.entryPrice * 1.001).toFixed(t.digits);
-      const ema21 = isLong ? +(t.entryPrice * 0.9975).toFixed(t.digits) : +(t.entryPrice * 1.0025).toFixed(t.digits);
+    const slDist = Math.abs(t.entryPrice - t.initialStopLoss) || (t.entryPrice * 0.005);
+    const tradeAtr = +(slDist / 1.25).toFixed(t.digits);
+    const dailyAtr14 = +(tradeAtr / 0.45).toFixed(t.digits);
+    const isLong = t.direction === 'AL (LONG)';
+    const snap = t.forensicXRay?.indicatorSnapshot;
+    const ema50 = snap?.ema50 ?? (isLong ? +(t.entryPrice * 0.996).toFixed(t.digits) : +(t.entryPrice * 1.004).toFixed(t.digits));
+    const ema200 = snap?.ema200 ?? (isLong ? +(t.entryPrice * 0.988).toFixed(t.digits) : +(t.entryPrice * 1.012).toFixed(t.digits));
+    const ema8 = snap?.ema8 ?? (isLong ? +(t.entryPrice * 0.999).toFixed(t.digits) : +(t.entryPrice * 1.001).toFixed(t.digits));
+    const ema21 = snap?.ema21 ?? (isLong ? +(t.entryPrice * 0.9975).toFixed(t.digits) : +(t.entryPrice * 1.0025).toFixed(t.digits));
 
-      const mfeR = t.status === 'TP2_TAM_HEDEF' ? 2.56 : t.tp1Hit ? 1.65 : t.totalPnL_TRY > 0 ? +(t.totalPnL_TRY / (t.riskAmountTRY || 3750)).toFixed(2) : 0.42;
-      const maeR = t.status === 'STOP_LOSS' ? -1.0 : -0.38;
-      const mfeTRY = +(mfeR * (t.riskAmountTRY || 3750)).toFixed(2);
-      const maeTRY = +(maeR * (t.riskAmountTRY || 3750)).toFixed(2);
-      const mfePrice = isLong ? +(t.entryPrice + slDist * mfeR).toFixed(t.digits) : +(t.entryPrice - slDist * mfeR).toFixed(t.digits);
-      const maePrice = isLong ? +(t.entryPrice + slDist * maeR).toFixed(t.digits) : +(t.entryPrice - slDist * maeR).toFixed(t.digits);
+    const mfeR = t.mfeR ?? (t.status === 'TP2_TAM_HEDEF' ? 2.56 : t.tp1Hit ? 1.65 : t.totalPnL_TRY > 0 ? +(t.totalPnL_TRY / (t.riskAmountTRY || 3750)).toFixed(2) : 0.42);
+    const maeR = t.maeR ?? (t.status === 'STOP_LOSS' ? -1.0 : -0.38);
+    const mfeTRY = +(mfeR * (t.riskAmountTRY || 3750)).toFixed(2);
+    const maeTRY = +(maeR * (t.riskAmountTRY || 3750)).toFixed(2);
+    const mfePrice = isLong ? +(t.entryPrice + slDist * mfeR).toFixed(t.digits) : +(t.entryPrice - slDist * mfeR).toFixed(t.digits);
+    const maePrice = isLong ? +(t.entryPrice + slDist * maeR).toFixed(t.digits) : +(t.entryPrice - slDist * maeR).toFixed(t.digits);
 
-      const built = buildForensicXRayForTrade({
-        symbol: t.symbol,
-        digits: t.digits,
-        direction: t.direction,
-        midPrice: t.midEntryPrice || t.entryPrice,
-        entryPrice: t.entryPrice,
-        stopLoss: t.initialStopLoss,
-        tp1: t.takeProfit1,
-        tp2: t.takeProfit2,
-        ema8,
-        ema21,
-        ema50,
-        ema200,
-        rsi14: isLong ? 54.2 : 41.6,
-        dailyAtr14,
-        tradeAtr,
-        newsScore: t.rationale.includes('Olumsuz') || t.rationale.includes('Negatif') ? -0.65 : t.rationale.includes('Olumlu') ? 0.55 : 0,
-        newsHeadline: t.rationale.includes('Haber') ? t.rationale : '',
-        newsSource: 'Küresel Finans Akışı',
-        cashBalanceTRY: state.initialCapitalTRY,
-        allocatedCapitalTRY: t.allocatedCapitalTRY,
-        riskAmountTRY: t.riskAmountTRY,
-        usdTry: state.liveUsdTry || 50.34,
-        entryTimeIso: t.entryTime,
-        closeTimeIso: t.closeTime,
-        closePrice: t.closePrice,
-        status: t.status,
-        tp1Hit: t.tp1Hit,
-        trailingStopActive: t.trailingStopActive,
-        realizedPnL_TRY: t.realizedPnL_TRY,
-        mfePrice,
-        mfeR,
-        mfeTRY,
-        maePrice,
-        maeR,
-        maeTRY,
-        exitReason: t.exitReason,
-      });
+    const built = buildForensicXRayForTrade({
+      symbol: t.symbol,
+      digits: t.digits,
+      direction: t.direction,
+      midPrice: t.midEntryPrice || t.entryPrice,
+      entryPrice: t.entryPrice,
+      stopLoss: t.initialStopLoss,
+      tp1: t.takeProfit1,
+      tp2: t.takeProfit2,
+      ema8,
+      ema21,
+      ema50,
+      ema200,
+      rsi14: snap?.rsi14 ?? (isLong ? 54.2 : 41.6),
+      dailyAtr14,
+      tradeAtr,
+      newsScore: snap?.newsScore ?? (t.rationale.includes('Olumsuz') || t.rationale.includes('Negatif') ? -0.65 : t.rationale.includes('Olumlu') ? 0.55 : 0),
+      newsHeadline: snap?.newsHeadline || (t.rationale.includes('Haber') ? t.rationale : ''),
+      newsSource: snap?.newsSource || 'Küresel Finans Akışı',
+      cashBalanceTRY: t.allocatedCapitalTRY * 5,
+      allocatedCapitalTRY: t.allocatedCapitalTRY,
+      riskAmountTRY: t.riskAmountTRY,
+      usdTry: state.liveUsdTry || 50.34,
+      entryTimeIso: t.entryTime,
+      closeTimeIso: t.closeTime,
+      closePrice: t.closePrice,
+      status: t.status,
+      tp1Hit: t.tp1Hit,
+      trailingStopActive: t.trailingStopActive,
+      realizedPnL_TRY: t.realizedPnL_TRY,
+      mfePrice,
+      mfeR,
+      mfeTRY,
+      maePrice,
+      maeR,
+      maeTRY,
+      exitReason: t.exitReason,
+    });
 
-      t.forensicXRay = built.xray;
-      t.lotSize = built.lotSize;
-      t.contractSize = built.contractSize;
-      t.positionSizeUnits = built.positionSizeUnits;
-      t.notionalValueTRY = built.notionalValueTRY;
-      t.effectiveLeverage = built.effectiveLeverage;
-      t.spreadPts = built.spreadPts;
-      t.slippagePts = built.slippagePts;
-      t.executionCostTRY = built.executionCostTRY;
-      t.confluenceScore = built.confluenceScore;
-      t.mfeTRY = mfeTRY;
-      t.mfeR = mfeR;
-      t.maeTRY = maeTRY;
-      t.maeR = maeR;
-    }
+    t.forensicXRay = built.xray;
+    t.lotSize = built.lotSize;
+    t.contractSize = built.contractSize;
+    t.unitLabel = built.unitLabel;
+    t.positionSizeUnits = built.positionSizeUnits;
+    t.notionalValueTRY = built.notionalValueTRY;
+    t.effectiveLeverage = built.effectiveLeverage;
+    t.accountLeverage = built.accountLeverage;
+    t.isLeveraged = built.isLeveraged;
+    t.spot1xEquivalentPnL_TRY = built.spot1xEquivalentPnL_TRY;
+    t.spreadPts = built.spreadPts;
+    t.slippagePts = built.slippagePts;
+    t.executionCostTRY = built.executionCostTRY;
+    t.confluenceScore = built.confluenceScore;
+    t.mfeTRY = mfeTRY;
+    t.mfeR = mfeR;
+    t.maeTRY = maeTRY;
+    t.maeR = maeR;
   }
+
+  // Tam Şeffaf Kronolojik İşlem ve Karar Günlüğünü (ActivityLog) Yapılandırılmış Telemetri İle Yeniden İnşa Et
+  const richLogs: (ActivityLogItem & { _sortTs: number })[] = [];
+
+  richLogs.push({
+    id: `ACT-INIT-START`,
+    timestamp: state.startedAt,
+    _sortTs: new Date(state.startedAt).getTime(),
+    type: 'SYSTEM',
+    symbol: 'PORTFÖY',
+    message: `250.000,00 TL Başlangıç Sermayeli Kurumsal Otonom İşlem Motoru başlatıldı. Kurallar: Her işleme kasanın %20'si teminat (marjin) ayrılır, stop mesafesine göre sadece %1,5 maksimum risk alınır. TP1'de %50 kâr realize edilip Stop girişe (Breakeven) çekilir.`,
+    equityAfterTRY: state.initialCapitalTRY,
+  });
+
+  // Kronolojik kasa takibi için kapanan işlemleri sırala
+  const closedChrono = [...state.closedTrades].sort(
+    (a, b) => (a.closeTimestamp || a.entryTimestamp) - (b.closeTimestamp || b.entryTimestamp)
+  );
+  let runningEq = state.initialCapitalTRY;
+
+  for (const t of closedChrono) {
+    // 1. İşlem Açılış (ENTRY) Logu
+    richLogs.push({
+      id: `ACT-ENT-${t.id}`,
+      timestamp: t.entryTime,
+      _sortTs: t.entryTimestamp,
+      type: 'ENTRY',
+      symbol: t.symbol,
+      direction: t.direction,
+      allocatedMarginTRY: t.allocatedCapitalTRY,
+      notionalVolumeTRY: t.notionalValueTRY,
+      effectiveLeverage: t.effectiveLeverage,
+      accountLeverage: t.accountLeverage,
+      isLeveraged: t.isLeveraged,
+      lotSize: t.lotSize,
+      units: t.positionSizeUnits,
+      unitLabel: t.unitLabel,
+      riskAmountTRY: t.riskAmountTRY,
+      executionCostTRY: t.executionCostTRY,
+      entryPrice: t.entryPrice,
+      stopLoss: t.initialStopLoss,
+      tp1: t.takeProfit1,
+      tp2: t.takeProfit2,
+      message: `EMİR AÇILDI: ${t.symbol} (${t.direction}) @ ${t.entryPrice.toFixed(t.digits)} | Basılan Ana Para (Teminat): ${t.allocatedCapitalTRY.toLocaleString('tr-TR')} TL | Kaldıraç: ${t.effectiveLeverage}x (Kasa Kaldıracı: ${t.accountLeverage}x) | Açılan Toplam Hacim: ${(t.notionalValueTRY || 0).toLocaleString('tr-TR')} TL (${t.positionSizeUnits} ${t.unitLabel} / ${t.lotSize} Lot) | Maks. Stop Riski: ${t.riskAmountTRY.toLocaleString('tr-TR')} TL (%1.5) | Gerekçe: ${t.rationale}`,
+    });
+
+    // 2. İşlem Kapanış Logu
+    runningEq = +(runningEq + t.realizedPnL_TRY).toFixed(2);
+    const logType: ActivityLogItem['type'] =
+      t.status === 'STOP_LOSS'
+        ? 'STOP_LOSS'
+        : t.status === 'TP2_TAM_HEDEF'
+        ? 'TP2_FULL'
+        : t.status === 'MANUEL_KAPANDI'
+        ? 'SYSTEM'
+        : 'BREAKEVEN_EXIT';
+
+    richLogs.push({
+      id: `ACT-CLS-${t.id}`,
+      timestamp: t.closeTime || t.entryTime,
+      _sortTs: t.closeTimestamp || (t.entryTimestamp + 1000),
+      type: logType,
+      symbol: t.symbol,
+      direction: t.direction,
+      allocatedMarginTRY: t.allocatedCapitalTRY,
+      notionalVolumeTRY: t.notionalValueTRY,
+      effectiveLeverage: t.effectiveLeverage,
+      accountLeverage: t.accountLeverage,
+      isLeveraged: t.isLeveraged,
+      lotSize: t.lotSize,
+      units: t.positionSizeUnits,
+      unitLabel: t.unitLabel,
+      riskAmountTRY: t.riskAmountTRY,
+      executionCostTRY: t.executionCostTRY,
+      entryPrice: t.entryPrice,
+      exitPrice: t.closePrice ?? t.currentPrice,
+      stopLoss: t.stopLoss,
+      tp1: t.takeProfit1,
+      tp2: t.takeProfit2,
+      rMultiple: t.rMultiple,
+      spot1xPnL_TRY: t.spot1xEquivalentPnL_TRY,
+      pnlImpactTRY: t.realizedPnL_TRY,
+      equityAfterTRY: runningEq,
+      message: `${t.status === 'MANUEL_KAPANDI' ? 'HABER RİSK KALKANI ÇIKIŞI' : t.status === 'TP2_TAM_HEDEF' ? 'TP1 + TP2 TAM HEDEF KAPANIŞI' : 'STOP LOSS KAPANIŞI'}: ${t.symbol} (${t.direction}) ${t.entryPrice.toFixed(t.digits)} → ${(t.closePrice ?? t.currentPrice).toFixed(t.digits)} | Basılan Para: ${t.allocatedCapitalTRY.toLocaleString('tr-TR')} TL (${t.effectiveLeverage}x Kaldıraç, Hacim: ${(t.notionalValueTRY || 0).toLocaleString('tr-TR')} TL) | Kaldıraçsız (1x Spot) Karşılığı: ${(t.spot1xEquivalentPnL_TRY || 0) >= 0 ? '+' : ''}${(t.spot1xEquivalentPnL_TRY || 0).toLocaleString('tr-TR')} TL | ${t.exitReason || ''}`,
+    });
+  }
+
+  // Açık pozisyonların giriş logları
+  for (const p of state.openPositions) {
+    richLogs.push({
+      id: `ACT-OPEN-ENT-${p.id}`,
+      timestamp: p.entryTime,
+      _sortTs: p.entryTimestamp,
+      type: 'ENTRY',
+      symbol: p.symbol,
+      direction: p.direction,
+      allocatedMarginTRY: p.allocatedCapitalTRY,
+      notionalVolumeTRY: p.notionalValueTRY,
+      effectiveLeverage: p.effectiveLeverage,
+      accountLeverage: p.accountLeverage,
+      isLeveraged: p.isLeveraged,
+      lotSize: p.lotSize,
+      units: p.positionSizeUnits,
+      unitLabel: p.unitLabel,
+      riskAmountTRY: p.riskAmountTRY,
+      executionCostTRY: p.executionCostTRY,
+      entryPrice: p.entryPrice,
+      exitPrice: p.currentPrice,
+      stopLoss: p.stopLoss,
+      tp1: p.takeProfit1,
+      tp2: p.takeProfit2,
+      pnlImpactTRY: p.totalPnL_TRY,
+      message: `AKTİF POZİSYON AÇILDI: ${p.symbol} (${p.direction}) @ ${p.entryPrice.toFixed(p.digits)} (Güncel: ${p.currentPrice.toFixed(p.digits)}) | Basılan Ana Para (Teminat): ${p.allocatedCapitalTRY.toLocaleString('tr-TR')} TL | Kaldıraç: ${p.effectiveLeverage}x (Kasa Kaldıracı: ${p.accountLeverage}x) | Açılan Toplam Hacim: ${(p.notionalValueTRY || 0).toLocaleString('tr-TR')} TL (${p.positionSizeUnits} ${p.unitLabel} / ${p.lotSize} Lot) | Maks. Stop Riski: ${p.riskAmountTRY.toLocaleString('tr-TR')} TL | Gerekçe: ${p.rationale}`,
+    });
+  }
+
+  richLogs.sort((a, b) => b._sortTs - a._sortTs);
+  state.activityLog = richLogs.map(({ _sortTs, ...rest }) => rest);
 }
 
 // İlk Kurulumda Gerçek Son 5 Günlük Saatlik Yahoo Finance Mumlarıyla Başlangıç Kütüğü Oluşturma

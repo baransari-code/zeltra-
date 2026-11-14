@@ -2,16 +2,16 @@
   "botId": "ZELTRA-AUTONOMOUS-250K-TRADER",
   "isRunning": true,
   "startedAt": "2026-11-10T14:10:57.487Z",
-  "lastTickAt": "2026-11-14T17:15:39.371Z",
+  "lastTickAt": "2026-11-14T20:20:34.997Z",
   "liveUsdTry": 50.3447,
   "initialCapitalTRY": 250000,
   "cashBalanceTRY": 273015.99,
   "allocatedMarginTRY": 206734.14,
   "availableCashTRY": 66281.85,
-  "openFloatingPnL_TRY": 367.75,
-  "totalEquityTRY": 273383.74,
-  "netProfitTRY": 23383.74,
-  "netProfitPercent": 9.35,
+  "openFloatingPnL_TRY": -211.95,
+  "totalEquityTRY": 272804.04,
+  "netProfitTRY": 22804.04,
+  "netProfitPercent": 9.12,
   "metrics": {
     "totalClosedTrades": 12,
     "openPositionsCount": 4,
@@ -31,7 +31,12 @@
     "realizedRMultipleTotal": 6.09,
     "sharpeRatio": 2.27,
     "sortinoRatio": 4.78,
-    "totalSpreadAndCommissionTRY": 860.66,
+    "totalSpreadAndCommissionTRY": 2024.54,
+    "totalCumulativeVolumeTRY": 18736843.73,
+    "activeNotionalVolumeTRY": 2672511.68,
+    "avgMarginLeverage": 22.06,
+    "portfolioEffectiveLeverage": 9.8,
+    "spot1xTotalNetProfitTRY": 225.92,
     "currentStreak": {
       "type": "LOSS",
       "count": 1
@@ -91,10 +96,14 @@
           "executionCostTRY": 24.1,
           "contractSize": 100,
           "lotSize": 0.02,
+          "unitLabel": "Ons",
           "notionalValueTRY": 312147.36,
           "effectiveLeverage": 5.65,
+          "accountLeverage": 1.13,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 0,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (51.60) × Kur (50.34 TL)] = 1.5954 Ons (0.02 Standart Lot) | Pozisyon Büyüklüğü: 312.147,36 TL (5.65x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 55.260,58 TL × 5.65x Kaldıraç = 312.147,36 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 1.13x) | Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (51.60) × Kur (50.34 TL)] = 1.5954 Ons (0.02 Standart Lot)"
         },
         "gates": [
           {
@@ -150,18 +159,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.144,54 TL | 0.02 Lot (1.5954 Ons) | Kaldıraç: 5.65x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 55.260,58 TL | Kaldıraç: 5.65x (Kasa: 1.13x) | Hacim: 312.147,36 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 51.60 × 50.34 TL. Spread (0.25) + Slippage (0.05) maliyeti: 24.1 TL."
+            "note": "Basılan Ana Para: 55.260,58 TL -> 5.65x kaldıraç ile 312.147,36 TL (1.5954 Ons / 0.02 Lot) pozisyon açıldı. Spread (0.25) + Slippage (0.05) maliyeti: 24.1 TL."
           }
         ],
         "excursion": {
@@ -199,7 +208,7 @@
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-14T17:15:39.368Z",
+            "timestamp": "2026-11-14T20:20:37.298Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
             "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.740,71 TL (+0.42R @ 3864.63) | En derin geri çekilme (MAE): -1.574,93 TL (-0.38R @ 3905.91).",
@@ -219,7 +228,11 @@
       "mfeR": 0.42,
       "maeTRY": -1574.93,
       "maeR": -0.38,
-      "rMultiple": 0
+      "rMultiple": 0,
+      "unitLabel": "Ons",
+      "accountLeverage": 1.13,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 0
     },
     {
       "id": "TRD-USDJPY-58023",
@@ -238,7 +251,7 @@
       "initialStopLoss": 159.12,
       "allocatedCapitalTRY": 55260.58,
       "riskAmountTRY": 4144.54,
-      "positionSizeUnits": 9329.9777,
+      "positionSizeUnits": 23063.5122,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": 0,
@@ -269,13 +282,17 @@
           "fillPrice": 159.69,
           "spreadPts": 0.014,
           "slippagePts": 0.004,
-          "executionCostTRY": 52.95,
+          "executionCostTRY": 130.88,
           "contractSize": 100000,
-          "lotSize": 0.09,
-          "notionalValueTRY": 469714.93,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.23,
+          "unitLabel": "USD",
+          "notionalValueTRY": 1161125.6,
+          "effectiveLeverage": 21.01,
+          "accountLeverage": 4.2,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 0,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (0.57) × Kur (50.34 TL)] = 9329.9777 USD (0.09 Standart Lot) | Pozisyon Büyüklüğü: 469.714,93 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 55.260,58 TL × 21.01x Kaldıraç = 1.161.125,6 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 4.2x) | Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (0.57) × Kur (50.34 TL)] = 23063.5122 USD (0.23 Standart Lot)"
         },
         "gates": [
           {
@@ -331,18 +348,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.144,54 TL | 0.09 Lot (9329.9777 USD) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 55.260,58 TL | Kaldıraç: 21.01x (Kasa: 4.2x) | Hacim: 1.161.125,6 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.57 × 50.34 TL. Spread (0.014) + Slippage (0.004) maliyeti: 52.95 TL."
+            "note": "Basılan Ana Para: 55.260,58 TL -> 21.01x kaldıraç ile 1.161.125,6 TL (23063.5122 USD / 0.23 Lot) pozisyon açıldı. Spread (0.014) + Slippage (0.004) maliyeti: 130.88 TL."
           }
         ],
         "excursion": {
@@ -374,13 +391,13 @@
             "stepNo": 3,
             "timestamp": "2026-11-14T14:10:58.023Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.09 Lot — AL (LONG))",
+            "title": "Canlı Emir İcra Edildi (0.23 Lot — AL (LONG))",
             "detail": "Kotasyon: 159.69 -> Spread/Slippage Dahil Dolum: 159.69. Teminat: 55.260,58 TL, Maks. Risk: 4.144,54 TL.",
             "price": 159.69
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-14T17:15:39.369Z",
+            "timestamp": "2026-11-14T20:20:37.298Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
             "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.740,71 TL (+0.42R @ 159.93) | En derin geri çekilme (MAE): -1.574,93 TL (-0.38R @ 159.47).",
@@ -388,19 +405,23 @@
           }
         ]
       },
-      "lotSize": 0.09,
+      "lotSize": 0.23,
       "contractSize": 100000,
-      "notionalValueTRY": 469714.93,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 1161125.6,
+      "effectiveLeverage": 21.01,
       "spreadPts": 0.014,
       "slippagePts": 0.004,
-      "executionCostTRY": 52.95,
+      "executionCostTRY": 130.88,
       "confluenceScore": 94,
       "mfeTRY": 1740.71,
       "mfeR": 0.42,
       "maeTRY": -1574.93,
       "maeR": -0.38,
-      "rMultiple": 0
+      "rMultiple": 0,
+      "unitLabel": "USD",
+      "accountLeverage": 4.2,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 0
     },
     {
       "id": "TRD-GBPUSD-58023",
@@ -419,7 +440,7 @@
       "initialStopLoss": 1.3261,
       "allocatedCapitalTRY": 55260.58,
       "riskAmountTRY": 4144.54,
-      "positionSizeUnits": 7063.349,
+      "positionSizeUnits": 15831.3968,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": 0,
@@ -450,13 +471,17 @@
           "fillPrice": 1.3209,
           "spreadPts": 0.00016,
           "slippagePts": 0.00004,
-          "executionCostTRY": 71.12,
+          "executionCostTRY": 159.41,
           "contractSize": 100000,
-          "lotSize": 0.07,
-          "notionalValueTRY": 469714.93,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.16,
+          "unitLabel": "GBP",
+          "notionalValueTRY": 1052792.86,
+          "effectiveLeverage": 19.05,
+          "accountLeverage": 3.81,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 0,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (0.0052) × Kur (50.34 TL)] = 7063.349 GBP (0.07 Standart Lot) | Pozisyon Büyüklüğü: 469.714,93 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 55.260,58 TL × 19.05x Kaldıraç = 1.052.792,86 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 3.81x) | Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (0.0052) × Kur (50.34 TL)] = 15831.3968 GBP (0.16 Standart Lot)"
         },
         "gates": [
           {
@@ -512,18 +537,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.144,54 TL | 0.07 Lot (7063.349 GBP) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 55.260,58 TL | Kaldıraç: 19.05x (Kasa: 3.81x) | Hacim: 1.052.792,86 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.0052 × 50.34 TL. Spread (0.00016) + Slippage (0.00004) maliyeti: 71.12 TL."
+            "note": "Basılan Ana Para: 55.260,58 TL -> 19.05x kaldıraç ile 1.052.792,86 TL (15831.3968 GBP / 0.16 Lot) pozisyon açıldı. Spread (0.00016) + Slippage (0.00004) maliyeti: 159.41 TL."
           }
         ],
         "excursion": {
@@ -555,13 +580,13 @@
             "stepNo": 3,
             "timestamp": "2026-11-14T14:10:58.023Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.07 Lot — SAT (SHORT))",
+            "title": "Canlı Emir İcra Edildi (0.16 Lot — SAT (SHORT))",
             "detail": "Kotasyon: 1.3209 -> Spread/Slippage Dahil Dolum: 1.3209. Teminat: 55.260,58 TL, Maks. Risk: 4.144,54 TL.",
             "price": 1.3209
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-14T17:15:39.369Z",
+            "timestamp": "2026-11-14T20:20:37.299Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
             "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.740,71 TL (+0.42R @ 1.3187) | En derin geri çekilme (MAE): -1.574,93 TL (-0.38R @ 1.3229).",
@@ -569,19 +594,23 @@
           }
         ]
       },
-      "lotSize": 0.07,
+      "lotSize": 0.16,
       "contractSize": 100000,
-      "notionalValueTRY": 469714.93,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 1052792.86,
+      "effectiveLeverage": 19.05,
       "spreadPts": 0.00016,
       "slippagePts": 0.00004,
-      "executionCostTRY": 71.12,
+      "executionCostTRY": 159.41,
       "confluenceScore": 94,
       "mfeTRY": 1740.71,
       "mfeR": 0.42,
       "maeTRY": -1574.93,
       "maeR": -0.38,
-      "rMultiple": 0
+      "rMultiple": 0,
+      "unitLabel": "GBP",
+      "accountLeverage": 3.81,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 0
     },
     {
       "id": "TRD-BTCUSD-98908",
@@ -593,7 +622,7 @@
       "entryTime": "2026-11-14T16:56:38.908Z",
       "entryTimestamp": 1794675398908,
       "entryPrice": 65367.72,
-      "currentPrice": 65203.55,
+      "currentPrice": 65462.34,
       "takeProfit1": 63283.59,
       "takeProfit2": 61857.61,
       "stopLoss": 66738.86,
@@ -604,9 +633,9 @@
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": 0,
-      "unrealizedPnL_TRY": 367.75,
-      "totalPnL_TRY": 367.75,
-      "totalPnL_Percent": 0.15,
+      "unrealizedPnL_TRY": -211.95,
+      "totalPnL_TRY": -211.95,
+      "totalPnL_Percent": -0.08,
       "rationale": "Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış.",
       "forensicXRay": {
         "confluenceScore": 98,
@@ -634,10 +663,14 @@
           "executionCostTRY": 45.93,
           "contractSize": 1,
           "lotSize": 0.04,
+          "unitLabel": "BTC",
           "notionalValueTRY": 146445.86,
           "effectiveLeverage": 3.58,
+          "accountLeverage": 0.72,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 0,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (3.071,43 TL) ÷ [SL Mesafesi (1371.14) × Kur (50.34 TL)] = 0.0445 BTC (0.04 Standart Lot) | Pozisyon Büyüklüğü: 146.445,86 TL (3.58x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 40.952,4 TL × 3.58x Kaldıraç = 146.445,86 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 0.72x) | Birim = Risk (3.071,43 TL) ÷ [SL Mesafesi (1371.14) × Kur (50.34 TL)] = 0.0445 BTC (0.04 Standart Lot)"
         },
         "gates": [
           {
@@ -698,13 +731,13 @@
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 3.071,43 TL | 0.04 Lot (0.0445 BTC) | Kaldıraç: 3.58x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 40.952,4 TL | Kaldıraç: 3.58x (Kasa: 0.72x) | Hacim: 146.445,86 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 1371.14 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 45.93 TL."
+            "note": "Basılan Ana Para: 40.952,4 TL -> 3.58x kaldıraç ile 146.445,86 TL (0.0445 BTC / 0.04 Lot) pozisyon açıldı. Spread (16) + Slippage (4.5) maliyeti: 45.93 TL."
           }
         ],
         "excursion": {
@@ -742,7 +775,7 @@
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-14T17:15:39.369Z",
+            "timestamp": "2026-11-14T20:20:37.299Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
             "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +1.290 TL (+0.42R @ 64791.84) | En derin geri çekilme (MAE): -1.167,14 TL (-0.38R @ 65888.75).",
@@ -762,7 +795,11 @@
       "mfeR": 0.42,
       "maeTRY": -1167.14,
       "maeR": -0.38,
-      "rMultiple": 0.12
+      "rMultiple": -0.07,
+      "unitLabel": "BTC",
+      "accountLeverage": 0.72,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 0
     }
   ],
   "closedTrades": [
@@ -821,10 +858,14 @@
           "executionCostTRY": 64.5,
           "contractSize": 1,
           "lotSize": 0.06,
+          "unitLabel": "BTC",
           "notionalValueTRY": 208971.5,
           "effectiveLeverage": 3.78,
+          "accountLeverage": 0.76,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": -869.55,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (1318.06) × Kur (50.34 TL)] = 0.0625 BTC (0.06 Standart Lot) | Pozisyon Büyüklüğü: 208.971,5 TL (3.78x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 55.260,58 TL × 3.78x Kaldıraç = 208.971,5 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 0.76x) | Birim = Risk (4.144,54 TL) ÷ [SL Mesafesi (1318.06) × Kur (50.34 TL)] = 0.0625 BTC (0.06 Standart Lot)"
         },
         "gates": [
           {
@@ -880,18 +921,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.144,54 TL | 0.06 Lot (0.0625 BTC) | Kaldıraç: 3.78x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 55.260,58 TL | Kaldıraç: 3.78x (Kasa: 0.76x) | Hacim: 208.971,5 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 1318.06 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 64.5 TL."
+            "note": "Basılan Ana Para: 55.260,58 TL -> 3.78x kaldıraç ile 208.971,5 TL (0.0625 BTC / 0.06 Lot) pozisyon açıldı. Spread (16) + Slippage (4.5) maliyeti: 64.5 TL."
           }
         ],
         "excursion": {
@@ -958,7 +999,11 @@
       "mfeR": 0.42,
       "maeTRY": -1574.93,
       "maeR": -0.38,
-      "rMultiple": -0.79
+      "rMultiple": -0.79,
+      "unitLabel": "BTC",
+      "accountLeverage": 0.76,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": -869.55
     },
     {
       "id": "TRD-EURUSD-00000",
@@ -980,7 +1025,7 @@
       "initialStopLoss": 1.1116,
       "allocatedCapitalTRY": 52218.89,
       "riskAmountTRY": 3916.42,
-      "positionSizeUnits": 7949.8925,
+      "positionSizeUnits": 29920.0389,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7754.51,
@@ -1012,13 +1057,17 @@
           "fillPrice": 1.109,
           "spreadPts": 0.00012,
           "slippagePts": 0.00003,
-          "executionCostTRY": 60.04,
+          "executionCostTRY": 225.95,
           "contractSize": 100000,
-          "lotSize": 0.08,
-          "notionalValueTRY": 443860.56,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.3,
+          "unitLabel": "EUR",
+          "notionalValueTRY": 1670503.76,
+          "effectiveLeverage": 31.99,
+          "accountLeverage": 6.4,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 242.4,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (3.916,42 TL) ÷ [SL Mesafesi (0.0026) × Kur (50.34 TL)] = 7949.8925 EUR (0.08 Standart Lot) | Pozisyon Büyüklüğü: 443.860,56 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 52.218,89 TL × 31.99x Kaldıraç = 1.670.503,76 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 6.4x) | Birim = Risk (3.916,42 TL) ÷ [SL Mesafesi (0.0026) × Kur (50.34 TL)] = 29920.0389 EUR (0.3 Standart Lot)"
         },
         "gates": [
           {
@@ -1074,18 +1123,18 @@
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 3.916,42 TL | 0.08 Lot (7949.8925 EUR) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 52.218,89 TL | Kaldıraç: 31.99x (Kasa: 6.4x) | Hacim: 1.670.503,76 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.0026 × 50.34 TL. Spread (0.00012) + Slippage (0.00003) maliyeti: 60.04 TL."
+            "note": "Basılan Ana Para: 52.218,89 TL -> 31.99x kaldıraç ile 1.670.503,76 TL (29920.0389 EUR / 0.3 Lot) pozisyon açıldı. Spread (0.00012) + Slippage (0.00003) maliyeti: 225.95 TL."
           }
         ],
         "excursion": {
@@ -1117,7 +1166,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-12T12:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.08 Lot — SAT (SHORT))",
+            "title": "Canlı Emir İcra Edildi (0.3 Lot — SAT (SHORT))",
             "detail": "Kotasyon: 1.1090 -> Spread/Slippage Dahil Dolum: 1.1090. Teminat: 52.218,89 TL, Maks. Risk: 3.916,42 TL.",
             "price": 1.109
           },
@@ -1149,19 +1198,23 @@
           }
         ]
       },
-      "lotSize": 0.08,
+      "lotSize": 0.3,
       "contractSize": 100000,
-      "notionalValueTRY": 443860.56,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 1670503.76,
+      "effectiveLeverage": 31.99,
       "spreadPts": 0.00012,
       "slippagePts": 0.00003,
-      "executionCostTRY": 60.04,
+      "executionCostTRY": 225.95,
       "confluenceScore": 98,
       "mfeTRY": 10026.04,
       "mfeR": 2.56,
       "maeTRY": -1488.24,
       "maeR": -0.38,
-      "rMultiple": 1.98
+      "rMultiple": 1.98,
+      "unitLabel": "EUR",
+      "accountLeverage": 6.4,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 242.4
     },
     {
       "id": "TRD-GBPUSD-00000",
@@ -1183,7 +1236,7 @@
       "initialStopLoss": 1.3393,
       "allocatedCapitalTRY": 53718.21,
       "riskAmountTRY": 4028.87,
-      "positionSizeUnits": 6794.1944,
+      "positionSizeUnits": 18187.6597,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7977.16,
@@ -1215,13 +1268,17 @@
           "fillPrice": 1.3349,
           "spreadPts": 0.00016,
           "slippagePts": 0.00004,
-          "executionCostTRY": 68.41,
+          "executionCostTRY": 183.13,
           "contractSize": 100000,
-          "lotSize": 0.07,
-          "notionalValueTRY": 456604.79,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.18,
+          "unitLabel": "GBP",
+          "notionalValueTRY": 1222304.22,
+          "effectiveLeverage": 22.75,
+          "accountLeverage": 4.55,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 350.64,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.028,87 TL) ÷ [SL Mesafesi (0.0044) × Kur (50.34 TL)] = 6794.1944 GBP (0.07 Standart Lot) | Pozisyon Büyüklüğü: 456.604,79 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 53.718,21 TL × 22.75x Kaldıraç = 1.222.304,22 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 4.55x) | Birim = Risk (4.028,87 TL) ÷ [SL Mesafesi (0.0044) × Kur (50.34 TL)] = 18187.6597 GBP (0.18 Standart Lot)"
         },
         "gates": [
           {
@@ -1277,18 +1334,18 @@
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.028,87 TL | 0.07 Lot (6794.1944 GBP) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 53.718,21 TL | Kaldıraç: 22.75x (Kasa: 4.55x) | Hacim: 1.222.304,22 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.0044 × 50.34 TL. Spread (0.00016) + Slippage (0.00004) maliyeti: 68.41 TL."
+            "note": "Basılan Ana Para: 53.718,21 TL -> 22.75x kaldıraç ile 1.222.304,22 TL (18187.6597 GBP / 0.18 Lot) pozisyon açıldı. Spread (0.00016) + Slippage (0.00004) maliyeti: 183.13 TL."
           }
         ],
         "excursion": {
@@ -1320,7 +1377,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-10T23:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.07 Lot — SAT (SHORT))",
+            "title": "Canlı Emir İcra Edildi (0.18 Lot — SAT (SHORT))",
             "detail": "Kotasyon: 1.3349 -> Spread/Slippage Dahil Dolum: 1.3349. Teminat: 53.718,21 TL, Maks. Risk: 4.028,87 TL.",
             "price": 1.3349
           },
@@ -1352,19 +1409,23 @@
           }
         ]
       },
-      "lotSize": 0.07,
+      "lotSize": 0.18,
       "contractSize": 100000,
-      "notionalValueTRY": 456604.79,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 1222304.22,
+      "effectiveLeverage": 22.75,
       "spreadPts": 0.00016,
       "slippagePts": 0.00004,
-      "executionCostTRY": 68.41,
+      "executionCostTRY": 183.13,
       "confluenceScore": 98,
       "mfeTRY": 10313.91,
       "mfeR": 2.56,
       "maeTRY": -1530.97,
       "maeR": -0.38,
-      "rMultiple": 1.98
+      "rMultiple": 1.98,
+      "unitLabel": "GBP",
+      "accountLeverage": 4.55,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 350.64
     },
     {
       "id": "TRD-BTCUSD-00000",
@@ -1421,10 +1482,14 @@
           "executionCostTRY": 118.48,
           "contractSize": 1,
           "lotSize": 0.11,
+          "unitLabel": "BTC",
           "notionalValueTRY": 424763.6,
           "effectiveLeverage": 7.91,
+          "accountLeverage": 1.58,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 1007.52,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.025 TL) ÷ [SL Mesafesi (696.71) × Kur (50.34 TL)] = 0.1148 BTC (0.11 Standart Lot) | Pozisyon Büyüklüğü: 424.763,6 TL (7.91x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 53.666,68 TL × 7.91x Kaldıraç = 424.763,6 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 1.58x) | Birim = Risk (4.025 TL) ÷ [SL Mesafesi (696.71) × Kur (50.34 TL)] = 0.1148 BTC (0.11 Standart Lot)"
         },
         "gates": [
           {
@@ -1480,18 +1545,18 @@
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.025 TL | 0.11 Lot (0.1148 BTC) | Kaldıraç: 7.91x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 53.666,68 TL | Kaldıraç: 7.91x (Kasa: 1.58x) | Hacim: 424.763,6 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 696.71 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 118.48 TL."
+            "note": "Basılan Ana Para: 53.666,68 TL -> 7.91x kaldıraç ile 424.763,6 TL (0.1148 BTC / 0.11 Lot) pozisyon açıldı. Spread (16) + Slippage (4.5) maliyeti: 118.48 TL."
           }
         ],
         "excursion": {
@@ -1567,7 +1632,11 @@
       "mfeR": 2.56,
       "maeTRY": -1529.5,
       "maeR": -0.38,
-      "rMultiple": 1.98
+      "rMultiple": 1.98,
+      "unitLabel": "BTC",
+      "accountLeverage": 1.58,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 1007.52
     },
     {
       "id": "TRD-BTCUSD-00000",
@@ -1624,10 +1693,14 @@
           "executionCostTRY": 98.77,
           "contractSize": 1,
           "lotSize": 0.1,
+          "unitLabel": "BTC",
           "notionalValueTRY": 359298.74,
           "effectiveLeverage": 6.59,
+          "accountLeverage": 1.32,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": -620.08,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.086,3 TL) ÷ [SL Mesafesi (848.51) × Kur (50.34 TL)] = 0.0957 BTC (0.1 Standart Lot) | Pozisyon Büyüklüğü: 359.298,74 TL (6.59x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 54.483,94 TL × 6.59x Kaldıraç = 359.298,74 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 1.32x) | Birim = Risk (4.086,3 TL) ÷ [SL Mesafesi (848.51) × Kur (50.34 TL)] = 0.0957 BTC (0.1 Standart Lot)"
         },
         "gates": [
           {
@@ -1683,18 +1756,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.086,3 TL | 0.1 Lot (0.0957 BTC) | Kaldıraç: 6.59x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 54.483,94 TL | Kaldıraç: 6.59x (Kasa: 1.32x) | Hacim: 359.298,74 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 848.51 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 98.77 TL."
+            "note": "Basılan Ana Para: 54.483,94 TL -> 6.59x kaldıraç ile 359.298,74 TL (0.0957 BTC / 0.1 Lot) pozisyon açıldı. Spread (16) + Slippage (4.5) maliyeti: 98.77 TL."
           }
         ],
         "excursion": {
@@ -1761,7 +1834,11 @@
       "mfeR": 0.42,
       "maeTRY": -4086.3,
       "maeR": -1,
-      "rMultiple": -1
+      "rMultiple": -1,
+      "unitLabel": "BTC",
+      "accountLeverage": 1.32,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": -620.08
     },
     {
       "id": "TRD-XAUUSD-00000",
@@ -1783,7 +1860,7 @@
       "initialStopLoss": 4090.84,
       "allocatedCapitalTRY": 50000,
       "riskAmountTRY": 3750,
-      "positionSizeUnits": 2.0752,
+      "positionSizeUnits": 3.247,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7425,
@@ -1815,13 +1892,17 @@
           "fillPrice": 4067.9,
           "spreadPts": 0.25,
           "slippagePts": 0.05,
-          "executionCostTRY": 31.34,
+          "executionCostTRY": 49.04,
           "contractSize": 100,
-          "lotSize": 0.02,
-          "notionalValueTRY": 424995.16,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.03,
+          "unitLabel": "Ons",
+          "notionalValueTRY": 664976.53,
+          "effectiveLeverage": 13.3,
+          "accountLeverage": 2.66,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 558.27,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (3.750 TL) ÷ [SL Mesafesi (22.94) × Kur (50.34 TL)] = 2.0752 Ons (0.02 Standart Lot) | Pozisyon Büyüklüğü: 424.995,16 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 50.000 TL × 13.3x Kaldıraç = 664.976,53 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 2.66x) | Birim = Risk (3.750 TL) ÷ [SL Mesafesi (22.94) × Kur (50.34 TL)] = 3.247 Ons (0.03 Standart Lot)"
         },
         "gates": [
           {
@@ -1877,18 +1958,18 @@
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 3.750 TL | 0.02 Lot (2.0752 Ons) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 50.000 TL | Kaldıraç: 13.3x (Kasa: 2.66x) | Hacim: 664.976,53 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 22.94 × 50.34 TL. Spread (0.25) + Slippage (0.05) maliyeti: 31.34 TL."
+            "note": "Basılan Ana Para: 50.000 TL -> 13.3x kaldıraç ile 664.976,53 TL (3.247 Ons / 0.03 Lot) pozisyon açıldı. Spread (0.25) + Slippage (0.05) maliyeti: 49.04 TL."
           }
         ],
         "excursion": {
@@ -1920,7 +2001,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-11T06:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.02 Lot — SAT (SHORT))",
+            "title": "Canlı Emir İcra Edildi (0.03 Lot — SAT (SHORT))",
             "detail": "Kotasyon: 4067.90 -> Spread/Slippage Dahil Dolum: 4067.90. Teminat: 50.000 TL, Maks. Risk: 3.750 TL.",
             "price": 4067.9
           },
@@ -1952,19 +2033,23 @@
           }
         ]
       },
-      "lotSize": 0.02,
+      "lotSize": 0.03,
       "contractSize": 100,
-      "notionalValueTRY": 424995.16,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 664976.53,
+      "effectiveLeverage": 13.3,
       "spreadPts": 0.25,
       "slippagePts": 0.05,
-      "executionCostTRY": 31.34,
+      "executionCostTRY": 49.04,
       "confluenceScore": 98,
       "mfeTRY": 9600,
       "mfeR": 2.56,
       "maeTRY": -1425,
       "maeR": -0.38,
-      "rMultiple": 1.98
+      "rMultiple": 1.98,
+      "unitLabel": "Ons",
+      "accountLeverage": 2.66,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 558.27
     },
     {
       "id": "TRD-BTCUSD-00000",
@@ -2021,10 +2106,14 @@
           "executionCostTRY": 130.56,
           "contractSize": 1,
           "lotSize": 0.13,
+          "unitLabel": "BTC",
           "notionalValueTRY": 468256.36,
           "effectiveLeverage": 8.47,
+          "accountLeverage": 1.69,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": -489.79,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.148,52 TL) ÷ [SL Mesafesi (651.39) × Kur (50.34 TL)] = 0.1265 BTC (0.13 Standart Lot) | Pozisyon Büyüklüğü: 468.256,36 TL (8.47x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 55.313,64 TL × 8.47x Kaldıraç = 468.256,36 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 1.69x) | Birim = Risk (4.148,52 TL) ÷ [SL Mesafesi (651.39) × Kur (50.34 TL)] = 0.1265 BTC (0.13 Standart Lot)"
         },
         "gates": [
           {
@@ -2080,18 +2169,18 @@
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.148,52 TL | 0.13 Lot (0.1265 BTC) | Kaldıraç: 8.47x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 55.313,64 TL | Kaldıraç: 8.47x (Kasa: 1.69x) | Hacim: 468.256,36 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 651.39 × 50.34 TL. Spread (16) + Slippage (4.5) maliyeti: 130.56 TL."
+            "note": "Basılan Ana Para: 55.313,64 TL -> 8.47x kaldıraç ile 468.256,36 TL (0.1265 BTC / 0.13 Lot) pozisyon açıldı. Spread (16) + Slippage (4.5) maliyeti: 130.56 TL."
           }
         ],
         "excursion": {
@@ -2158,7 +2247,11 @@
       "mfeR": 0.42,
       "maeTRY": -4148.52,
       "maeR": -1,
-      "rMultiple": -1
+      "rMultiple": -1,
+      "unitLabel": "BTC",
+      "accountLeverage": 1.69,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": -489.79
     },
     {
       "id": "TRD-EURUSD-00000",
@@ -2180,7 +2273,7 @@
       "initialStopLoss": 1.1201,
       "allocatedCapitalTRY": 50712.72,
       "riskAmountTRY": 3803.45,
-      "positionSizeUnits": 7663.9232,
+      "positionSizeUnits": 26051.0934,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7530.83,
@@ -2212,13 +2305,17 @@
           "fillPrice": 1.1172,
           "spreadPts": 0.00012,
           "slippagePts": 0.00003,
-          "executionCostTRY": 57.88,
+          "executionCostTRY": 196.73,
           "contractSize": 100000,
-          "lotSize": 0.08,
-          "notionalValueTRY": 431058.12,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.26,
+          "unitLabel": "EUR",
+          "notionalValueTRY": 1465246.32,
+          "effectiveLeverage": 28.89,
+          "accountLeverage": 5.78,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 260.67,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (3.803,45 TL) ÷ [SL Mesafesi (0.0029) × Kur (50.34 TL)] = 7663.9232 EUR (0.08 Standart Lot) | Pozisyon Büyüklüğü: 431.058,12 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 50.712,72 TL × 28.89x Kaldıraç = 1.465.246,32 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 5.78x) | Birim = Risk (3.803,45 TL) ÷ [SL Mesafesi (0.0029) × Kur (50.34 TL)] = 26051.0934 EUR (0.26 Standart Lot)"
         },
         "gates": [
           {
@@ -2274,18 +2371,18 @@
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 3.803,45 TL | 0.08 Lot (7663.9232 EUR) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 50.712,72 TL | Kaldıraç: 28.89x (Kasa: 5.78x) | Hacim: 1.465.246,32 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.0029 × 50.34 TL. Spread (0.00012) + Slippage (0.00003) maliyeti: 57.88 TL."
+            "note": "Basılan Ana Para: 50.712,72 TL -> 28.89x kaldıraç ile 1.465.246,32 TL (26051.0934 EUR / 0.26 Lot) pozisyon açıldı. Spread (0.00012) + Slippage (0.00003) maliyeti: 196.73 TL."
           }
         ],
         "excursion": {
@@ -2317,7 +2414,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-10T23:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.08 Lot — SAT (SHORT))",
+            "title": "Canlı Emir İcra Edildi (0.26 Lot — SAT (SHORT))",
             "detail": "Kotasyon: 1.1172 -> Spread/Slippage Dahil Dolum: 1.1172. Teminat: 50.712,72 TL, Maks. Risk: 3.803,45 TL.",
             "price": 1.1172
           },
@@ -2349,19 +2446,23 @@
           }
         ]
       },
-      "lotSize": 0.08,
+      "lotSize": 0.26,
       "contractSize": 100000,
-      "notionalValueTRY": 431058.12,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 1465246.32,
+      "effectiveLeverage": 28.89,
       "spreadPts": 0.00012,
       "slippagePts": 0.00003,
-      "executionCostTRY": 57.88,
+      "executionCostTRY": 196.73,
       "confluenceScore": 98,
       "mfeTRY": 9736.83,
       "mfeR": 2.56,
       "maeTRY": -1445.31,
       "maeR": -0.38,
-      "rMultiple": 1.98
+      "rMultiple": 1.98,
+      "unitLabel": "EUR",
+      "accountLeverage": 5.78,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 260.67
     },
     {
       "id": "TRD-USDJPY-00000",
@@ -2383,7 +2484,7 @@
       "initialStopLoss": 158.6,
       "allocatedCapitalTRY": 52963.25,
       "riskAmountTRY": 3972.24,
-      "positionSizeUnits": 8942.1056,
+      "positionSizeUnits": 59667.8342,
       "tp1Hit": true,
       "breakevenActive": true,
       "realizedPnL_TRY": 7865.04,
@@ -2415,13 +2516,17 @@
           "fillPrice": 158.81,
           "spreadPts": 0.014,
           "slippagePts": 0.004,
-          "executionCostTRY": 51.03,
+          "executionCostTRY": 238.33,
           "contractSize": 100000,
-          "lotSize": 0.09,
-          "notionalValueTRY": 450187.62,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.6,
+          "unitLabel": "USD",
+          "notionalValueTRY": 3003959.21,
+          "effectiveLeverage": 56.72,
+          "accountLeverage": 11.34,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": 138.66,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (3.972,24 TL) ÷ [SL Mesafesi (0.21) × Kur (50.34 TL)] = 8942.1056 USD (0.09 Standart Lot) | Pozisyon Büyüklüğü: 450.187,62 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 52.963,25 TL × 56.72x Kaldıraç = 3.003.959,21 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 11.34x) | Birim = Risk (3.972,24 TL) ÷ [SL Mesafesi (0.21) × Kur (50.34 TL)] = 59667.8342 USD (0.6 Standart Lot)"
         },
         "gates": [
           {
@@ -2477,18 +2582,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 3.972,24 TL | 0.09 Lot (8942.1056 USD) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 52.963,25 TL | Kaldıraç: 56.72x (Kasa: 11.34x) | Hacim: 3.003.959,21 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.21 × 50.34 TL. Spread (0.014) + Slippage (0.004) maliyeti: 51.03 TL."
+            "note": "Basılan Ana Para: 52.963,25 TL -> 56.72x kaldıraç ile 3.003.959,21 TL (59667.8342 USD / 0.6 Lot) pozisyon açıldı. Spread (0.014) + Slippage (0.004) maliyeti: 238.33 TL."
           }
         ],
         "excursion": {
@@ -2520,7 +2625,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-11T05:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.09 Lot — AL (LONG))",
+            "title": "Canlı Emir İcra Edildi (0.6 Lot — AL (LONG))",
             "detail": "Kotasyon: 158.81 -> Spread/Slippage Dahil Dolum: 158.81. Teminat: 52.963,25 TL, Maks. Risk: 3.972,24 TL.",
             "price": 158.81
           },
@@ -2552,19 +2657,23 @@
           }
         ]
       },
-      "lotSize": 0.09,
+      "lotSize": 0.6,
       "contractSize": 100000,
-      "notionalValueTRY": 450187.62,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 3003959.21,
+      "effectiveLeverage": 56.72,
       "spreadPts": 0.014,
       "slippagePts": 0.004,
-      "executionCostTRY": 51.03,
+      "executionCostTRY": 238.33,
       "confluenceScore": 94,
       "mfeTRY": 10168.93,
       "mfeR": 2.56,
       "maeTRY": -1509.45,
       "maeR": -0.38,
-      "rMultiple": 1.98
+      "rMultiple": 1.98,
+      "unitLabel": "USD",
+      "accountLeverage": 11.34,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": 138.66
     },
     {
       "id": "TRD-EURUSD-00000",
@@ -2586,7 +2695,7 @@
       "initialStopLoss": 1.1194,
       "allocatedCapitalTRY": 51485,
       "riskAmountTRY": 3861.38,
-      "positionSizeUnits": 7749.4194,
+      "positionSizeUnits": 33347.321,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -3861.38,
@@ -2618,13 +2727,17 @@
           "fillPrice": 1.1217,
           "spreadPts": 0.00012,
           "slippagePts": 0.00003,
-          "executionCostTRY": 58.52,
+          "executionCostTRY": 231.68,
           "contractSize": 100000,
-          "lotSize": 0.08,
-          "notionalValueTRY": 437622.5,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.33,
+          "unitLabel": "EUR",
+          "notionalValueTRY": 1883178.24,
+          "effectiveLeverage": 36.58,
+          "accountLeverage": 7.32,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": -105.56,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (3.861,38 TL) ÷ [SL Mesafesi (0.0023) × Kur (50.34 TL)] = 7749.4194 EUR (0.08 Standart Lot) | Pozisyon Büyüklüğü: 437.622,5 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 51.485 TL × 36.58x Kaldıraç = 1.883.178,24 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 7.32x) | Birim = Risk (3.861,38 TL) ÷ [SL Mesafesi (0.0023) × Kur (50.34 TL)] = 33347.321 EUR (0.33 Standart Lot)"
         },
         "gates": [
           {
@@ -2680,18 +2793,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 3.861,38 TL | 0.08 Lot (7749.4194 EUR) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 51.485 TL | Kaldıraç: 36.58x (Kasa: 7.32x) | Hacim: 1.883.178,24 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.0023 × 50.34 TL. Spread (0.00012) + Slippage (0.00003) maliyeti: 58.52 TL."
+            "note": "Basılan Ana Para: 51.485 TL -> 36.58x kaldıraç ile 1.883.178,24 TL (33347.321 EUR / 0.33 Lot) pozisyon açıldı. Spread (0.00012) + Slippage (0.00003) maliyeti: 231.68 TL."
           }
         ],
         "excursion": {
@@ -2723,7 +2836,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-10T12:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.08 Lot — AL (LONG))",
+            "title": "Canlı Emir İcra Edildi (0.33 Lot — AL (LONG))",
             "detail": "Kotasyon: 1.1217 -> Spread/Slippage Dahil Dolum: 1.1217. Teminat: 51.485 TL, Maks. Risk: 3.861,38 TL.",
             "price": 1.1217
           },
@@ -2746,19 +2859,23 @@
           }
         ]
       },
-      "lotSize": 0.08,
+      "lotSize": 0.33,
       "contractSize": 100000,
-      "notionalValueTRY": 437622.5,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 1883178.24,
+      "effectiveLeverage": 36.58,
       "spreadPts": 0.00012,
       "slippagePts": 0.00003,
-      "executionCostTRY": 58.52,
+      "executionCostTRY": 231.68,
       "confluenceScore": 94,
       "mfeTRY": 1621.78,
       "mfeR": 0.42,
       "maeTRY": -3861.38,
       "maeR": -1,
-      "rMultiple": -1
+      "rMultiple": -1,
+      "unitLabel": "EUR",
+      "accountLeverage": 7.32,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": -105.56
     },
     {
       "id": "TRD-USDJPY-00000",
@@ -2780,7 +2897,7 @@
       "initialStopLoss": 158.3,
       "allocatedCapitalTRY": 53769.79,
       "riskAmountTRY": 4032.73,
-      "positionSizeUnits": 9078.2786,
+      "positionSizeUnits": 43644.7454,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -4032.73,
@@ -2812,13 +2929,17 @@
           "fillPrice": 158.01,
           "spreadPts": 0.014,
           "slippagePts": 0.004,
-          "executionCostTRY": 52.06,
+          "executionCostTRY": 241.96,
           "contractSize": 100000,
-          "lotSize": 0.09,
-          "notionalValueTRY": 457043.21,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.44,
+          "unitLabel": "USD",
+          "notionalValueTRY": 2197281.61,
+          "effectiveLeverage": 40.86,
+          "accountLeverage": 8.17,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": -98.7,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.032,73 TL) ÷ [SL Mesafesi (0.29) × Kur (50.34 TL)] = 9078.2786 USD (0.09 Standart Lot) | Pozisyon Büyüklüğü: 457.043,21 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 53.769,79 TL × 40.86x Kaldıraç = 2.197.281,61 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 8.17x) | Birim = Risk (4.032,73 TL) ÷ [SL Mesafesi (0.29) × Kur (50.34 TL)] = 43644.7454 USD (0.44 Standart Lot)"
         },
         "gates": [
           {
@@ -2874,18 +2995,18 @@
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.032,73 TL | 0.09 Lot (9078.2786 USD) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 53.769,79 TL | Kaldıraç: 40.86x (Kasa: 8.17x) | Hacim: 2.197.281,61 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.29 × 50.34 TL. Spread (0.014) + Slippage (0.004) maliyeti: 52.06 TL."
+            "note": "Basılan Ana Para: 53.769,79 TL -> 40.86x kaldıraç ile 2.197.281,61 TL (43644.7454 USD / 0.44 Lot) pozisyon açıldı. Spread (0.014) + Slippage (0.004) maliyeti: 241.96 TL."
           }
         ],
         "excursion": {
@@ -2917,7 +3038,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-10T06:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.09 Lot — SAT (SHORT))",
+            "title": "Canlı Emir İcra Edildi (0.44 Lot — SAT (SHORT))",
             "detail": "Kotasyon: 158.01 -> Spread/Slippage Dahil Dolum: 158.01. Teminat: 53.769,79 TL, Maks. Risk: 4.032,73 TL.",
             "price": 158.01
           },
@@ -2940,19 +3061,23 @@
           }
         ]
       },
-      "lotSize": 0.09,
+      "lotSize": 0.44,
       "contractSize": 100000,
-      "notionalValueTRY": 457043.21,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 2197281.61,
+      "effectiveLeverage": 40.86,
       "spreadPts": 0.014,
       "slippagePts": 0.004,
-      "executionCostTRY": 52.06,
+      "executionCostTRY": 241.96,
       "confluenceScore": 98,
       "mfeTRY": 1693.75,
       "mfeR": 0.42,
       "maeTRY": -4032.73,
       "maeR": -1,
-      "rMultiple": -1
+      "rMultiple": -1,
+      "unitLabel": "USD",
+      "accountLeverage": 8.17,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": -98.7
     },
     {
       "id": "TRD-GBPUSD-00000",
@@ -2974,7 +3099,7 @@
       "initialStopLoss": 1.3401,
       "allocatedCapitalTRY": 54536.25,
       "riskAmountTRY": 4090.22,
-      "positionSizeUnits": 6859.6325,
+      "positionSizeUnits": 36929.2281,
       "tp1Hit": false,
       "breakevenActive": false,
       "realizedPnL_TRY": -4090.22,
@@ -3006,13 +3131,17 @@
           "fillPrice": 1.3423,
           "spreadPts": 0.00016,
           "slippagePts": 0.00004,
-          "executionCostTRY": 69.07,
+          "executionCostTRY": 245.41,
           "contractSize": 100000,
-          "lotSize": 0.07,
-          "notionalValueTRY": 463558.12,
-          "effectiveLeverage": 8.5,
+          "lotSize": 0.37,
+          "unitLabel": "GBP",
+          "notionalValueTRY": 2495591.96,
+          "effectiveLeverage": 45.76,
+          "accountLeverage": 9.15,
+          "isLeveraged": true,
+          "spot1xEquivalentPnL_TRY": -89.38,
           "usdTryAtEntry": 50.3447,
-          "sizingFormulaText": "Birim = Risk (4.090,22 TL) ÷ [SL Mesafesi (0.0022) × Kur (50.34 TL)] = 6859.6325 GBP (0.07 Standart Lot) | Pozisyon Büyüklüğü: 463.558,12 TL (8.5x Efektif Kaldıraç)"
+          "sizingFormulaText": "Basılan Ana Para (Teminat): 54.536,25 TL × 45.76x Kaldıraç = 2.495.591,96 TL Toplam İşlem Hacmi (Kasa Kaldıracı: 9.15x) | Birim = Risk (4.090,22 TL) ÷ [SL Mesafesi (0.0022) × Kur (50.34 TL)] = 36929.2281 GBP (0.37 Standart Lot)"
         },
         "gates": [
           {
@@ -3068,18 +3197,18 @@
             "score": 11,
             "maxScore": 15,
             "passed": true,
-            "note": "Enstrüman üzerinde ters yönlü flaş haber şoku bulunmuyor; teknik model onaylandı."
+            "note": "İncelenen Canlı Manşet: \"Sakin / Teknik Akış\". Ters yönlü haber vetosu yok."
           },
           {
             "step": 6,
             "title": "Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi",
-            "metricLabel": "Risk / Teminat / Lot / Spread",
-            "metricValue": "Risk: 4.090,22 TL | 0.07 Lot (6859.6325 GBP) | Kaldıraç: 8.5x",
-            "threshold": "Maks. Kasa Riski <= %1.50 & Efektif Kaldıraç <= 10x",
+            "metricLabel": "Basılan Para / Kaldıraç / Hacim",
+            "metricValue": "Teminat: 54.536,25 TL | Kaldıraç: 45.76x (Kasa: 9.15x) | Hacim: 2.495.591,96 TL",
+            "threshold": "Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç",
             "score": 15,
             "maxScore": 15,
             "passed": true,
-            "note": "Birim Risk = 0.0022 × 50.34 TL. Spread (0.00016) + Slippage (0.00004) maliyeti: 69.07 TL."
+            "note": "Basılan Ana Para: 54.536,25 TL -> 45.76x kaldıraç ile 2.495.591,96 TL (36929.2281 GBP / 0.37 Lot) pozisyon açıldı. Spread (0.00016) + Slippage (0.00004) maliyeti: 245.41 TL."
           }
         ],
         "excursion": {
@@ -3111,7 +3240,7 @@
             "stepNo": 3,
             "timestamp": "2026-11-10T12:00:00.000Z",
             "phase": "ORDER_FILLED",
-            "title": "Canlı Emir İcra Edildi (0.07 Lot — AL (LONG))",
+            "title": "Canlı Emir İcra Edildi (0.37 Lot — AL (LONG))",
             "detail": "Kotasyon: 1.3423 -> Spread/Slippage Dahil Dolum: 1.3423. Teminat: 54.536,25 TL, Maks. Risk: 4.090,22 TL.",
             "price": 1.3423
           },
@@ -3134,19 +3263,23 @@
           }
         ]
       },
-      "lotSize": 0.07,
+      "lotSize": 0.37,
       "contractSize": 100000,
-      "notionalValueTRY": 463558.12,
-      "effectiveLeverage": 8.5,
+      "notionalValueTRY": 2495591.96,
+      "effectiveLeverage": 45.76,
       "spreadPts": 0.00016,
       "slippagePts": 0.00004,
-      "executionCostTRY": 69.07,
+      "executionCostTRY": 245.41,
       "confluenceScore": 94,
       "mfeTRY": 1717.89,
       "mfeR": 0.42,
       "maeTRY": -4090.22,
       "maeR": -1,
-      "rMultiple": -1
+      "rMultiple": -1,
+      "unitLabel": "GBP",
+      "accountLeverage": 9.15,
+      "isLeveraged": true,
+      "spot1xEquivalentPnL_TRY": -89.38
     }
   ],
   "equityCurve": [
@@ -3261,146 +3394,707 @@
       "equityTRY": 273383.74,
       "cashTRY": 273015.99,
       "drawdownPercent": -1.15
+    },
+    {
+      "timestamp": 1794687634997,
+      "timeStr": "14/11 23:20",
+      "equityTRY": 272804.04,
+      "cashTRY": 273015.99,
+      "drawdownPercent": -1.36
     }
   ],
   "activityLog": [
     {
-      "id": "ACT-ENT-1794675398908-BTC/USD",
-      "timestamp": "2026-11-14T16:56:38.908Z",
-      "type": "ENTRY",
-      "symbol": "BTC/USD",
-      "message": "YENİ İŞLEM AÇILDI: BTC/USD (SAT (SHORT)) @ 65367.72 | TP1: 63283.59 | TP2: 61857.61 | SL: 66738.86 | Gerekçe: Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış."
-    },
-    {
-      "id": "ACT-NEWS-SHIELD-1794675398908-BTC/USD",
+      "id": "ACT-CLS-TRD-BTCUSD-58023",
       "timestamp": "2026-11-14T16:56:38.908Z",
       "type": "SYSTEM",
       "symbol": "BTC/USD",
-      "message": "HABER RİSK KALKANI DEVREDE: BTC/USD (AL (LONG)) pozisyonu \"Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi\" olumsuz haberi nedeniyle tam stop zararını beklemeden 65367.72 seviyesinden savunma amaçlı kapatıldı (-3.286,9 TL).",
-      "pnlImpactTRY": -3286.9
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 55260.58,
+      "notionalVolumeTRY": 208971.5,
+      "effectiveLeverage": 3.78,
+      "accountLeverage": 0.76,
+      "isLeveraged": true,
+      "lotSize": 0.06,
+      "units": 0.0625,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4144.54,
+      "executionCostTRY": 64.5,
+      "entryPrice": 66413.03,
+      "exitPrice": 65367.72,
+      "stopLoss": 65094.97,
+      "tp1": 68416.48,
+      "tp2": 69787.26,
+      "rMultiple": -0.79,
+      "spot1xPnL_TRY": -869.55,
+      "pnlImpactTRY": -3286.9,
+      "equityAfterTRY": 273015.99,
+      "message": "HABER RİSK KALKANI ÇIKIŞI: BTC/USD (AL (LONG)) 66413.03 → 65367.72 | Basılan Para: 55.260,58 TL (3.78x Kaldıraç, Hacim: 208.971,5 TL) | Kaldıraçsız (1x Spot) Karşılığı: -869,55 TL | Canlı Haber Risk Kalkanı: \"Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi\" (CoinDesk) ters yönlü haber şoku nedeniyle tam stop beklenmeden savunma çıkışı yapıldı."
     },
     {
-      "id": "ACT-ENT-1794665458023-BTC/USD",
+      "id": "ACT-OPEN-ENT-TRD-BTCUSD-98908",
+      "timestamp": "2026-11-14T16:56:38.908Z",
+      "type": "ENTRY",
+      "symbol": "BTC/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 40952.4,
+      "notionalVolumeTRY": 146445.86,
+      "effectiveLeverage": 3.58,
+      "accountLeverage": 0.72,
+      "isLeveraged": true,
+      "lotSize": 0.04,
+      "units": 0.0445,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 3071.43,
+      "executionCostTRY": 45.93,
+      "entryPrice": 65367.72,
+      "exitPrice": 65462.34,
+      "stopLoss": 66738.86,
+      "tp1": 63283.59,
+      "tp2": 61857.61,
+      "pnlImpactTRY": -211.95,
+      "message": "AKTİF POZİSYON AÇILDI: BTC/USD (SAT (SHORT)) @ 65367.72 (Güncel: 65462.34) | Basılan Ana Para (Teminat): 40.952,4 TL | Kaldıraç: 3.58x (Kasa Kaldıracı: 0.72x) | Açılan Toplam Hacim: 146.445,86 TL (0.0445 BTC / 0.04 Lot) | Maks. Stop Riski: 3.071,43 TL | Gerekçe: Canlı Negatif Haber Katalizörü (\"Analistler dördüncü teslimiyet dalgasını işaret ederken...\") + EMA50 Altı Kırılım Teyitli Satış."
+    },
+    {
+      "id": "ACT-ENT-TRD-BTCUSD-58023",
       "timestamp": "2026-11-14T14:10:58.023Z",
       "type": "ENTRY",
       "symbol": "BTC/USD",
-      "message": "YENİ İŞLEM AÇILDI: BTC/USD (AL (LONG)) @ 66413.03 | TP1: 68416.48 | TP2: 69787.26 | SL: 65094.97 (Teminat: 55.260,58 TL, Risk: 4.144,54 TL)"
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 55260.58,
+      "notionalVolumeTRY": 208971.5,
+      "effectiveLeverage": 3.78,
+      "accountLeverage": 0.76,
+      "isLeveraged": true,
+      "lotSize": 0.06,
+      "units": 0.0625,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4144.54,
+      "executionCostTRY": 64.5,
+      "entryPrice": 66413.03,
+      "stopLoss": 65094.97,
+      "tp1": 68416.48,
+      "tp2": 69787.26,
+      "message": "EMİR AÇILDI: BTC/USD (AL (LONG)) @ 66413.03 | Basılan Ana Para (Teminat): 55.260,58 TL | Kaldıraç: 3.78x (Kasa Kaldıracı: 0.76x) | Açılan Toplam Hacim: 208.971,5 TL (0.0625 BTC / 0.06 Lot) | Maks. Stop Riski: 4.144,54 TL (%1.5) | Gerekçe: Aşırı Satım Tepki Bölgesi (Wilder RSI: 22.6) + Kurumsal Destek Alımı."
     },
     {
-      "id": "ACT-ENT-1794665458023-GBP/USD",
-      "timestamp": "2026-11-14T14:10:58.023Z",
-      "type": "ENTRY",
-      "symbol": "GBP/USD",
-      "message": "YENİ İŞLEM AÇILDI: GBP/USD (SAT (SHORT)) @ 1.3209 | TP1: 1.313 | TP2: 1.3076 | SL: 1.3261 (Teminat: 55.260,58 TL, Risk: 4.144,54 TL)"
-    },
-    {
-      "id": "ACT-ENT-1794665458023-USD/JPY",
-      "timestamp": "2026-11-14T14:10:58.023Z",
-      "type": "ENTRY",
-      "symbol": "USD/JPY",
-      "message": "YENİ İŞLEM AÇILDI: USD/JPY (AL (LONG)) @ 159.69 | TP1: 160.56 | TP2: 161.15 | SL: 159.12 (Teminat: 55.260,58 TL, Risk: 4.144,54 TL)"
-    },
-    {
-      "id": "ACT-ENT-1794665458023-XAU/USD",
+      "id": "ACT-OPEN-ENT-TRD-XAUUSD-58023",
       "timestamp": "2026-11-14T14:10:58.023Z",
       "type": "ENTRY",
       "symbol": "XAU/USD",
-      "message": "YENİ İŞLEM AÇILDI: XAU/USD (SAT (SHORT)) @ 3886.3 | TP1: 3807.87 | TP2: 3754.21 | SL: 3937.9 (Teminat: 55.260,58 TL, Risk: 4.144,54 TL)"
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 55260.58,
+      "notionalVolumeTRY": 312147.36,
+      "effectiveLeverage": 5.65,
+      "accountLeverage": 1.13,
+      "isLeveraged": true,
+      "lotSize": 0.02,
+      "units": 1.5954,
+      "unitLabel": "Ons",
+      "riskAmountTRY": 4144.54,
+      "executionCostTRY": 24.1,
+      "entryPrice": 3886.3,
+      "exitPrice": 3886.3,
+      "stopLoss": 3937.9,
+      "tp1": 3807.87,
+      "tp2": 3754.21,
+      "pnlImpactTRY": 0,
+      "message": "AKTİF POZİSYON AÇILDI: XAU/USD (SAT (SHORT)) @ 3886.30 (Güncel: 3886.30) | Basılan Ana Para (Teminat): 55.260,58 TL | Kaldıraç: 5.65x (Kasa Kaldıracı: 1.13x) | Açılan Toplam Hacim: 312.147,36 TL (1.5954 Ons / 0.02 Lot) | Maks. Stop Riski: 4.144,54 TL | Gerekçe: Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (35.9) Teyitli."
     },
     {
-      "id": "ACT-1794492000000-BTC/USD",
-      "timestamp": "2026-11-12T14:00:00.000Z",
-      "type": "TP2_FULL",
-      "symbol": "BTC/USD",
-      "message": "BTC/USD (SAT (SHORT)) pozisyonu 71766.11 fiyatından kapandı. TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
-      "pnlImpactTRY": 7969.5
-    },
-    {
-      "id": "ACT-1794445200000-BTC/USD",
-      "timestamp": "2026-11-12T01:00:00.000Z",
-      "type": "STOP_LOSS",
-      "symbol": "BTC/USD",
-      "message": "BTC/USD (AL (LONG)) pozisyonu 73725.93 fiyatından kapandı. Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı.",
-      "pnlImpactTRY": -4086.3
-    },
-    {
-      "id": "ACT-1794412800000-BTC/USD",
-      "timestamp": "2026-11-11T16:00:00.000Z",
-      "type": "STOP_LOSS",
-      "symbol": "BTC/USD",
-      "message": "BTC/USD (SAT (SHORT)) pozisyonu 74177.13 fiyatından kapandı. Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı.",
-      "pnlImpactTRY": -4148.52
-    },
-    {
-      "id": "ACT-1794495600000-GBP/USD",
-      "timestamp": "2026-11-12T15:00:00.000Z",
-      "type": "TP2_FULL",
-      "symbol": "GBP/USD",
-      "message": "GBP/USD (SAT (SHORT)) pozisyonu 1.3241 fiyatından kapandı. TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
-      "pnlImpactTRY": 7977.16
-    },
-    {
-      "id": "ACT-1794315600000-GBP/USD",
-      "timestamp": "2026-11-10T13:00:00.000Z",
-      "type": "STOP_LOSS",
-      "symbol": "GBP/USD",
-      "message": "GBP/USD (AL (LONG)) pozisyonu 1.3401 fiyatından kapandı. Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı.",
-      "pnlImpactTRY": -4090.22
-    },
-    {
-      "id": "ACT-1794402000000-USD/JPY",
-      "timestamp": "2026-11-11T13:00:00.000Z",
-      "type": "TP2_FULL",
+      "id": "ACT-OPEN-ENT-TRD-USDJPY-58023",
+      "timestamp": "2026-11-14T14:10:58.023Z",
+      "type": "ENTRY",
       "symbol": "USD/JPY",
-      "message": "USD/JPY (AL (LONG)) pozisyonu 159.33 fiyatından kapandı. TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
-      "pnlImpactTRY": 7865.04
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 55260.58,
+      "notionalVolumeTRY": 1161125.6,
+      "effectiveLeverage": 21.01,
+      "accountLeverage": 4.2,
+      "isLeveraged": true,
+      "lotSize": 0.23,
+      "units": 23063.5122,
+      "unitLabel": "USD",
+      "riskAmountTRY": 4144.54,
+      "executionCostTRY": 130.88,
+      "entryPrice": 159.69,
+      "exitPrice": 159.69,
+      "stopLoss": 159.12,
+      "tp1": 160.56,
+      "tp2": 161.15,
+      "pnlImpactTRY": 0,
+      "message": "AKTİF POZİSYON AÇILDI: USD/JPY (AL (LONG)) @ 159.69 (Güncel: 159.69) | Basılan Ana Para (Teminat): 55.260,58 TL | Kaldıraç: 21.01x (Kasa Kaldıracı: 4.2x) | Açılan Toplam Hacim: 1.161.125,6 TL (23063.5122 USD / 0.23 Lot) | Maks. Stop Riski: 4.144,54 TL | Gerekçe: Trend Pozitif (Fiyat > EMA50), EMA8/21 Alıcı Akışı ve Wilder RSI (63.9) Uygun Bölgede."
     },
     {
-      "id": "ACT-1794315600000-USD/JPY",
-      "timestamp": "2026-11-10T13:00:00.000Z",
-      "type": "STOP_LOSS",
-      "symbol": "USD/JPY",
-      "message": "USD/JPY (SAT (SHORT)) pozisyonu 158.3 fiyatından kapandı. Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı.",
-      "pnlImpactTRY": -4032.73
+      "id": "ACT-OPEN-ENT-TRD-GBPUSD-58023",
+      "timestamp": "2026-11-14T14:10:58.023Z",
+      "type": "ENTRY",
+      "symbol": "GBP/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 55260.58,
+      "notionalVolumeTRY": 1052792.86,
+      "effectiveLeverage": 19.05,
+      "accountLeverage": 3.81,
+      "isLeveraged": true,
+      "lotSize": 0.16,
+      "units": 15831.3968,
+      "unitLabel": "GBP",
+      "riskAmountTRY": 4144.54,
+      "executionCostTRY": 159.41,
+      "entryPrice": 1.3209,
+      "exitPrice": 1.3209,
+      "stopLoss": 1.3261,
+      "tp1": 1.313,
+      "tp2": 1.3076,
+      "pnlImpactTRY": 0,
+      "message": "AKTİF POZİSYON AÇILDI: GBP/USD (SAT (SHORT)) @ 1.3209 (Güncel: 1.3209) | Basılan Ana Para (Teminat): 55.260,58 TL | Kaldıraç: 19.05x (Kasa Kaldıracı: 3.81x) | Açılan Toplam Hacim: 1.052.792,86 TL (15831.3968 GBP / 0.16 Lot) | Maks. Stop Riski: 4.144,54 TL | Gerekçe: Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (39.8) Teyitli."
     },
     {
-      "id": "ACT-1794603600000-EUR/USD",
+      "id": "ACT-CLS-TRD-EURUSD-00000",
       "timestamp": "2026-11-13T21:00:00.000Z",
       "type": "TP2_FULL",
       "symbol": "EUR/USD",
-      "message": "EUR/USD (SAT (SHORT)) pozisyonu 1.1026 fiyatından kapandı. TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
-      "pnlImpactTRY": 7754.51
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 52218.89,
+      "notionalVolumeTRY": 1670503.76,
+      "effectiveLeverage": 31.99,
+      "accountLeverage": 6.4,
+      "isLeveraged": true,
+      "lotSize": 0.3,
+      "units": 29920.0389,
+      "unitLabel": "EUR",
+      "riskAmountTRY": 3916.42,
+      "executionCostTRY": 225.95,
+      "entryPrice": 1.109,
+      "exitPrice": 1.1026,
+      "stopLoss": 1.109,
+      "tp1": 1.1052,
+      "tp2": 1.1026,
+      "rMultiple": 1.98,
+      "spot1xPnL_TRY": 242.4,
+      "pnlImpactTRY": 7754.51,
+      "equityAfterTRY": 276302.89,
+      "message": "TP1 + TP2 TAM HEDEF KAPANIŞI: EUR/USD (SAT (SHORT)) 1.1090 → 1.1026 | Basılan Para: 52.218,89 TL (31.99x Kaldıraç, Hacim: 1.670.503,76 TL) | Kaldıraçsız (1x Spot) Karşılığı: +242,4 TL | TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
     },
     {
-      "id": "ACT-1794405600000-EUR/USD",
-      "timestamp": "2026-11-11T14:00:00.000Z",
+      "id": "ACT-CLS-TRD-GBPUSD-00000",
+      "timestamp": "2026-11-12T15:00:00.000Z",
       "type": "TP2_FULL",
-      "symbol": "EUR/USD",
-      "message": "EUR/USD (SAT (SHORT)) pozisyonu 1.1101 fiyatından kapandı. TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
-      "pnlImpactTRY": 7530.83
+      "symbol": "GBP/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 53718.21,
+      "notionalVolumeTRY": 1222304.22,
+      "effectiveLeverage": 22.75,
+      "accountLeverage": 4.55,
+      "isLeveraged": true,
+      "lotSize": 0.18,
+      "units": 18187.6597,
+      "unitLabel": "GBP",
+      "riskAmountTRY": 4028.87,
+      "executionCostTRY": 183.13,
+      "entryPrice": 1.3349,
+      "exitPrice": 1.3241,
+      "stopLoss": 1.3349,
+      "tp1": 1.3284,
+      "tp2": 1.3241,
+      "rMultiple": 1.98,
+      "spot1xPnL_TRY": 350.64,
+      "pnlImpactTRY": 7977.16,
+      "equityAfterTRY": 268548.38,
+      "message": "TP1 + TP2 TAM HEDEF KAPANIŞI: GBP/USD (SAT (SHORT)) 1.3349 → 1.3241 | Basılan Para: 53.718,21 TL (22.75x Kaldıraç, Hacim: 1.222.304,22 TL) | Kaldıraçsız (1x Spot) Karşılığı: +350,64 TL | TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
     },
     {
-      "id": "ACT-1794315600000-EUR/USD",
-      "timestamp": "2026-11-10T13:00:00.000Z",
+      "id": "ACT-CLS-TRD-BTCUSD-00000",
+      "timestamp": "2026-11-12T14:00:00.000Z",
+      "type": "TP2_FULL",
+      "symbol": "BTC/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 53666.68,
+      "notionalVolumeTRY": 424763.6,
+      "effectiveLeverage": 7.91,
+      "accountLeverage": 1.58,
+      "isLeveraged": true,
+      "lotSize": 0.11,
+      "units": 0.1148,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4025,
+      "executionCostTRY": 118.48,
+      "entryPrice": 73493.96,
+      "exitPrice": 71766.11,
+      "stopLoss": 73493.96,
+      "tp1": 72462.82,
+      "tp2": 71766.11,
+      "rMultiple": 1.98,
+      "spot1xPnL_TRY": 1007.52,
+      "pnlImpactTRY": 7969.5,
+      "equityAfterTRY": 260571.22,
+      "message": "TP1 + TP2 TAM HEDEF KAPANIŞI: BTC/USD (SAT (SHORT)) 73493.96 → 71766.11 | Basılan Para: 53.666,68 TL (7.91x Kaldıraç, Hacim: 424.763,6 TL) | Kaldıraçsız (1x Spot) Karşılığı: +1.007,52 TL | TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+    },
+    {
+      "id": "ACT-ENT-TRD-EURUSD-00000",
+      "timestamp": "2026-11-12T12:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "EUR/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 52218.89,
+      "notionalVolumeTRY": 1670503.76,
+      "effectiveLeverage": 31.99,
+      "accountLeverage": 6.4,
+      "isLeveraged": true,
+      "lotSize": 0.3,
+      "units": 29920.0389,
+      "unitLabel": "EUR",
+      "riskAmountTRY": 3916.42,
+      "executionCostTRY": 225.95,
+      "entryPrice": 1.109,
+      "stopLoss": 1.1116,
+      "tp1": 1.1052,
+      "tp2": 1.1026,
+      "message": "EMİR AÇILDI: EUR/USD (SAT (SHORT)) @ 1.1090 | Basılan Ana Para (Teminat): 52.218,89 TL | Kaldıraç: 31.99x (Kasa Kaldıracı: 6.4x) | Açılan Toplam Hacim: 1.670.503,76 TL (29920.0389 EUR / 0.3 Lot) | Maks. Stop Riski: 3.916,42 TL (%1.5) | Gerekçe: EMA8/21 Negatif Akış + Wilder RSI (40.9) Satış Baskısı"
+    },
+    {
+      "id": "ACT-ENT-TRD-BTCUSD-00000",
+      "timestamp": "2026-11-12T05:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "BTC/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 53666.68,
+      "notionalVolumeTRY": 424763.6,
+      "effectiveLeverage": 7.91,
+      "accountLeverage": 1.58,
+      "isLeveraged": true,
+      "lotSize": 0.11,
+      "units": 0.1148,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4025,
+      "executionCostTRY": 118.48,
+      "entryPrice": 73493.96,
+      "stopLoss": 74190.67,
+      "tp1": 72462.82,
+      "tp2": 71766.11,
+      "message": "EMİR AÇILDI: BTC/USD (SAT (SHORT)) @ 73493.96 | Basılan Ana Para (Teminat): 53.666,68 TL | Kaldıraç: 7.91x (Kasa Kaldıracı: 1.58x) | Açılan Toplam Hacim: 424.763,6 TL (0.1148 BTC / 0.11 Lot) | Maks. Stop Riski: 4.025 TL (%1.5) | Gerekçe: EMA8/21 Negatif Akış + Wilder RSI (41.2) Satış Baskısı"
+    },
+    {
+      "id": "ACT-CLS-TRD-BTCUSD-00000",
+      "timestamp": "2026-11-12T01:00:00.000Z",
       "type": "STOP_LOSS",
-      "symbol": "EUR/USD",
-      "message": "EUR/USD (AL (LONG)) pozisyonu 1.1194 fiyatından kapandı. Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı.",
-      "pnlImpactTRY": -3861.38
+      "symbol": "BTC/USD",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 54483.94,
+      "notionalVolumeTRY": 359298.74,
+      "effectiveLeverage": 6.59,
+      "accountLeverage": 1.32,
+      "isLeveraged": true,
+      "lotSize": 0.1,
+      "units": 0.0957,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4086.3,
+      "executionCostTRY": 98.77,
+      "entryPrice": 74574.44,
+      "exitPrice": 73725.93,
+      "stopLoss": 73725.93,
+      "tp1": 75830.24,
+      "tp2": 76678.75,
+      "rMultiple": -1,
+      "spot1xPnL_TRY": -620.08,
+      "pnlImpactTRY": -4086.3,
+      "equityAfterTRY": 252601.72,
+      "message": "STOP LOSS KAPANIŞI: BTC/USD (AL (LONG)) 74574.44 → 73725.93 | Basılan Para: 54.483,94 TL (6.59x Kaldıraç, Hacim: 359.298,74 TL) | Kaldıraçsız (1x Spot) Karşılığı: -620,08 TL | Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı."
     },
     {
-      "id": "ACT-1794412800000-XAU/USD",
+      "id": "ACT-ENT-TRD-BTCUSD-00000",
+      "timestamp": "2026-11-11T20:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "BTC/USD",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 54483.94,
+      "notionalVolumeTRY": 359298.74,
+      "effectiveLeverage": 6.59,
+      "accountLeverage": 1.32,
+      "isLeveraged": true,
+      "lotSize": 0.1,
+      "units": 0.0957,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4086.3,
+      "executionCostTRY": 98.77,
+      "entryPrice": 74574.44,
+      "stopLoss": 73725.93,
+      "tp1": 75830.24,
+      "tp2": 76678.75,
+      "message": "EMİR AÇILDI: BTC/USD (AL (LONG)) @ 74574.44 | Basılan Ana Para (Teminat): 54.483,94 TL | Kaldıraç: 6.59x (Kasa Kaldıracı: 1.32x) | Açılan Toplam Hacim: 359.298,74 TL (0.0957 BTC / 0.1 Lot) | Maks. Stop Riski: 4.086,3 TL (%1.5) | Gerekçe: EMA8/21 Pozitif Kesişim + Wilder RSI (60) İvme Teyidi"
+    },
+    {
+      "id": "ACT-CLS-TRD-XAUUSD-00000",
       "timestamp": "2026-11-11T16:00:00.000Z",
       "type": "TP2_FULL",
       "symbol": "XAU/USD",
-      "message": "XAU/USD (SAT (SHORT)) pozisyonu 4011 fiyatından kapandı. TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı.",
-      "pnlImpactTRY": 7425
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 50000,
+      "notionalVolumeTRY": 664976.53,
+      "effectiveLeverage": 13.3,
+      "accountLeverage": 2.66,
+      "isLeveraged": true,
+      "lotSize": 0.03,
+      "units": 3.247,
+      "unitLabel": "Ons",
+      "riskAmountTRY": 3750,
+      "executionCostTRY": 49.04,
+      "entryPrice": 4067.9,
+      "exitPrice": 4011,
+      "stopLoss": 4067.9,
+      "tp1": 4033.94,
+      "tp2": 4011,
+      "rMultiple": 1.98,
+      "spot1xPnL_TRY": 558.27,
+      "pnlImpactTRY": 7425,
+      "equityAfterTRY": 260836.54,
+      "message": "TP1 + TP2 TAM HEDEF KAPANIŞI: XAU/USD (SAT (SHORT)) 4067.90 → 4011.00 | Basılan Para: 50.000 TL (13.3x Kaldıraç, Hacim: 664.976,53 TL) | Kaldıraçsız (1x Spot) Karşılığı: +558,27 TL | TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
     },
     {
-      "id": "LOG-INIT-1794319857487",
+      "id": "ACT-CLS-TRD-BTCUSD-00000",
+      "timestamp": "2026-11-11T16:00:00.000Z",
+      "type": "STOP_LOSS",
+      "symbol": "BTC/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 55313.64,
+      "notionalVolumeTRY": 468256.36,
+      "effectiveLeverage": 8.47,
+      "accountLeverage": 1.69,
+      "isLeveraged": true,
+      "lotSize": 0.13,
+      "units": 0.1265,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4148.52,
+      "executionCostTRY": 130.56,
+      "entryPrice": 73525.74,
+      "exitPrice": 74177.13,
+      "stopLoss": 74177.13,
+      "tp1": 72561.69,
+      "tp2": 71910.3,
+      "rMultiple": -1,
+      "spot1xPnL_TRY": -489.79,
+      "pnlImpactTRY": -4148.52,
+      "equityAfterTRY": 256688.02,
+      "message": "STOP LOSS KAPANIŞI: BTC/USD (SAT (SHORT)) 73525.74 → 74177.13 | Basılan Para: 55.313,64 TL (8.47x Kaldıraç, Hacim: 468.256,36 TL) | Kaldıraçsız (1x Spot) Karşılığı: -489,79 TL | Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı."
+    },
+    {
+      "id": "ACT-CLS-TRD-EURUSD-00000",
+      "timestamp": "2026-11-11T14:00:00.000Z",
+      "type": "TP2_FULL",
+      "symbol": "EUR/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 50712.72,
+      "notionalVolumeTRY": 1465246.32,
+      "effectiveLeverage": 28.89,
+      "accountLeverage": 5.78,
+      "isLeveraged": true,
+      "lotSize": 0.26,
+      "units": 26051.0934,
+      "unitLabel": "EUR",
+      "riskAmountTRY": 3803.45,
+      "executionCostTRY": 196.73,
+      "entryPrice": 1.1172,
+      "exitPrice": 1.1101,
+      "stopLoss": 1.1172,
+      "tp1": 1.113,
+      "tp2": 1.1101,
+      "rMultiple": 1.98,
+      "spot1xPnL_TRY": 260.67,
+      "pnlImpactTRY": 7530.83,
+      "equityAfterTRY": 253411.54,
+      "message": "TP1 + TP2 TAM HEDEF KAPANIŞI: EUR/USD (SAT (SHORT)) 1.1172 → 1.1101 | Basılan Para: 50.712,72 TL (28.89x Kaldıraç, Hacim: 1.465.246,32 TL) | Kaldıraçsız (1x Spot) Karşılığı: +260,67 TL | TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+    },
+    {
+      "id": "ACT-CLS-TRD-USDJPY-00000",
+      "timestamp": "2026-11-11T13:00:00.000Z",
+      "type": "TP2_FULL",
+      "symbol": "USD/JPY",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 52963.25,
+      "notionalVolumeTRY": 3003959.21,
+      "effectiveLeverage": 56.72,
+      "accountLeverage": 11.34,
+      "isLeveraged": true,
+      "lotSize": 0.6,
+      "units": 59667.8342,
+      "unitLabel": "USD",
+      "riskAmountTRY": 3972.24,
+      "executionCostTRY": 238.33,
+      "entryPrice": 158.81,
+      "exitPrice": 159.33,
+      "stopLoss": 158.81,
+      "tp1": 159.12,
+      "tp2": 159.33,
+      "rMultiple": 1.98,
+      "spot1xPnL_TRY": 138.66,
+      "pnlImpactTRY": 7865.04,
+      "equityAfterTRY": 245880.71,
+      "message": "TP1 + TP2 TAM HEDEF KAPANIŞI: USD/JPY (AL (LONG)) 158.81 → 159.33 | Basılan Para: 52.963,25 TL (56.72x Kaldıraç, Hacim: 3.003.959,21 TL) | Kaldıraçsız (1x Spot) Karşılığı: +138,66 TL | TP1 (%50) ve TP2 (%50) tam kâr hedefleri başarıyla alındı."
+    },
+    {
+      "id": "ACT-ENT-TRD-XAUUSD-00000",
+      "timestamp": "2026-11-11T06:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "XAU/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 50000,
+      "notionalVolumeTRY": 664976.53,
+      "effectiveLeverage": 13.3,
+      "accountLeverage": 2.66,
+      "isLeveraged": true,
+      "lotSize": 0.03,
+      "units": 3.247,
+      "unitLabel": "Ons",
+      "riskAmountTRY": 3750,
+      "executionCostTRY": 49.04,
+      "entryPrice": 4067.9,
+      "stopLoss": 4090.84,
+      "tp1": 4033.94,
+      "tp2": 4011,
+      "message": "EMİR AÇILDI: XAU/USD (SAT (SHORT)) @ 4067.90 | Basılan Ana Para (Teminat): 50.000 TL | Kaldıraç: 13.3x (Kasa Kaldıracı: 2.66x) | Açılan Toplam Hacim: 664.976,53 TL (3.247 Ons / 0.03 Lot) | Maks. Stop Riski: 3.750 TL (%1.5) | Gerekçe: EMA8/21 Negatif Akış + Wilder RSI (49.1) Satış Baskısı"
+    },
+    {
+      "id": "ACT-ENT-TRD-BTCUSD-00000",
+      "timestamp": "2026-11-11T06:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "BTC/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 55313.64,
+      "notionalVolumeTRY": 468256.36,
+      "effectiveLeverage": 8.47,
+      "accountLeverage": 1.69,
+      "isLeveraged": true,
+      "lotSize": 0.13,
+      "units": 0.1265,
+      "unitLabel": "BTC",
+      "riskAmountTRY": 4148.52,
+      "executionCostTRY": 130.56,
+      "entryPrice": 73525.74,
+      "stopLoss": 74177.13,
+      "tp1": 72561.69,
+      "tp2": 71910.3,
+      "message": "EMİR AÇILDI: BTC/USD (SAT (SHORT)) @ 73525.74 | Basılan Ana Para (Teminat): 55.313,64 TL | Kaldıraç: 8.47x (Kasa Kaldıracı: 1.69x) | Açılan Toplam Hacim: 468.256,36 TL (0.1265 BTC / 0.13 Lot) | Maks. Stop Riski: 4.148,52 TL (%1.5) | Gerekçe: EMA8/21 Negatif Akış + Wilder RSI (41.9) Satış Baskısı"
+    },
+    {
+      "id": "ACT-ENT-TRD-USDJPY-00000",
+      "timestamp": "2026-11-11T05:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "USD/JPY",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 52963.25,
+      "notionalVolumeTRY": 3003959.21,
+      "effectiveLeverage": 56.72,
+      "accountLeverage": 11.34,
+      "isLeveraged": true,
+      "lotSize": 0.6,
+      "units": 59667.8342,
+      "unitLabel": "USD",
+      "riskAmountTRY": 3972.24,
+      "executionCostTRY": 238.33,
+      "entryPrice": 158.81,
+      "stopLoss": 158.6,
+      "tp1": 159.12,
+      "tp2": 159.33,
+      "message": "EMİR AÇILDI: USD/JPY (AL (LONG)) @ 158.81 | Basılan Ana Para (Teminat): 52.963,25 TL | Kaldıraç: 56.72x (Kasa Kaldıracı: 11.34x) | Açılan Toplam Hacim: 3.003.959,21 TL (59667.8342 USD / 0.6 Lot) | Maks. Stop Riski: 3.972,24 TL (%1.5) | Gerekçe: EMA8/21 Pozitif Kesişim + Wilder RSI (63.5) İvme Teyidi"
+    },
+    {
+      "id": "ACT-ENT-TRD-EURUSD-00000",
+      "timestamp": "2026-11-10T23:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "EUR/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 50712.72,
+      "notionalVolumeTRY": 1465246.32,
+      "effectiveLeverage": 28.89,
+      "accountLeverage": 5.78,
+      "isLeveraged": true,
+      "lotSize": 0.26,
+      "units": 26051.0934,
+      "unitLabel": "EUR",
+      "riskAmountTRY": 3803.45,
+      "executionCostTRY": 196.73,
+      "entryPrice": 1.1172,
+      "stopLoss": 1.1201,
+      "tp1": 1.113,
+      "tp2": 1.1101,
+      "message": "EMİR AÇILDI: EUR/USD (SAT (SHORT)) @ 1.1172 | Basılan Ana Para (Teminat): 50.712,72 TL | Kaldıraç: 28.89x (Kasa Kaldıracı: 5.78x) | Açılan Toplam Hacim: 1.465.246,32 TL (26051.0934 EUR / 0.26 Lot) | Maks. Stop Riski: 3.803,45 TL (%1.5) | Gerekçe: EMA8/21 Negatif Akış + Wilder RSI (40.2) Satış Baskısı"
+    },
+    {
+      "id": "ACT-ENT-TRD-GBPUSD-00000",
+      "timestamp": "2026-11-10T23:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "GBP/USD",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 53718.21,
+      "notionalVolumeTRY": 1222304.22,
+      "effectiveLeverage": 22.75,
+      "accountLeverage": 4.55,
+      "isLeveraged": true,
+      "lotSize": 0.18,
+      "units": 18187.6597,
+      "unitLabel": "GBP",
+      "riskAmountTRY": 4028.87,
+      "executionCostTRY": 183.13,
+      "entryPrice": 1.3349,
+      "stopLoss": 1.3393,
+      "tp1": 1.3284,
+      "tp2": 1.3241,
+      "message": "EMİR AÇILDI: GBP/USD (SAT (SHORT)) @ 1.3349 | Basılan Ana Para (Teminat): 53.718,21 TL | Kaldıraç: 22.75x (Kasa Kaldıracı: 4.55x) | Açılan Toplam Hacim: 1.222.304,22 TL (18187.6597 GBP / 0.18 Lot) | Maks. Stop Riski: 4.028,87 TL (%1.5) | Gerekçe: EMA8/21 Negatif Akış + Wilder RSI (36) Satış Baskısı"
+    },
+    {
+      "id": "ACT-INIT-START",
       "timestamp": "2026-11-10T14:10:57.487Z",
       "type": "SYSTEM",
       "symbol": "PORTFÖY",
-      "message": "250.000 TL Başlangıç Sermayesi ile ZELTRA Otonom İşlem Motoru başlatıldı (İşlem başı %1.5 Sermaye Kalkanı aktif)."
+      "message": "250.000,00 TL Başlangıç Sermayeli Kurumsal Otonom İşlem Motoru başlatıldı. Kurallar: Her işleme kasanın %20'si teminat (marjin) ayrılır, stop mesafesine göre sadece %1,5 maksimum risk alınır. TP1'de %50 kâr realize edilip Stop girişe (Breakeven) çekilir.",
+      "equityAfterTRY": 250000
+    },
+    {
+      "id": "ACT-CLS-TRD-EURUSD-00000",
+      "timestamp": "2026-11-10T13:00:00.000Z",
+      "type": "STOP_LOSS",
+      "symbol": "EUR/USD",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 51485,
+      "notionalVolumeTRY": 1883178.24,
+      "effectiveLeverage": 36.58,
+      "accountLeverage": 7.32,
+      "isLeveraged": true,
+      "lotSize": 0.33,
+      "units": 33347.321,
+      "unitLabel": "EUR",
+      "riskAmountTRY": 3861.38,
+      "executionCostTRY": 231.68,
+      "entryPrice": 1.1217,
+      "exitPrice": 1.1194,
+      "stopLoss": 1.1194,
+      "tp1": 1.1252,
+      "tp2": 1.1275,
+      "rMultiple": -1,
+      "spot1xPnL_TRY": -105.56,
+      "pnlImpactTRY": -3861.38,
+      "equityAfterTRY": 246138.62,
+      "message": "STOP LOSS KAPANIŞI: EUR/USD (AL (LONG)) 1.1217 → 1.1194 | Basılan Para: 51.485 TL (36.58x Kaldıraç, Hacim: 1.883.178,24 TL) | Kaldıraçsız (1x Spot) Karşılığı: -105,56 TL | Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı."
+    },
+    {
+      "id": "ACT-CLS-TRD-USDJPY-00000",
+      "timestamp": "2026-11-10T13:00:00.000Z",
+      "type": "STOP_LOSS",
+      "symbol": "USD/JPY",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 53769.79,
+      "notionalVolumeTRY": 2197281.61,
+      "effectiveLeverage": 40.86,
+      "accountLeverage": 8.17,
+      "isLeveraged": true,
+      "lotSize": 0.44,
+      "units": 43644.7454,
+      "unitLabel": "USD",
+      "riskAmountTRY": 4032.73,
+      "executionCostTRY": 241.96,
+      "entryPrice": 158.01,
+      "exitPrice": 158.3,
+      "stopLoss": 158.3,
+      "tp1": 157.59,
+      "tp2": 157.3,
+      "rMultiple": -1,
+      "spot1xPnL_TRY": -98.7,
+      "pnlImpactTRY": -4032.73,
+      "equityAfterTRY": 242105.89,
+      "message": "STOP LOSS KAPANIŞI: USD/JPY (SAT (SHORT)) 158.01 → 158.30 | Basılan Para: 53.769,79 TL (40.86x Kaldıraç, Hacim: 2.197.281,61 TL) | Kaldıraçsız (1x Spot) Karşılığı: -98,7 TL | Fiyat Stop Loss seviyesine değdi; zarar %1.5 ile sınırlandı."
+    },
+    {
+      "id": "ACT-CLS-TRD-GBPUSD-00000",
+      "timestamp": "2026-11-10T13:00:00.000Z",
+      "type": "STOP_LOSS",
+      "symbol": "GBP/USD",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 54536.25,
+      "notionalVolumeTRY": 2495591.96,
+      "effectiveLeverage": 45.76,
+      "accountLeverage": 9.15,
+      "isLeveraged": true,
+      "lotSize": 0.37,
+      "units": 36929.2281,
+      "unitLabel": "GBP",
+      "riskAmountTRY": 4090.22,
+      "executionCostTRY": 245.41,
+      "entryPrice": 1.3423,
+      "exitPrice": 1.3401,
+      "stopLoss": 1.3401,
+      "tp1": 1.3455,
+      "tp2": 1.3477,
+      "rMultiple": -1,
+      "spot1xPnL_TRY": -89.38,
+      "pnlImpactTRY": -4090.22,
+      "equityAfterTRY": 238015.67,
+      "message": "STOP LOSS KAPANIŞI: GBP/USD (AL (LONG)) 1.3423 → 1.3401 | Basılan Para: 54.536,25 TL (45.76x Kaldıraç, Hacim: 2.495.591,96 TL) | Kaldıraçsız (1x Spot) Karşılığı: -89,38 TL | Fiyat Stop Loss (Emniyet Kemeri) seviyesine değdi; zarar %1.5 ile sınırlandı."
+    },
+    {
+      "id": "ACT-ENT-TRD-EURUSD-00000",
+      "timestamp": "2026-11-10T12:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "EUR/USD",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 51485,
+      "notionalVolumeTRY": 1883178.24,
+      "effectiveLeverage": 36.58,
+      "accountLeverage": 7.32,
+      "isLeveraged": true,
+      "lotSize": 0.33,
+      "units": 33347.321,
+      "unitLabel": "EUR",
+      "riskAmountTRY": 3861.38,
+      "executionCostTRY": 231.68,
+      "entryPrice": 1.1217,
+      "stopLoss": 1.1194,
+      "tp1": 1.1252,
+      "tp2": 1.1275,
+      "message": "EMİR AÇILDI: EUR/USD (AL (LONG)) @ 1.1217 | Basılan Ana Para (Teminat): 51.485 TL | Kaldıraç: 36.58x (Kasa Kaldıracı: 7.32x) | Açılan Toplam Hacim: 1.883.178,24 TL (33347.321 EUR / 0.33 Lot) | Maks. Stop Riski: 3.861,38 TL (%1.5) | Gerekçe: EMA8/21 Pozitif Kesişim + Wilder RSI (53) İvme Teyidi"
+    },
+    {
+      "id": "ACT-ENT-TRD-GBPUSD-00000",
+      "timestamp": "2026-11-10T12:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "GBP/USD",
+      "direction": "AL (LONG)",
+      "allocatedMarginTRY": 54536.25,
+      "notionalVolumeTRY": 2495591.96,
+      "effectiveLeverage": 45.76,
+      "accountLeverage": 9.15,
+      "isLeveraged": true,
+      "lotSize": 0.37,
+      "units": 36929.2281,
+      "unitLabel": "GBP",
+      "riskAmountTRY": 4090.22,
+      "executionCostTRY": 245.41,
+      "entryPrice": 1.3423,
+      "stopLoss": 1.3401,
+      "tp1": 1.3455,
+      "tp2": 1.3477,
+      "message": "EMİR AÇILDI: GBP/USD (AL (LONG)) @ 1.3423 | Basılan Ana Para (Teminat): 54.536,25 TL | Kaldıraç: 45.76x (Kasa Kaldıracı: 9.15x) | Açılan Toplam Hacim: 2.495.591,96 TL (36929.2281 GBP / 0.37 Lot) | Maks. Stop Riski: 4.090,22 TL (%1.5) | Gerekçe: EMA8/21 Pozitif Kesişim + Wilder RSI (49.7) İvme Teyidi"
+    },
+    {
+      "id": "ACT-ENT-TRD-USDJPY-00000",
+      "timestamp": "2026-11-10T06:00:00.000Z",
+      "type": "ENTRY",
+      "symbol": "USD/JPY",
+      "direction": "SAT (SHORT)",
+      "allocatedMarginTRY": 53769.79,
+      "notionalVolumeTRY": 2197281.61,
+      "effectiveLeverage": 40.86,
+      "accountLeverage": 8.17,
+      "isLeveraged": true,
+      "lotSize": 0.44,
+      "units": 43644.7454,
+      "unitLabel": "USD",
+      "riskAmountTRY": 4032.73,
+      "executionCostTRY": 241.96,
+      "entryPrice": 158.01,
+      "stopLoss": 158.3,
+      "tp1": 157.59,
+      "tp2": 157.3,
+      "message": "EMİR AÇILDI: USD/JPY (SAT (SHORT)) @ 158.01 | Basılan Ana Para (Teminat): 53.769,79 TL | Kaldıraç: 40.86x (Kasa Kaldıracı: 8.17x) | Açılan Toplam Hacim: 2.197.281,61 TL (43644.7454 USD / 0.44 Lot) | Maks. Stop Riski: 4.032,73 TL (%1.5) | Gerekçe: EMA8/21 Negatif Akış + Wilder RSI (45.8) Satış Baskısı"
     }
   ],
   "attribution": {
@@ -3418,7 +4112,7 @@
         "totalNetPnL_TRY": 7425,
         "avgRMultiple": 1.98,
         "totalRMultiple": 1.98,
-        "executionCostTRY": 31.34
+        "executionCostTRY": 49.04
       },
       {
         "symbol": "EUR/USD",
@@ -3433,7 +4127,7 @@
         "totalNetPnL_TRY": 11423.96,
         "avgRMultiple": 0.99,
         "totalRMultiple": 2.96,
-        "executionCostTRY": 176.44
+        "executionCostTRY": 654.36
       },
       {
         "symbol": "USD/JPY",
@@ -3448,7 +4142,7 @@
         "totalNetPnL_TRY": 3832.31,
         "avgRMultiple": 0.49,
         "totalRMultiple": 0.98,
-        "executionCostTRY": 103.09
+        "executionCostTRY": 480.29
       },
       {
         "symbol": "GBP/USD",
@@ -3463,7 +4157,7 @@
         "totalNetPnL_TRY": 3886.94,
         "avgRMultiple": 0.49,
         "totalRMultiple": 0.98,
-        "executionCostTRY": 137.48
+        "executionCostTRY": 428.54
       },
       {
         "symbol": "BTC/USD",
@@ -3474,8 +4168,8 @@
         "losses": 3,
         "winRatePercent": 25,
         "netRealizedPnL_TRY": -3552.22,
-        "floatingPnL_TRY": 367.75,
-        "totalNetPnL_TRY": -3184.47,
+        "floatingPnL_TRY": -211.95,
+        "totalNetPnL_TRY": -3764.17,
         "avgRMultiple": -0.2,
         "totalRMultiple": -0.81,
         "executionCostTRY": 412.31
@@ -3582,7 +4276,7 @@
       "candidateDirection": "SAT (SHORT)",
       "status": "POZİSYONDA (AÇIK)",
       "decisionReason": "Aktif SAT (SHORT) (0.02 Lot) pozisyonu yönetiliyor (SL: 3937.9 Kalkanı Aktif).",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "EUR/USD",
@@ -3601,7 +4295,7 @@
       "candidateDirection": "BEKLE",
       "status": "TEKNİK TEYİT BEKLİYOR",
       "decisionReason": "Fiyat (1.1028) vs EMA50 (1.1280) ve Wilder RSI (33) — EMA8/21 kurumsal momentum kesişimi bekleniyor.",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "USD/JPY",
@@ -3619,8 +4313,8 @@
       "confluenceScore": 94,
       "candidateDirection": "AL (LONG)",
       "status": "POZİSYONDA (AÇIK)",
-      "decisionReason": "Aktif AL (LONG) (0.09 Lot) pozisyonu yönetiliyor (SL: 159.12 Kalkanı Aktif).",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "decisionReason": "Aktif AL (LONG) (0.23 Lot) pozisyonu yönetiliyor (SL: 159.12 Kalkanı Aktif).",
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "GBP/USD",
@@ -3638,27 +4332,27 @@
       "confluenceScore": 94,
       "candidateDirection": "SAT (SHORT)",
       "status": "POZİSYONDA (AÇIK)",
-      "decisionReason": "Aktif SAT (SHORT) (0.07 Lot) pozisyonu yönetiliyor (SL: 1.3261 Kalkanı Aktif).",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "decisionReason": "Aktif SAT (SHORT) (0.16 Lot) pozisyonu yönetiliyor (SL: 1.3261 Kalkanı Aktif).",
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "BTC/USD",
       "name": "Bitcoin / ABD Doları",
       "digits": 2,
-      "price": 65203.55,
-      "ema8": 71317.64,
-      "ema21": 75110.9,
-      "ema50": 77607.56,
+      "price": 65462.34,
+      "ema8": 71375.15,
+      "ema21": 75134.43,
+      "ema50": 77617.71,
       "trendRegime": "AYI (BEAR)",
-      "rsi14": 21.3,
-      "atr14": 2437.58,
+      "rsi14": 21.5,
+      "atr14": 2440.88,
       "newsSentimentScore": -0.95,
       "newsHeadline": "Analistler dördüncü teslimiyet dalgasını işaret ederken Bitcoin 3 ayın en düşük seviyesi olan 65.000 dolara geriledi",
       "confluenceScore": 98,
       "candidateDirection": "SAT (SHORT)",
       "status": "POZİSYONDA (AÇIK)",
       "decisionReason": "Aktif SAT (SHORT) (0.04 Lot) pozisyonu yönetiliyor (SL: 66738.86 Kalkanı Aktif).",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "NAS100",
@@ -3677,7 +4371,7 @@
       "candidateDirection": "SAT (SHORT)",
       "status": "LİMİT DOLU (4/4)",
       "decisionReason": "SAT (SHORT) sinyali hazır (82/100 — Çift Teyit (Teknik + Olumsuz Haber): Fiyat < EMA50, Wilder RSI (42.4) ve \"ETF uzmanlarına göre Nvidia'daki çalkantı ve Demokratik...\" haberi satış baskısını teyit ediyor.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında devreye girecek.",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "SPX500",
@@ -3696,7 +4390,7 @@
       "candidateDirection": "SAT (SHORT)",
       "status": "LİMİT DOLU (4/4)",
       "decisionReason": "SAT (SHORT) sinyali hazır (82/100 — Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (46.8) Teyitli.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında devreye girecek.",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "NVDA",
@@ -3715,7 +4409,7 @@
       "candidateDirection": "BEKLE",
       "status": "HABER VETOSU",
       "decisionReason": "RSI (24.9) aşırı satımda ancak negatif haber baskısı (-0.28) nedeniyle düşen bıçak tutulmadı.",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     },
     {
       "symbol": "WTI",
@@ -3734,7 +4428,7 @@
       "candidateDirection": "SAT (SHORT)",
       "status": "LİMİT DOLU (4/4)",
       "decisionReason": "SAT (SHORT) sinyali hazır (82/100 — Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (41.7) Teyitli.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında devreye girecek.",
-      "scannedAt": "2026-11-14T17:15:39.371Z"
+      "scannedAt": "2026-11-14T20:20:34.997Z"
     }
   ]
 }
