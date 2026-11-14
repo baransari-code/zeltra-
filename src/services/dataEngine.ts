@@ -3,6 +3,30 @@ import { ALL_ASSETS } from '../data/marketDirectory';
 
 export { ALL_ASSETS };
 
+// Zaman Aşımlı & Otomatik Yeniden Denemeli (Resilient) İstemci Fetch Yardımcıları
+async function fetchJsonWithRetry(url: string, timeoutMs = 10000, retries = 1): Promise<any> {
+  let lastErr: any;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) {
+        throw new Error(`API hatası: ${res.status}`);
+      }
+      return await res.json();
+    } catch (err) {
+      clearTimeout(timer);
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 350));
+      }
+    }
+  }
+  throw lastErr || new Error('Ağ bağlantı hatası');
+}
+
 // Canlı API'den Gerçek 1 Yıllık Veri Çekici
 export async function fetchRealAssetData(symbol: string): Promise<{
   price: number;
@@ -10,12 +34,8 @@ export async function fetchRealAssetData(symbol: string): Promise<{
   changePercent24h: number;
   candles: Candle[];
 }> {
-  const res = await fetch(`/api/real-data?symbol=${encodeURIComponent(symbol)}`);
-  if (!res.ok) {
-    throw new Error(`API hatası: ${res.status}`);
-  }
-  const data = await res.json();
-  if (data.error) {
+  const data = await fetchJsonWithRetry(`/api/real-data?symbol=${encodeURIComponent(symbol)}`, 10000, 1);
+  if (data?.error) {
     throw new Error(data.error);
   }
   return {
@@ -28,11 +48,7 @@ export async function fetchRealAssetData(symbol: string): Promise<{
 
 // Canlı API'den Gerçek Finans Haberleri Çekici
 export async function fetchRealNewsList() {
-  const res = await fetch('/api/real-news');
-  if (!res.ok) {
-    throw new Error(`Haber API hatası: ${res.status}`);
-  }
-  return await res.json();
+  return await fetchJsonWithRetry('/api/real-news', 10000, 1);
 }
 
 // EMA Hesaplayıcı
@@ -591,7 +607,7 @@ export function generateQuantitativeSignal(
     }
   }
   const rawWinRate = regimeTotal > 0 ? (regimeWins / regimeTotal) * 100 : 72.0;
-  // Haber uyumu veya çatışmasına göre kazanma olasılığı düzeltmesi
+  // Haber uyumu, MACD Histogram ve Bollinger konumuyla çok-faktörlü kazanma olasılığı düzeltmesi
   let newsWinAdjustment = 0;
   if (matchedNews) {
     if ((action === 'AL (BUY)' && newsBias === 'POZİTİF') || (action === 'SAT (SELL)' && newsBias === 'NEGATİF')) {
@@ -600,9 +616,13 @@ export function generateQuantitativeSignal(
       newsWinAdjustment = -6.5;
     }
   }
-  const calculatedWinRate = Math.min(Math.max(rawWinRate + newsWinAdjustment, 54.0), 92.5);
+  const macdAligned =
+    (action === 'AL (BUY)' && technicals.macd.hist >= 0) ||
+    (action === 'SAT (SELL)' && technicals.macd.hist < 0);
+  const multiFactorBonus = (macdAligned ? 2.2 : -1.2) + (keyLevels.supportTests >= 3 ? 1.5 : 0);
+  const calculatedWinRate = Math.min(Math.max(rawWinRate + newsWinAdjustment + multiFactorBonus, 54.0), 93.5);
   const winProbability = +calculatedWinRate.toFixed(1);
-  const confidenceScore = Math.max(60, Math.min(96, Math.floor(78 + (winProbability - 58) * 0.48)));
+  const confidenceScore = Math.max(60, Math.min(97, Math.floor(78 + (winProbability - 58) * 0.52)));
 
   // Koşullu Senaryolar (Senaryo A / Senaryo B)
   const scenarios: ConditionalScenarios = {

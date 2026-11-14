@@ -669,7 +669,14 @@ export function saveLedger(state: AutonomousLedgerState): void {
   try {
     const dir = path.dirname(LEDGER_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(LEDGER_FILE, JSON.stringify(state, null, 2), 'utf-8');
+    const tmpPath = `${LEDGER_FILE}.tmp`;
+    const serialized = JSON.stringify(state, null, 2);
+    fs.writeFileSync(tmpPath, serialized, 'utf-8');
+    try {
+      fs.renameSync(tmpPath, LEDGER_FILE);
+    } catch {
+      fs.writeFileSync(LEDGER_FILE, serialized, 'utf-8');
+    }
   } catch (err) {
     console.error('Otonom kütük kaydedilemedi:', err);
   }
@@ -1458,8 +1465,23 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
   return await bootstrapHistoricalRealTrades(250000);
 }
 
+// Eşzamanlı Tick Kilit Mekanizması (Race-Condition & Çifte İşlem Kalkanı)
+let inFlightTickPromise: Promise<AutonomousLedgerState> | null = null;
+
 // Canlı Piyasa Tarama, Açık Pozisyon Güncelleme, Canlı Haber Risk Kalkanı, 9-Varlık Radarı ve Yeni İşlem Açma Döngüsü
-export async function executeAutonomousTradingTick(_forceScan = false): Promise<AutonomousLedgerState> {
+export async function executeAutonomousTradingTick(forceScan = false): Promise<AutonomousLedgerState> {
+  if (inFlightTickPromise) {
+    return inFlightTickPromise;
+  }
+  inFlightTickPromise = runAutonomousTradingTickInternal(forceScan);
+  try {
+    return await inFlightTickPromise;
+  } finally {
+    inFlightTickPromise = null;
+  }
+}
+
+async function runAutonomousTradingTickInternal(_forceScan = false): Promise<AutonomousLedgerState> {
   const state = await loadOrInitAutonomousLedger();
   const now = Date.now();
   const nowIso = new Date(now).toISOString();

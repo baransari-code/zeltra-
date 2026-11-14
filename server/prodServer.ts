@@ -44,14 +44,31 @@ const server = http.createServer(async (req, res) => {
   const urlObj = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const pathname = urlObj.pathname;
 
-  // CORS headers
+  // CORS & Security headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
+    return;
+  }
+
+  // 0. API: Sistem Sağlık Kontrolü (/api/health)
+  if (pathname === '/api/health') {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        status: 'OK',
+        service: 'ZELTRA-QUANT-ENGINE',
+        uptimeSec: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+      })
+    );
     return;
   }
 
@@ -192,9 +209,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 4. STATİK DOSYA SUNUMU (SPA - React Frontend; /test dahil tüm rotaları index.html'e yönlendir)
-  let filePath = path.join(DIST_DIR, pathname);
-  if (pathname === '/' || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+  // 4. STATİK DOSYA SUNUMU (SPA - React Frontend; /test dahil tüm rotaları index.html'e yönlendir + Path Traversal Koruması)
+  const safeRelPath = pathname.replace(/^\/+/, '');
+  let filePath = path.resolve(DIST_DIR, safeRelPath);
+  if (!filePath.startsWith(DIST_DIR) || pathname === '/' || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     filePath = path.join(DIST_DIR, 'index.html');
   }
 
@@ -202,6 +220,11 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
     res.setHeader('Content-Type', contentType);
+    if (ext === '.html') {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
     fs.createReadStream(filePath).pipe(res);
   } else {
     res.statusCode = 404;

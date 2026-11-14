@@ -167,6 +167,61 @@ const CAUSAL_RULES: CausalRule[] = [
     mechanismTR: 'Stokların artması ve talebin zayıflaması enerji fiyatlarında aşağı yönlü (Short) baskı oluşturur.',
     impacts: [
       { symbol: 'WTI', direction: 'SAT (SHORT)', weight: 0.83, reasonTR: 'Arz fazlası ve zayıf talep ham petrol fiyatını aşağı çeker.' },
+      { symbol: 'BRENT', direction: 'SAT (SHORT)', weight: 0.82, reasonTR: 'Küresel petrol stoklarındaki artış Brent petrolü baskılar.' },
+    ],
+  },
+  {
+    id: 'boj_hawkish_or_yen_intervention',
+    category: 'Merkez Bankası & Faiz',
+    patterns: [
+      /\b(bank of japan|boj|ueda|tokyo inflation|yen intervention|fx intervention).*\b(hike|raises|hawkish|intervene|support yen|stronger yen)\b/i,
+      /\b(japonya merkez bankası|boj|japon yeni).*\b(faiz artışı|müdahale|güçlendi)\b/i,
+    ],
+    whatHappenedTR: 'Japonya Merkez Bankası (BoJ) faiz artışı sinyali verdi veya Japon Yeni için kur müdahalesi gündeme geldi.',
+    mechanismTR: 'Japon Yeni (JPY) güçlendiğinde küresel Carry Trade pozisyonları çözülür ve USD/JPY paritesinde sert aşağı yönlü (Short) hareket başlar.',
+    impacts: [
+      { symbol: 'USD/JPY', direction: 'SAT (SHORT)', weight: 0.89, reasonTR: 'Japon Yeninin değer kazanması USD/JPY paritesini doğrudan aşağı çeker.' },
+    ],
+  },
+  {
+    id: 'ecb_or_boe_dovish_euro_pound_weak',
+    category: 'Merkez Bankası & Faiz',
+    patterns: [
+      /\b(ecb|lagarde|eurozone|bank of england|boe|bailey).*\b(rate cut|cuts rate|dovish|weak growth|recession|contract|slowdown)\b/i,
+      /\b(avrupa merkez bankası|ecb|ingiltere merkez bankası).*\b(faiz indirimi|daralma|yavaşlama)\b/i,
+    ],
+    whatHappenedTR: 'Avrupa (ECB) veya İngiltere (BoE) tarafında ekonomik yavaşlama ve faiz indirimi beklentisi öne çıktı.',
+    mechanismTR: 'Avrupa/İngiltere faizlerinin ABD’ye kıyasla daha hızlı düşeceği beklentisi Euro ve Sterlin’den çıkışa yol açar.',
+    impacts: [
+      { symbol: 'EUR/USD', direction: 'SAT (SHORT)', weight: 0.83, reasonTR: 'Avrupa faiz indirimi beklentisi EUR/USD üzerinde satış baskısı oluşturur.' },
+      { symbol: 'GBP/USD', direction: 'SAT (SHORT)', weight: 0.78, reasonTR: 'İngiltere büyüme/faiz baskısı GBP/USD paritesini aşağı iter.' },
+    ],
+  },
+  {
+    id: 'tcmb_tight_policy_or_lira_stability',
+    category: 'Merkez Bankası & Faiz',
+    patterns: [
+      /\b(cbrt|tcmb|central bank of turkey|turkish lira|turkey).*\b(rate hike|tight monetary|hawkish|reserves rise|upgrade|credit rating)\b/i,
+      /\b(tcmb|merkez bankası|türkiye).*\b(sıkı para|rezerv artışı|not artışı|faiz artışı)\b/i,
+    ],
+    whatHappenedTR: 'TCMB sıkı para politikası duruşunu korudu veya Türkiye kredi/rezerv görünümünde pozitif gelişme kaydedildi.',
+    mechanismTR: 'TL varlıklara yönelik yabancı kurumsal girişi destekler, kur oynaklığını sınırlar.',
+    impacts: [
+      { symbol: 'USD/TRY', direction: 'SAT (SHORT)', weight: 0.74, reasonTR: 'Yüksek TL getirisi ve rezerv artışı döviz talebini dengeler.' },
+    ],
+  },
+  {
+    id: 'big_tech_antitrust_or_earnings_miss',
+    category: 'Şirket Bilanço & Teknoloji',
+    patterns: [
+      /\b(nvidia|nvda|apple|aapl|microsoft|msft|tesla|tsla|alphabet|googl|meta|amazon|amzn).*\b(miss|misses|plunge|slump|antitrust|probe|lawsuit|downgrade|export ban|weak guidance)\b/i,
+    ],
+    whatHappenedTR: 'Büyük teknoloji şirketlerinde bilanço hayal kırıklığı, ihracat kısıtlaması veya regülasyon/soruşturma haberi çıktı.',
+    mechanismTR: 'Teknoloji devlerindeki satış baskısı hem ilgili hisseyi hem de ağırlığı yüksek olduğu Nasdaq 100 ve S&P 500 endekslerini aşağı çeker.',
+    impacts: [
+      { symbol: 'NVDA', direction: 'SAT (SHORT)', weight: 0.84, reasonTR: 'Yarı iletken/teknoloji haber şoku hissede kar satışlarını hızlandırır.' },
+      { symbol: 'NAS100', direction: 'SAT (SHORT)', weight: 0.82, reasonTR: 'Büyük teknoloji hisselerindeki geri çekilme Nasdaq 100 endeksini baskılar.' },
+      { symbol: 'SPX500', direction: 'SAT (SHORT)', weight: 0.75, reasonTR: 'Mega-cap teknoloji satışı S&P 500 endeksini aşağı taşır.' },
     ],
   },
 ];

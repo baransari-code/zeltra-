@@ -117,14 +117,33 @@ export function saveTestState(state: ValidationTestState): void {
   try {
     const dir = path.dirname(LEDGER_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(LEDGER_PATH, JSON.stringify(state, null, 2), 'utf-8');
+    const tmpPath = `${LEDGER_PATH}.tmp`;
+    const serialized = JSON.stringify(state, null, 2);
+    fs.writeFileSync(tmpPath, serialized, 'utf-8');
+    try {
+      fs.renameSync(tmpPath, LEDGER_PATH);
+    } catch {
+      fs.writeFileSync(LEDGER_PATH, serialized, 'utf-8');
+    }
   } catch (err) {
     console.error('Doğrulama dosyası yazılamadı:', err);
   }
 }
 
+let inFlightValidation: Promise<ValidationTestState> | null = null;
+
 // 4 Günlük Test Döngüsü: Yeni 24 Saatlik Tahmin Snapshot'ı Kaydet ve Süresi Dolan Noktaları Doğrula
 export async function executeValidationCycle(): Promise<ValidationTestState> {
+  if (inFlightValidation) return inFlightValidation;
+  inFlightValidation = runValidationCycleInternal();
+  try {
+    return await inFlightValidation;
+  } finally {
+    inFlightValidation = null;
+  }
+}
+
+async function runValidationCycleInternal(): Promise<ValidationTestState> {
   const state = loadTestState();
   const now = Date.now();
   const nowDate = new Date(now).toISOString();
@@ -218,6 +237,9 @@ export async function executeValidationCycle(): Promise<ValidationTestState> {
         initialPrice: currentPrice,
         checkpoints,
       });
+      if (series.snapshots.length > 16) {
+        series.snapshots = series.snapshots.slice(-16);
+      }
     }
 
     // C) Sembol bazlı metrikleri güncelle

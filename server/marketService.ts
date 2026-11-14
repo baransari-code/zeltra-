@@ -152,106 +152,203 @@ export const SYMBOL_MAP: Record<string, string> = {
   'USO': 'USO',
 };
 
-// Real 1-Year OHLC Data Fetcher
+// In-Memory OHLC & Hourly History Cache + In-Flight Deduplication (45s TTL)
+const OHLC_CACHE_TTL = 45 * 1000;
+const ohlcCache = new Map<string, { timestamp: number; data: any }>();
+const inFlightOhlc = new Map<string, Promise<any>>();
+const hourlyCache = new Map<string, { timestamp: number; data: { timestamp: number; close: number }[] }>();
+const inFlightHourly = new Map<string, Promise<{ timestamp: number; close: number }[]>>();
+
+// Real 1-Year OHLC Data Fetcher (with TTL Cache, In-Flight Deduplication & True 24h Daily Change)
 export async function fetchReal1YearData(symbol: string) {
-  const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=1y&interval=1d`;
-
-  const resp = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!resp.ok) {
-    throw new Error(`Yahoo Finance HTTP error: ${resp.status}`);
+  const now = Date.now();
+  const cached = ohlcCache.get(symbol);
+  if (cached && now - cached.timestamp < OHLC_CACHE_TTL) {
+    return cached.data;
+  }
+  if (inFlightOhlc.has(symbol)) {
+    return inFlightOhlc.get(symbol)!;
   }
 
-  const data: any = await resp.json();
-  const result = data?.chart?.result?.[0];
-  if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
-    throw new Error('Geçersiz veri yapısı');
+  const fetchPromise = (async () => {
+    const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=1y&interval=1d`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+    try {
+      const resp = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!resp.ok) {
+        if (cached) return cached.data;
+        throw new Error(`Yahoo Finance HTTP error: ${resp.status}`);
+      }
+
+      const data: any = await resp.json();
+      const result = data?.chart?.result?.[0];
+      if (!result || !result.timestamp || !result.indicators?.quote?.[0]) {
+        if (cached) return cached.data;
+        throw new Error('Geçersiz veri yapısı');
+      }
+
+      const timestamps = result.timestamp;
+      const quote = result.indicators.quote[0];
+      const meta = result.meta;
+
+      const candles: {
+        timestamp: number;
+        dateStr: string;
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+        volume: number;
+      }[] = [];
+
+      for (let i = 0; i < timestamps.length; i++) {
+        const close = quote.close[i];
+        if (close === null || close === undefined || isNaN(close)) continue;
+
+        const open = quote.open[i] ?? close;
+        const high = quote.high[i] ?? Math.max(open, close);
+        const low = quote.low[i] ?? Math.min(open, close);
+        const volume = quote.volume[i] ?? 0;
+        const ts = timestamps[i] * 1000;
+        const dateStr = new Date(ts).toISOString().split('T')[0];
+
+        candles.push({
+          timestamp: ts,
+          dateStr,
+          open: +open.toFixed(4),
+          high: +high.toFixed(4),
+          low: +low.toFixed(4),
+          close: +close.toFixed(4),
+          volume,
+        });
+      }
+
+      const lastCandleClose = candles.length > 0 ? candles[candles.length - 1].close : 0;
+      const rawRegular = Number(meta.regularMarketPrice);
+      // Eğer meta.regularMarketPrice son mumdan aşırı kopuksa (>%15 veri sağlayıcı artefaktı) son mumu esas al
+      const currentPrice =
+        Number.isFinite(rawRegular) && rawRegular > 0 && (lastCandleClose === 0 || Math.abs(rawRegular - lastCandleClose) / lastCandleClose < 0.15)
+          ? rawRegular
+          : lastCandleClose;
+
+      if (candles.length > 0 && currentPrice > 0) {
+        const lastIdx = candles.length - 1;
+        candles[lastIdx].close = +currentPrice.toFixed(4);
+        candles[lastIdx].high = +Math.max(candles[lastIdx].high, currentPrice).toFixed(4);
+        candles[lastIdx].low = +Math.min(candles[lastIdx].low, currentPrice).toFixed(4);
+      }
+
+      // Gerçek 24 Saatlik Değişim: 1 yıllık grafikte chartPreviousClose 1 yıl önceki fiyattır; bir önceki günlük mum kapanışını kullan!
+      const prevDayClose =
+        candles.length >= 2
+          ? candles[candles.length - 2].close
+          : Number(meta.previousClose) > 0
+          ? Number(meta.previousClose)
+          : currentPrice;
+
+      const change24h = +(currentPrice - prevDayClose).toFixed(4);
+      const changePercent24h = prevDayClose > 0 ? +((change24h / prevDayClose) * 100).toFixed(2) : 0;
+
+      const payload = {
+        symbol,
+        ticker: yahooTicker,
+        price: currentPrice,
+        change24h,
+        changePercent24h,
+        currency: meta.currency || 'USD',
+        exchangeTimezoneName: meta.exchangeTimezoneName,
+        candles,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      ohlcCache.set(symbol, { timestamp: Date.now(), data: payload });
+      return payload;
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
+
+  inFlightOhlc.set(symbol, fetchPromise);
+  try {
+    return await fetchPromise;
+  } finally {
+    inFlightOhlc.delete(symbol);
   }
-
-  const timestamps = result.timestamp;
-  const quote = result.indicators.quote[0];
-  const meta = result.meta;
-
-  const currentPrice = meta.regularMarketPrice || quote.close[quote.close.length - 1];
-  const previousClose = meta.chartPreviousClose || meta.previousClose || currentPrice;
-  const change24h = +(currentPrice - previousClose).toFixed(4);
-  const changePercent24h = +((change24h / previousClose) * 100).toFixed(2);
-
-  const candles = [];
-  for (let i = 0; i < timestamps.length; i++) {
-    const close = quote.close[i];
-    if (close === null || close === undefined || isNaN(close)) continue;
-
-    const open = quote.open[i] ?? close;
-    const high = quote.high[i] ?? Math.max(open, close);
-    const low = quote.low[i] ?? Math.min(open, close);
-    const volume = quote.volume[i] ?? 0;
-    const ts = timestamps[i] * 1000;
-    const dateStr = new Date(ts).toISOString().split('T')[0];
-
-    candles.push({
-      timestamp: ts,
-      dateStr,
-      open: +open.toFixed(4),
-      high: +high.toFixed(4),
-      low: +low.toFixed(4),
-      close: +close.toFixed(4),
-      volume,
-    });
-  }
-
-  return {
-    symbol,
-    ticker: yahooTicker,
-    price: currentPrice,
-    change24h,
-    changePercent24h,
-    currency: meta.currency || 'USD',
-    exchangeTimezoneName: meta.exchangeTimezoneName,
-    candles,
-    lastUpdated: new Date().toISOString(),
-  };
 }
 
-// 5 Günlük Saatlik Geçmiş Mum Verisi (PC Kapalıyken Oluşan Süreleri Geriye Dönük Doğrulama)
+// 5 Günlük Saatlik Geçmiş Mum Verisi (PC Kapalıyken Oluşan Süreleri Geriye Dönük Doğrulama + TTL Önbellek)
 export async function fetchRealHourlyHistory(symbol: string): Promise<{ timestamp: number; close: number }[]> {
-  const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=5d&interval=1h`;
-
-  const resp = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!resp.ok) return [];
-
-  const data: any = await resp.json();
-  const result = data?.chart?.result?.[0];
-  if (!result || !result.timestamp || !result.indicators?.quote?.[0]) return [];
-
-  const timestamps = result.timestamp;
-  const quote = result.indicators.quote[0];
-  const list: { timestamp: number; close: number }[] = [];
-
-  for (let i = 0; i < timestamps.length; i++) {
-    const c = quote.close[i];
-    if (c !== null && c !== undefined && !isNaN(c)) {
-      list.push({
-        timestamp: timestamps[i] * 1000,
-        close: +c,
-      });
-    }
+  const now = Date.now();
+  const cached = hourlyCache.get(symbol);
+  if (cached && now - cached.timestamp < OHLC_CACHE_TTL) {
+    return cached.data;
+  }
+  if (inFlightHourly.has(symbol)) {
+    return inFlightHourly.get(symbol)!;
   }
 
-  return list;
+  const fetchPromise = (async () => {
+    const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=5d&interval=1h`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+    try {
+      const resp = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!resp.ok) return cached?.data || [];
+
+      const data: any = await resp.json();
+      const result = data?.chart?.result?.[0];
+      if (!result || !result.timestamp || !result.indicators?.quote?.[0]) return cached?.data || [];
+
+      const timestamps = result.timestamp;
+      const quote = result.indicators.quote[0];
+      const list: { timestamp: number; close: number }[] = [];
+
+      for (let i = 0; i < timestamps.length; i++) {
+        const c = quote.close[i];
+        if (c !== null && c !== undefined && !isNaN(c)) {
+          list.push({
+            timestamp: timestamps[i] * 1000,
+            close: +c,
+          });
+        }
+      }
+
+      if (list.length > 0) {
+        hourlyCache.set(symbol, { timestamp: Date.now(), data: list });
+      }
+      return list;
+    } catch {
+      return cached?.data || [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
+
+  inFlightHourly.set(symbol, fetchPromise);
+  try {
+    return await fetchPromise;
+  } finally {
+    inFlightHourly.delete(symbol);
+  }
 }
 
 // Multi-Source Financial Feeds (14 Global Financial & Market Feeds — Last 24 Hours)
@@ -874,6 +971,10 @@ export function generate24HourPredictions(
   const ema8 = calcEMAVal(closes, 8);
   const ema21 = calcEMAVal(closes, 21);
   const ema50 = calcEMAVal(closes, 50);
+  const ema12 = calcEMAVal(closes, 12);
+  const ema26 = calcEMAVal(closes, 26);
+  const macdLine = ema12 - ema26;
+  const macdNorm = (macdLine / (dailyATR || 1)) * 0.25;
 
   // Wilder's RSI-14 Hesabı
   let rsi14 = 50;
@@ -895,13 +996,13 @@ export function generate24HourPredictions(
     rsi14 = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
   }
 
-  // Kısa vadeli 3 günlük ivme ve orta vadeli EMA uyumu
+  // Kısa vadeli 3 günlük ivme, MACD ve orta vadeli EMA uyumu
   const cLen = closes.length;
   const shortImpulse = cLen >= 4 ? (currentPrice - closes[cLen - 4]) / (dailyATR * 3 || 1) : 0;
   const emaSpread = (ema8 - ema21) / (dailyATR || 1);
   const macroBias = currentPrice >= ema50 ? 0.25 : -0.25;
 
-  // RSI Aşırı Alım (>70) / Aşırı Satım (<30) Ortalamaya Dönüş (Mean-Reversion) Düzeltmesi
+  // RSI Aşırı Alım (>68) / Aşırı Satım (<32) Ortalamaya Dönüş (Mean-Reversion) Düzeltmesi
   let rsiReversionForce = 0;
   if (rsi14 > 68) {
     rsiReversionForce = -((rsi14 - 68) / 32) * 0.65;
@@ -910,7 +1011,7 @@ export function generate24HourPredictions(
   }
 
   // Birleşik Kantitatif Drift Katsayısı (-1.2 ile +1.2 arası normalize güç)
-  const rawCompositeSignal = (shortImpulse * 0.45) + (emaSpread * 0.35) + macroBias + rsiReversionForce;
+  const rawCompositeSignal = (shortImpulse * 0.38) + (emaSpread * 0.32) + macdNorm + macroBias + rsiReversionForce;
   const compositeDriftScore = Math.max(-1.1, Math.min(1.1, rawCompositeSignal));
 
   // CANLI HABER ŞOKU VE DUYARLILIK UYARLAMASI
