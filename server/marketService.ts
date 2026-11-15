@@ -156,8 +156,16 @@ export const SYMBOL_MAP: Record<string, string> = {
 const OHLC_CACHE_TTL = 20 * 1000;
 const ohlcCache = new Map<string, { timestamp: number; data: any }>();
 const inFlightOhlc = new Map<string, Promise<any>>();
-const hourlyCache = new Map<string, { timestamp: number; data: { timestamp: number; close: number }[] }>();
-const inFlightHourly = new Map<string, Promise<{ timestamp: number; close: number }[]>>();
+export interface HourlyBar {
+  timestamp: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close: number;
+}
+
+const hourlyCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
+const inFlightHourly = new Map<string, Promise<HourlyBar[]>>();
 
 const KRAKEN_PAIR_MAP: Record<string, string> = {
   'BTC/USD': 'XXBTZUSD',
@@ -405,11 +413,26 @@ export async function fetchReal1YearData(symbol: string) {
   }
 }
 
-// 5 Günlük Saatlik Geçmiş Mum Verisi (PC Kapalıyken Oluşan Süreleri Geriye Dönük Doğrulama + TTL Önbellek)
-export async function fetchRealHourlyHistory(symbol: string): Promise<{ timestamp: number; close: number }[]> {
+// 5 Günlük Saatlik Geçmiş Mum Verisi (Gerçek 1h OHLC + Canlı Kraken Fiyat Bindirmeli)
+export async function fetchRealHourlyHistory(symbol: string): Promise<HourlyBar[]> {
   const now = Date.now();
   const cached = hourlyCache.get(symbol);
   if (cached && now - cached.timestamp < OHLC_CACHE_TTL) {
+    if (KRAKEN_PAIR_MAP[symbol] && cached.data.length > 0) {
+      const liveQuotes = await fetchLiveCryptoQuotes();
+      const q = liveQuotes[symbol];
+      if (q && q.mid > 0) {
+        const copy = cached.data.slice();
+        const last = copy[copy.length - 1];
+        copy[copy.length - 1] = {
+          ...last,
+          close: q.mid,
+          high: Math.max(last.high ?? q.mid, q.mid),
+          low: Math.min(last.low ?? q.mid, q.mid),
+        };
+        return copy;
+      }
+    }
     return cached.data;
   }
   if (inFlightHourly.has(symbol)) {
@@ -439,15 +462,32 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<{ timestam
 
       const timestamps = result.timestamp;
       const quote = result.indicators.quote[0];
-      const list: { timestamp: number; close: number }[] = [];
+      const list: HourlyBar[] = [];
 
       for (let i = 0; i < timestamps.length; i++) {
         const c = quote.close[i];
         if (c !== null && c !== undefined && !isNaN(c)) {
+          const o = quote.open?.[i] ?? c;
+          const h = quote.high?.[i] ?? Math.max(o, c);
+          const l = quote.low?.[i] ?? Math.min(o, c);
           list.push({
             timestamp: timestamps[i] * 1000,
+            open: +o,
+            high: +h,
+            low: +l,
             close: +c,
           });
+        }
+      }
+
+      if (list.length > 0 && KRAKEN_PAIR_MAP[symbol]) {
+        const liveQuotes = await fetchLiveCryptoQuotes();
+        const q = liveQuotes[symbol];
+        if (q && q.mid > 0) {
+          const last = list[list.length - 1];
+          last.close = q.mid;
+          last.high = Math.max(last.high ?? q.mid, q.mid);
+          last.low = Math.min(last.low ?? q.mid, q.mid);
         }
       }
 
@@ -512,12 +552,12 @@ const ASSET_KEYWORD_MAP: Record<string, string[]> = {
   'NATGAS': ['natural gas', 'natgas', 'lng', 'doğalgaz'],
   'BTC/USD': ['btc/usd', 'btc', 'bitcoin', 'crypto', 'coindesk', 'cointelegraph', 'bitcoin etf', 'crypto etf', 'mining', 'capitulation', 'halving', 'binance', 'coinbase', 'kripto'],
   'ETH/USD': ['eth/usd', 'ethereum', 'ether', 'defi', 'ether etf', 'staking'],
-  'SOL/USD': ['sol/usd', 'solana'],
-  'BNB/USD': ['bnb/usd', 'bnb', 'binance coin', 'binance', 'bsc'],
-  'XRP/USD': ['xrp/usd', 'ripple', 'xrp'],
-  'AVAX/USD': ['avax/usd', 'avax', 'avalanche'],
-  'LINK/USD': ['link/usd', 'chainlink'],
-  'DOGE/USD': ['doge/usd', 'doge', 'dogecoin'],
+  'SOL/USD': ['sol/usd', 'solana', 'altcoin', 'altcoins', 'crypto market'],
+  'BNB/USD': ['bnb/usd', 'bnb', 'binance coin', 'binance', 'bsc', 'altcoin', 'crypto market'],
+  'XRP/USD': ['xrp/usd', 'ripple', 'xrp', 'altcoin', 'crypto market'],
+  'AVAX/USD': ['avax/usd', 'avax', 'avalanche', 'altcoin', 'crypto market'],
+  'LINK/USD': ['link/usd', 'chainlink', 'altcoin', 'crypto market'],
+  'DOGE/USD': ['doge/usd', 'doge', 'dogecoin', 'memecoin', 'altcoin', 'crypto market'],
   'ADA/USD': ['ada/usd', 'cardano'],
   'NVDA': ['nvidia', 'nvda', 'jensen huang', 'huang', 'blackwell', 'semiconductor', 'chips', 'gpu', 'ai chip', 'yapay zeka çip'],
   'AAPL': ['apple', 'aapl', 'iphone', 'tim cook', 'cupertino'],
