@@ -255,6 +255,12 @@ export interface AutonomousLedgerState {
     sharpeRatio: number;
     sortinoRatio: number;
     totalSpreadAndCommissionTRY: number;
+    totalSignalsExecuted?: number;
+    directionCorrectCount?: number;
+    directionAccuracyPercent?: number;
+    netProfitableCount?: number;
+    netProfitablePercent?: number;
+    totalPredictedGrossTRY?: number;
     totalCumulativeVolumeTRY?: number;
     activeNotionalVolumeTRY?: number;
     avgMarginLeverage?: number;
@@ -886,6 +892,33 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
   const currentDd = peak > 0 ? ((peak - state.totalEquityTRY) / peak) * 100 : 0;
   if (currentDd > maxDd) maxDd = currentDd;
 
+  // Tahmin Doğruluğu (Brüt Yön Başarısı) & Komisyon Sonrası Gerçek Kârlılık Analizi (Açık + Kapalı Tüm İşlemler)
+  const allExecuted = [...state.closedTrades, ...state.openPositions];
+  const totalSignalsExecuted = allExecuted.length;
+  let directionCorrectCount = 0;
+  let netProfitableCount = 0;
+  let totalPredictedGross = 0;
+
+  for (const tr of allExecuted) {
+    const paidFees =
+      (tr.entryCommissionTRY ?? 0) + (tr.exitCommissionTRY ?? 0) + (tr.financingCostTRY ?? 0);
+    const realizedGross = tr.realizedPnL_TRY + paidFees;
+    const openGross =
+      tr.status === 'ACIK' ? (tr.grossUnrealizedPnL_TRY ?? tr.unrealizedPnL_TRY ?? 0) : 0;
+    const tradeGrossPnL = realizedGross + openGross;
+    const tradeNetPnL = tr.status === 'ACIK' ? tr.totalPnL_TRY : tr.realizedPnL_TRY;
+
+    totalPredictedGross += tradeGrossPnL;
+    if (tradeGrossPnL > 0) directionCorrectCount++;
+    if (tradeNetPnL > 0) netProfitableCount++;
+  }
+
+  const directionAccuracyPercent =
+    totalSignalsExecuted > 0 ? +((directionCorrectCount / totalSignalsExecuted) * 100).toFixed(1) : 0;
+  const netProfitablePercent =
+    totalSignalsExecuted > 0 ? +((netProfitableCount / totalSignalsExecuted) * 100).toFixed(1) : 0;
+  const totalPredictedGrossTRY = +totalPredictedGross.toFixed(2);
+
   // Açık pozisyonlarda halihazırda nakitten kesilmiş IBKR giriş komisyonu & taşıma maliyetini de ekle
   for (const op of state.openPositions) {
     totalExecCost += (op.entryCommissionTRY ?? 0) + (op.exitCommissionTRY ?? 0) + (op.financingCostTRY ?? 0);
@@ -926,6 +959,12 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
     sharpeRatio,
     sortinoRatio,
     totalSpreadAndCommissionTRY: +totalExecCost.toFixed(2),
+    totalSignalsExecuted,
+    directionCorrectCount,
+    directionAccuracyPercent,
+    netProfitableCount,
+    netProfitablePercent,
+    totalPredictedGrossTRY,
     totalCumulativeVolumeTRY,
     activeNotionalVolumeTRY,
     avgMarginLeverage,

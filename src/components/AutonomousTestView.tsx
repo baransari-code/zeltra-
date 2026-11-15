@@ -249,6 +249,12 @@ interface AutonomousLedgerState {
     sharpeRatio?: number;
     sortinoRatio?: number;
     totalSpreadAndCommissionTRY?: number;
+    totalSignalsExecuted?: number;
+    directionCorrectCount?: number;
+    directionAccuracyPercent?: number;
+    netProfitableCount?: number;
+    netProfitablePercent?: number;
+    totalPredictedGrossTRY?: number;
     totalCumulativeVolumeTRY?: number;
     activeNotionalVolumeTRY?: number;
     avgMarginLeverage?: number;
@@ -529,12 +535,26 @@ export const AutonomousTestView: React.FC = () => {
           </div>
 
           <div className="bg-zinc-950 border border-zinc-800/90 rounded p-3.5 space-y-1">
-            <div className="text-xs text-zinc-400">İşlem Başarısı</div>
+            <div className="text-xs text-zinc-400">Tahmin Doğruluğu &amp; Kârlılık</div>
             <div className="text-lg font-semibold font-mono text-white tabular-nums">
-              %{ledger.metrics.winRatePercent} <span className="text-xs text-zinc-400 font-normal">({ledger.metrics.winningTrades} Kazanç / {ledger.metrics.losingTrades} Kayıp)</span>
+              {ledger.metrics.totalClosedTrades > 0 ? (
+                <>
+                  %{ledger.metrics.winRatePercent}{' '}
+                  <span className="text-xs text-zinc-400 font-normal">
+                    ({ledger.metrics.winningTrades}K / {ledger.metrics.losingTrades}Z) • Yön: %{ledger.metrics.directionAccuracyPercent ?? 0}
+                  </span>
+                </>
+              ) : (
+                <>
+                  Yön: %{ledger.metrics.directionAccuracyPercent ?? 0}{' '}
+                  <span className="text-xs text-zinc-400 font-normal">
+                    ({ledger.metrics.directionCorrectCount ?? 0}/{ledger.metrics.totalSignalsExecuted ?? 0} doğru tahmin)
+                  </span>
+                </>
+              )}
             </div>
             <div className="text-[11px] text-zinc-500">
-              Ort. Kazanç: +{formatTRY(ledger.metrics.avgWinTRY ?? 0)} • Ort. Kayıp: -{formatTRY(ledger.metrics.avgLossTRY ?? 0)}
+              Net kâra geçen: <span className="text-zinc-300 font-medium">{ledger.metrics.netProfitableCount ?? 0}/{ledger.metrics.totalSignalsExecuted ?? 0}</span> (%{ledger.metrics.netProfitablePercent ?? 0}) • Brüt: <span className={(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? '+' : ''}{formatTRY(ledger.metrics.totalPredictedGrossTRY ?? 0)}</span>
             </div>
           </div>
         </div>
@@ -579,6 +599,64 @@ export const AutonomousTestView: React.FC = () => {
             </div>
             <div className="text-[11px] text-zinc-500">
               Kaldıraçlı (%1,5 sabit riskli) gerçek kazanç: <span className={ledger.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{ledger.netProfitTRY >= 0 ? '+' : ''}{formatTRY(ledger.netProfitTRY)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 TAHMİN DOĞRULUĞU & GERÇEK PARA KAZANMA KARNESİ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
+            <div className="text-xs text-zinc-400">Yön Tahmin Doğruluğu (Tüm İşlemler)</div>
+            <div className="text-sm font-semibold font-mono text-white">
+              %{ledger.metrics.directionAccuracyPercent ?? 0}{' '}
+              <span className="text-xs font-normal text-zinc-400">
+                ({ledger.metrics.directionCorrectCount ?? 0} / {ledger.metrics.totalSignalsExecuted ?? 0} İşlem Doğru Yön)
+              </span>
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Açık + kapalı tüm işlemlerde fiyatın öngörülen yöne gitme oranı
+            </div>
+          </div>
+
+          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
+            <div className="text-xs text-zinc-400">Komisyon Üstü Net Kazanan Oranı</div>
+            <div className="text-sm font-semibold font-mono text-white">
+              %{ledger.metrics.netProfitablePercent ?? 0}{' '}
+              <span className="text-xs font-normal text-zinc-400">
+                ({ledger.metrics.netProfitableCount ?? 0} / {ledger.metrics.totalSignalsExecuted ?? 0} İşlem Kârlı)
+              </span>
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Kapanan kesin başarı: %{ledger.metrics.winRatePercent} ({ledger.metrics.winningTrades}K / {ledger.metrics.losingTrades}Z)
+            </div>
+          </div>
+
+          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
+            <div className="text-xs text-zinc-400">Tahminlerden Para Kazandık mı?</div>
+            <div className={`text-sm font-semibold font-mono ${(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              Brüt: {(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? '+' : ''}{formatTRY(ledger.metrics.totalPredictedGrossTRY ?? 0)}
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Komisyon &amp; çıkış kesintisi sonrası net: <span className={ledger.netProfitTRY >= 0 ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>{ledger.netProfitTRY >= 0 ? '+' : ''}{formatTRY(ledger.netProfitTRY)}</span>
+            </div>
+          </div>
+
+          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
+            <div className="text-xs text-zinc-400">Kâr Çarpanı &amp; İşlem Başı Beklenti</div>
+            <div className="text-sm font-semibold font-mono text-white">
+              {ledger.metrics.totalClosedTrades > 0 ? (
+                <>
+                  {ledger.metrics.profitFactor}x Çarpan •{' '}
+                  <span className={(ledger.metrics.expectancyTRY ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                    {(ledger.metrics.expectancyTRY ?? 0) >= 0 ? '+' : ''}{formatTRY(ledger.metrics.expectancyTRY ?? 0)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-zinc-300 font-normal">İlk kapanış bekleniyor ({ledger.openPositions.length} açık)</span>
+              )}
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Ort. Kazanç: +{formatTRY(ledger.metrics.avgWinTRY ?? 0)} • Ort. Kayıp: -{formatTRY(ledger.metrics.avgLossTRY ?? 0)}
             </div>
           </div>
         </div>
@@ -749,6 +827,8 @@ export const AutonomousTestView: React.FC = () => {
                     const isSelected = inspectedTrade?.id === pos.id;
                     const gauge = computePriceGaugePercent(pos);
                     const marketNote = getMarketHoursNote(pos.symbol);
+                    const paidFees = (pos.entryCommissionTRY ?? 0) + (pos.exitCommissionTRY ?? 0) + (pos.financingCostTRY ?? 0);
+                    const posGrossTotal = +(pos.realizedPnL_TRY + paidFees + (pos.grossUnrealizedPnL_TRY ?? pos.unrealizedPnL_TRY ?? 0)).toFixed(2);
                     return (
                       <tr
                         key={pos.id}
@@ -808,8 +888,8 @@ export const AutonomousTestView: React.FC = () => {
                         </td>
                         <td className={`py-3 px-2 text-right font-mono font-semibold ${isPosProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
                           <div>{isPosProfit ? '+' : ''}{formatTRY(pos.totalPnL_TRY)}</div>
-                          <div className="text-[10px] font-normal text-zinc-500">
-                            IBKR Kom: -{formatTRY(pos.executionCostTRY ?? 0)}
+                          <div className="text-[10px] font-normal text-zinc-400">
+                            Brüt: {posGrossTotal >= 0 ? '+' : ''}{formatTRY(posGrossTotal)} ({posGrossTotal > 0 ? 'Yön Doğru' : 'Yön Ters'}) • Kom: -{formatTRY(pos.executionCostTRY ?? 0)}
                           </div>
                         </td>
                         <td className="py-3 px-2 text-right">
@@ -1193,7 +1273,10 @@ export const AutonomousTestView: React.FC = () => {
                         {spot1x >= 0 ? '+' : ''}{formatTRY(spot1x)}
                       </td>
                       <td className={`py-3 px-2 text-right font-mono font-semibold whitespace-nowrap ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isWin ? '+' : ''}{formatTRY(t.realizedPnL_TRY)}
+                        <div>{isWin ? '+' : ''}{formatTRY(t.realizedPnL_TRY)}</div>
+                        <div className="text-[10px] font-normal text-zinc-500">
+                          IBKR Kom: -{formatTRY(t.executionCostTRY ?? 0)}
+                        </div>
                       </td>
                     </tr>
                   );

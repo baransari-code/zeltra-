@@ -2,16 +2,16 @@
   "botId": "ZELTRA-QUANT-AUTO-250K",
   "isRunning": true,
   "startedAt": "2026-11-15T05:15:56.685Z",
-  "lastTickAt": "2026-11-15T05:15:58.779Z",
+  "lastTickAt": "2026-11-15T05:28:53.620Z",
   "liveUsdTry": 50.3447,
   "initialCapitalTRY": 250000,
   "cashBalanceTRY": 249280.77,
   "allocatedMarginTRY": 199784.1,
   "availableCashTRY": 49496.67,
-  "openFloatingPnL_TRY": -827.07,
-  "totalEquityTRY": 248453.7,
-  "netProfitTRY": -1546.3,
-  "netProfitPercent": -0.62,
+  "openFloatingPnL_TRY": 15.69,
+  "totalEquityTRY": 249296.46,
+  "netProfitTRY": -703.54,
+  "netProfitPercent": -0.28,
   "metrics": {
     "totalClosedTrades": 0,
     "openPositionsCount": 4,
@@ -32,11 +32,17 @@
     "sharpeRatio": 0,
     "sortinoRatio": 0,
     "totalSpreadAndCommissionTRY": 719.23,
+    "totalSignalsExecuted": 4,
+    "directionCorrectCount": 3,
+    "directionAccuracyPercent": 75,
+    "netProfitableCount": 0,
+    "netProfitablePercent": 0,
+    "totalPredictedGrossTRY": 734.76,
     "totalCumulativeVolumeTRY": 599360.52,
     "activeNotionalVolumeTRY": 599360.52,
     "avgMarginLeverage": 3,
-    "portfolioEffectiveLeverage": 2.41,
-    "spot1xTotalNetProfitTRY": -515.43,
+    "portfolioEffectiveLeverage": 2.4,
+    "spot1xTotalNetProfitTRY": -234.51,
     "currentStreak": {
       "type": "NONE",
       "count": 0
@@ -55,8 +61,8 @@
         "losses": 0,
         "winRatePercent": 0,
         "netRealizedPnL_TRY": 0,
-        "floatingPnL_TRY": -187.18,
-        "totalNetPnL_TRY": -187.18,
+        "floatingPnL_TRY": 30.99,
+        "totalNetPnL_TRY": 30.99,
         "avgRMultiple": 0,
         "totalRMultiple": 0,
         "executionCostTRY": 180.01
@@ -70,8 +76,8 @@
         "losses": 0,
         "winRatePercent": 0,
         "netRealizedPnL_TRY": 0,
-        "floatingPnL_TRY": -193.14,
-        "totalNetPnL_TRY": -193.14,
+        "floatingPnL_TRY": 44,
+        "totalNetPnL_TRY": 44,
         "avgRMultiple": 0,
         "totalRMultiple": 0,
         "executionCostTRY": 179.87
@@ -85,8 +91,8 @@
         "losses": 0,
         "winRatePercent": 0,
         "netRealizedPnL_TRY": 0,
-        "floatingPnL_TRY": -221.95,
-        "totalNetPnL_TRY": -221.95,
+        "floatingPnL_TRY": 157.96,
+        "totalNetPnL_TRY": 157.96,
         "avgRMultiple": 0,
         "totalRMultiple": 0,
         "executionCostTRY": 179.74
@@ -100,8 +106,8 @@
         "losses": 0,
         "winRatePercent": 0,
         "netRealizedPnL_TRY": 0,
-        "floatingPnL_TRY": -224.8,
-        "totalNetPnL_TRY": -224.8,
+        "floatingPnL_TRY": -217.26,
+        "totalNetPnL_TRY": -217.26,
         "avgRMultiple": 0,
         "totalRMultiple": 0,
         "executionCostTRY": 179.61
@@ -315,12 +321,12 @@
       "symbol": "BTC/USD",
       "name": "Bitcoin / ABD Doları",
       "digits": 2,
-      "price": 64919.05,
-      "ema8": 71254.42,
-      "ema21": 75085.04,
-      "ema50": 77596.4,
+      "price": 64824.75,
+      "ema8": 71233.46,
+      "ema21": 75076.47,
+      "ema50": 77592.71,
       "trendRegime": "AYI (BEAR)",
-      "rsi14": 21,
+      "rsi14": 20.9,
       "atr14": 2646.94,
       "newsSentimentScore": -0.46,
       "newsHeadline": "XRP, paranın kriptodan ayrılmasıyla Kasım 2024'ten bu yana en düşük seviyesine geriledi",
@@ -328,18 +334,18 @@
       "candidateDirection": "SAT (SHORT)",
       "status": "POZİSYONDA (AÇIK)",
       "decisionReason": "Aktif SAT (SHORT) (0.046 Lot) pozisyonu anlık yönetiliyor (SL: 65511.56 | TP1: 64034.57).",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "ETH/USD",
       "name": "Ethereum / ABD Doları",
       "digits": 2,
-      "price": 1810.09,
-      "ema8": 2018.65,
-      "ema21": 2167.15,
-      "ema50": 2296.04,
+      "price": 1807.24,
+      "ema8": 2018.01,
+      "ema21": 2166.89,
+      "ema50": 2295.93,
       "trendRegime": "AYI (BEAR)",
-      "rsi14": 20.9,
+      "rsi14": 20.8,
       "atr14": 103.66,
       "newsSentimentScore": -0.66,
       "newsHeadline": "XRP, paranın kriptodan ayrılmasıyla Kasım 2024'ten bu yana en düşük seviyesine geriledi",
@@ -347,15 +353,15 @@
       "candidateDirection": "SAT (SHORT)",
       "status": "POZİSYONDA (AÇIK)",
       "decisionReason": "Aktif SAT (SHORT) (0.164 Lot) pozisyonu anlık yönetiliyor (SL: 1833.26 | TP1: 1775.42).",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "SOL/USD",
       "name": "Solana / ABD Doları",
       "digits": 2,
-      "price": 70.87,
-      "ema8": 81.35,
-      "ema21": 89.21,
+      "price": 71.05,
+      "ema8": 81.39,
+      "ema21": 89.23,
       "ema50": 96.41,
       "trendRegime": "AYI (BEAR)",
       "rsi14": 15.5,
@@ -366,13 +372,13 @@
       "candidateDirection": "AL (LONG)",
       "status": "POZİSYONDA (AÇIK)",
       "decisionReason": "Aktif AL (LONG) (0.42 Lot) pozisyonu anlık yönetiliyor (SL: 69.86 | TP1: 72.38).",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "BNB/USD",
       "name": "BNB / ABD Doları",
       "digits": 2,
-      "price": 595.36,
+      "price": 595.37,
       "ema8": 653.77,
       "ema21": 685.74,
       "ema50": 707.35,
@@ -385,18 +391,18 @@
       "candidateDirection": "AL (LONG)",
       "status": "POZİSYONDA (AÇIK)",
       "decisionReason": "Aktif AL (LONG) (0.499 Lot) pozisyonu anlık yönetiliyor (SL: 589.95 | TP1: 603.64).",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "XRP/USD",
       "name": "Ripple / ABD Doları",
       "digits": 4,
-      "price": 0.9731,
-      "ema8": 1.0614,
-      "ema21": 1.1598,
-      "ema50": 1.2511,
+      "price": 0.9668,
+      "ema8": 1.06,
+      "ema21": 1.1592,
+      "ema50": 1.2508,
       "trendRegime": "AYI (BEAR)",
-      "rsi14": 18.9,
+      "rsi14": 18.6,
       "atr14": 0.0549,
       "newsSentimentScore": -0.95,
       "newsHeadline": "XRP, paranın kriptodan ayrılmasıyla Kasım 2024'ten bu yana en düşük seviyesine geriledi",
@@ -404,33 +410,33 @@
       "candidateDirection": "SAT (SHORT)",
       "status": "LİMİT DOLU (4/4)",
       "decisionReason": "SAT (SHORT) sinyali hazır (84/100 — Yapay Zeka Haber Katalizörü (%88 Güven): Kripto piyasasında kurumsal çıkış, likidasyon veya teslimiyet (satış) dalgası tespit edildi.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında anında devreye girecek.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "AVAX/USD",
       "name": "Avalanche / ABD Doları",
       "digits": 3,
-      "price": 7.223,
-      "ema8": 8.108,
-      "ema21": 8.501,
+      "price": 7.244,
+      "ema8": 8.112,
+      "ema21": 8.503,
       "ema50": 8.868,
       "trendRegime": "AYI (BEAR)",
-      "rsi14": 31.6,
+      "rsi14": 31.8,
       "atr14": 0.588,
       "newsSentimentScore": 0,
       "newsHeadline": "Sakin / Teknik Akış",
       "confluenceScore": 84,
       "candidateDirection": "AL (LONG)",
       "status": "KORELASYON KALKANI",
-      "decisionReason": "AL (LONG) sinyali hazır (84/100 — Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 31.6) + Likidite Dip Alımı.) ancak aynı korelasyon kümesinde (CRYPTO_L1) 2 açık işlem bulunduğu için risk çeşitlendirmesi korundu.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "decisionReason": "AL (LONG) sinyali hazır (84/100 — Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 31.8) + Likidite Dip Alımı.) ancak aynı korelasyon kümesinde (CRYPTO_L1) 2 açık işlem bulunduğu için risk çeşitlendirmesi korundu.",
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "LINK/USD",
       "name": "Chainlink / ABD Doları",
       "digits": 3,
-      "price": 9.139,
-      "ema8": 10.08,
+      "price": 9.135,
+      "ema8": 10.079,
       "ema21": 10.77,
       "ema50": 11.411,
       "trendRegime": "AYI (BEAR)",
@@ -442,15 +448,15 @@
       "candidateDirection": "AL (LONG)",
       "status": "LİMİT DOLU (4/4)",
       "decisionReason": "AL (LONG) sinyali hazır (84/100 — Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 28) + Likidite Dip Alımı.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında anında devreye girecek.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "DOGE/USD",
       "name": "Dogecoin / ABD Doları",
       "digits": 5,
-      "price": 0.05833,
-      "ema8": 0.06612,
-      "ema21": 0.07137,
+      "price": 0.05838,
+      "ema8": 0.06613,
+      "ema21": 0.07138,
       "ema50": 0.07709,
       "trendRegime": "AYI (BEAR)",
       "rsi14": 20.4,
@@ -461,7 +467,7 @@
       "candidateDirection": "AL (LONG)",
       "status": "LİMİT DOLU (4/4)",
       "decisionReason": "AL (LONG) sinyali hazır (84/100 — Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 20.4) + Likidite Dip Alımı.) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında anında devreye girecek.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "XAU/USD",
@@ -480,7 +486,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "EUR/USD",
@@ -499,7 +505,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "USD/JPY",
@@ -518,7 +524,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "GBP/USD",
@@ -537,7 +543,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "NAS100",
@@ -556,7 +562,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "SPX500",
@@ -575,7 +581,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "NVDA",
@@ -594,7 +600,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     },
     {
       "symbol": "WTI",
@@ -613,7 +619,7 @@
       "candidateDirection": "BEKLE",
       "status": "PİYASA KAPALI (HAFTA SONU)",
       "decisionReason": "Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.",
-      "scannedAt": "2026-11-15T05:15:58.779Z"
+      "scannedAt": "2026-11-15T05:28:53.620Z"
     }
   ],
   "openPositions": [
@@ -628,9 +634,9 @@
       "entryTimestamp": 1794719756702,
       "midEntryPrice": 64919.05,
       "entryPrice": 64916,
-      "currentPrice": 64919.1,
-      "bidAtTick": 64919,
-      "askAtTick": 64919.1,
+      "currentPrice": 64824.8,
+      "bidAtTick": 64824.7,
+      "askAtTick": 64824.8,
       "takeProfit1": 64034.57,
       "takeProfit2": 63439.01,
       "stopLoss": 65511.56,
@@ -645,7 +651,7 @@
       "effectiveLeverage": 3,
       "accountLeverage": 0.6,
       "isLeveraged": true,
-      "spot1xEquivalentPnL_TRY": -122.4,
+      "spot1xEquivalentPnL_TRY": -49.67,
       "spreadPts": 0.1,
       "slippagePts": 3,
       "executionCostTRY": 180.01,
@@ -654,19 +660,19 @@
       "financingCostTRY": 0,
       "lastSwapDateUTC": "2026-11-15",
       "usdTryAtEntry": 50.3447,
-      "grossUnrealizedPnL_TRY": -7.16,
-      "rMultiple": -0.27,
-      "mfeTRY": -13.76,
-      "mfeR": -0.01,
+      "grossUnrealizedPnL_TRY": 210.75,
+      "rMultiple": -0.11,
+      "mfeTRY": 206.44,
+      "mfeR": 0.15,
       "maeTRY": -13.76,
       "maeR": -0.01,
       "tp1Hit": false,
       "breakevenActive": false,
       "trailingStopActive": false,
       "realizedPnL_TRY": -180.01,
-      "unrealizedPnL_TRY": -187.18,
-      "totalPnL_TRY": -367.19,
-      "totalPnL_Percent": -0.15,
+      "unrealizedPnL_TRY": 30.99,
+      "totalPnL_TRY": -149.02,
+      "totalPnL_Percent": -0.06,
       "confluenceScore": 98,
       "rationale": "Yapay Zeka Haber Katalizörü (%83 Güven): Kripto piyasasında kurumsal çıkış, likidasyon veya teslimiyet (satış) dalgası tespit edildi.",
       "forensicXRay": {
@@ -773,9 +779,9 @@
           }
         ],
         "excursion": {
-          "mfePrice": 64921.96,
-          "mfeR": -0.01,
-          "mfeTRY": -13.76,
+          "mfePrice": 64826.67,
+          "mfeR": 0.15,
+          "mfeTRY": 206.44,
           "maePrice": 64921.96,
           "maeR": -0.01,
           "maeTRY": -13.76
@@ -807,11 +813,11 @@
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-15T05:15:58.781Z",
+            "timestamp": "2026-11-15T05:28:55.294Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
-            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +-13,76 TL (+-0.01R @ 64921.96) | En derin geri çekilme (MAE): -13,76 TL (-0.01R @ 64921.96).",
-            "price": 64921.96
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +206,44 TL (+0.15R @ 64826.67) | En derin geri çekilme (MAE): -13,76 TL (-0.01R @ 64921.96).",
+            "price": 64826.67
           }
         ]
       }
@@ -827,9 +833,9 @@
       "entryTimestamp": 1794719756702,
       "midEntryPrice": 1810.09,
       "entryPrice": 1809.94,
-      "currentPrice": 1810.1,
-      "bidAtTick": 1810.09,
-      "askAtTick": 1810.1,
+      "currentPrice": 1807.24,
+      "bidAtTick": 1807.23,
+      "askAtTick": 1807.24,
       "takeProfit1": 1775.42,
       "takeProfit2": 1752.1,
       "stopLoss": 1833.26,
@@ -844,7 +850,7 @@
       "effectiveLeverage": 3,
       "accountLeverage": 0.6,
       "isLeveraged": true,
-      "spot1xEquivalentPnL_TRY": -124.34,
+      "spot1xEquivalentPnL_TRY": -45.29,
       "spreadPts": 0.01,
       "slippagePts": 0.15,
       "executionCostTRY": 179.87,
@@ -853,19 +859,19 @@
       "financingCostTRY": 0,
       "lastSwapDateUTC": "2026-11-15",
       "usdTryAtEntry": 50.3447,
-      "grossUnrealizedPnL_TRY": -13.25,
-      "rMultiple": -0.19,
-      "mfeTRY": -19.31,
-      "mfeR": -0.01,
+      "grossUnrealizedPnL_TRY": 223.6,
+      "rMultiple": -0.07,
+      "mfeTRY": 231.78,
+      "mfeR": 0.12,
       "maeTRY": -19.31,
       "maeR": -0.01,
       "tp1Hit": false,
       "breakevenActive": false,
       "trailingStopActive": false,
       "realizedPnL_TRY": -179.87,
-      "unrealizedPnL_TRY": -193.14,
-      "totalPnL_TRY": -373.01,
-      "totalPnL_Percent": -0.15,
+      "unrealizedPnL_TRY": 44,
+      "totalPnL_TRY": -135.87,
+      "totalPnL_Percent": -0.05,
       "confluenceScore": 98,
       "rationale": "Yapay Zeka Haber Katalizörü (%86 Güven): Kripto piyasasında kurumsal çıkış, likidasyon veya teslimiyet (satış) dalgası tespit edildi.",
       "forensicXRay": {
@@ -972,9 +978,9 @@
           }
         ],
         "excursion": {
-          "mfePrice": 1810.17,
-          "mfeR": -0.01,
-          "mfeTRY": -19.31,
+          "mfePrice": 1807.14,
+          "mfeR": 0.12,
+          "mfeTRY": 231.78,
           "maePrice": 1810.17,
           "maeR": -0.01,
           "maeTRY": -19.31
@@ -1006,11 +1012,11 @@
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-15T05:15:58.781Z",
+            "timestamp": "2026-11-15T05:28:55.294Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
-            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +-19,31 TL (+-0.01R @ 1810.17) | En derin geri çekilme (MAE): -19,31 TL (-0.01R @ 1810.17).",
-            "price": 1810.17
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +231,78 TL (+0.12R @ 1807.14) | En derin geri çekilme (MAE): -19,31 TL (-0.01R @ 1810.17).",
+            "price": 1807.14
           }
         ]
       }
@@ -1026,9 +1032,9 @@
       "entryTimestamp": 1794719756702,
       "midEntryPrice": 70.87,
       "entryPrice": 70.88,
-      "currentPrice": 70.86,
-      "bidAtTick": 70.86,
-      "askAtTick": 70.87,
+      "currentPrice": 71.04,
+      "bidAtTick": 71.04,
+      "askAtTick": 71.05,
       "takeProfit1": 72.38,
       "takeProfit2": 73.4,
       "stopLoss": 69.86,
@@ -1043,7 +1049,7 @@
       "effectiveLeverage": 3,
       "accountLeverage": 0.6,
       "isLeveraged": true,
-      "spot1xEquivalentPnL_TRY": -133.9,
+      "spot1xEquivalentPnL_TRY": -7.26,
       "spreadPts": 0.01,
       "slippagePts": 0.01,
       "executionCostTRY": 179.74,
@@ -1052,19 +1058,19 @@
       "financingCostTRY": 0,
       "lastSwapDateUTC": "2026-11-15",
       "usdTryAtEntry": 50.3447,
-      "grossUnrealizedPnL_TRY": -42.26,
-      "rMultiple": -0.19,
-      "mfeTRY": -42.97,
-      "mfeR": -0.02,
+      "grossUnrealizedPnL_TRY": 338.11,
+      "rMultiple": -0.01,
+      "mfeTRY": 343.76,
+      "mfeR": 0.16,
       "maeTRY": -42.97,
       "maeR": -0.02,
       "tp1Hit": false,
       "breakevenActive": false,
       "trailingStopActive": false,
       "realizedPnL_TRY": -179.74,
-      "unrealizedPnL_TRY": -221.95,
-      "totalPnL_TRY": -401.69,
-      "totalPnL_Percent": -0.16,
+      "unrealizedPnL_TRY": 157.96,
+      "totalPnL_TRY": -21.78,
+      "totalPnL_Percent": -0.01,
       "confluenceScore": 76,
       "rationale": "Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 15.5) + Likidite Dip Alımı.",
       "forensicXRay": {
@@ -1171,9 +1177,9 @@
           }
         ],
         "excursion": {
-          "mfePrice": 70.86,
-          "mfeR": -0.02,
-          "mfeTRY": -42.97,
+          "mfePrice": 71.04,
+          "mfeR": 0.16,
+          "mfeTRY": 343.76,
           "maePrice": 70.86,
           "maeR": -0.02,
           "maeTRY": -42.97
@@ -1205,11 +1211,11 @@
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-15T05:15:58.781Z",
+            "timestamp": "2026-11-15T05:28:55.294Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
-            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +-42,97 TL (+-0.02R @ 70.86) | En derin geri çekilme (MAE): -42,97 TL (-0.02R @ 70.86).",
-            "price": 70.86
+            "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +343,76 TL (+0.16R @ 71.04) | En derin geri çekilme (MAE): -42,97 TL (-0.02R @ 70.86).",
+            "price": 71.04
           }
         ]
       }
@@ -1225,8 +1231,8 @@
       "entryTimestamp": 1794719756702,
       "midEntryPrice": 595.36,
       "entryPrice": 595.47,
-      "currentPrice": 595.29,
-      "bidAtTick": 595.29,
+      "currentPrice": 595.32,
+      "bidAtTick": 595.32,
       "askAtTick": 595.42,
       "takeProfit1": 603.64,
       "takeProfit2": 609.17,
@@ -1242,7 +1248,7 @@
       "effectiveLeverage": 3,
       "accountLeverage": 0.6,
       "isLeveraged": true,
-      "spot1xEquivalentPnL_TRY": -134.8,
+      "spot1xEquivalentPnL_TRY": -132.29,
       "spreadPts": 0.13,
       "slippagePts": 0.05,
       "executionCostTRY": 179.61,
@@ -1251,7 +1257,7 @@
       "financingCostTRY": 0,
       "lastSwapDateUTC": "2026-11-15",
       "usdTryAtEntry": 50.3447,
-      "grossUnrealizedPnL_TRY": -45.24,
+      "grossUnrealizedPnL_TRY": -37.7,
       "rMultiple": -0.29,
       "mfeTRY": -41.65,
       "mfeR": -0.03,
@@ -1261,8 +1267,8 @@
       "breakevenActive": false,
       "trailingStopActive": false,
       "realizedPnL_TRY": -179.61,
-      "unrealizedPnL_TRY": -224.8,
-      "totalPnL_TRY": -404.41,
+      "unrealizedPnL_TRY": -217.26,
+      "totalPnL_TRY": -396.87,
       "totalPnL_Percent": -0.16,
       "confluenceScore": 76,
       "rationale": "Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 22.3) + Likidite Dip Alımı.",
@@ -1404,7 +1410,7 @@
           },
           {
             "stepNo": 4,
-            "timestamp": "2026-11-15T05:15:58.781Z",
+            "timestamp": "2026-11-15T05:28:55.294Z",
             "phase": "MFE_MAE_TRACK",
             "title": "İşlem İçi Maksimum Lehine (MFE) & Aleyhine (MAE) Sapma Takibi",
             "detail": "İşlem açıkken görülen en yüksek kâr (MFE): +-41,65 TL (+-0.03R @ 595.30) | En derin geri çekilme (MAE): -41,65 TL (-0.03R @ 595.30).",
@@ -1429,6 +1435,13 @@
       "equityTRY": 248453.7,
       "cashTRY": 249280.77,
       "drawdownPercent": -0.62
+    },
+    {
+      "timestamp": 1794720533620,
+      "timeStr": "15/11 08:28",
+      "equityTRY": 249296.46,
+      "cashTRY": 249280.77,
+      "drawdownPercent": -0.28
     }
   ],
   "activityLog": [
@@ -1449,12 +1462,12 @@
       "riskAmountTRY": 1376.24,
       "executionCostTRY": 180.01,
       "entryPrice": 64916,
-      "exitPrice": 64919.1,
+      "exitPrice": 64824.8,
       "stopLoss": 65511.56,
       "tp1": 64034.57,
       "tp2": 63439.01,
-      "pnlImpactTRY": -367.19,
-      "message": "AKTİF POZİSYON AÇILDI: BTC/USD (SAT (SHORT)) @ 64916.00 (Güncel: 64919.10) | Basılan Ana Para (Teminat): 50.000 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 150.009,3 TL (0.0459 BTC / 0.046 Lot) | Maks. Stop Riski: 1.376,24 TL | Gerekçe: Yapay Zeka Haber Katalizörü (%83 Güven): Kripto piyasasında kurumsal çıkış, likidasyon veya teslimiyet (satış) dalgası tespit edildi."
+      "pnlImpactTRY": -149.02,
+      "message": "AKTİF POZİSYON AÇILDI: BTC/USD (SAT (SHORT)) @ 64916.00 (Güncel: 64824.80) | Basılan Ana Para (Teminat): 50.000 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 150.009,3 TL (0.0459 BTC / 0.046 Lot) | Maks. Stop Riski: 1.376,24 TL | Gerekçe: Yapay Zeka Haber Katalizörü (%83 Güven): Kripto piyasasında kurumsal çıkış, likidasyon veya teslimiyet (satış) dalgası tespit edildi."
     },
     {
       "id": "ACT-OPEN-ENT-TRD-ETHUSD-56702",
@@ -1473,12 +1486,12 @@
       "riskAmountTRY": 1931.47,
       "executionCostTRY": 179.87,
       "entryPrice": 1809.94,
-      "exitPrice": 1810.1,
+      "exitPrice": 1807.24,
       "stopLoss": 1833.26,
       "tp1": 1775.42,
       "tp2": 1752.1,
-      "pnlImpactTRY": -373.01,
-      "message": "AKTİF POZİSYON AÇILDI: ETH/USD (SAT (SHORT)) @ 1809.94 (Güncel: 1810.10) | Basılan Ana Para (Teminat): 49.964 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 149.892,04 TL (1.64498 ETH / 0.164 Lot) | Maks. Stop Riski: 1.931,47 TL | Gerekçe: Yapay Zeka Haber Katalizörü (%86 Güven): Kripto piyasasında kurumsal çıkış, likidasyon veya teslimiyet (satış) dalgası tespit edildi."
+      "pnlImpactTRY": -135.87,
+      "message": "AKTİF POZİSYON AÇILDI: ETH/USD (SAT (SHORT)) @ 1809.94 (Güncel: 1807.24) | Basılan Ana Para (Teminat): 49.964 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 149.892,04 TL (1.64498 ETH / 0.164 Lot) | Maks. Stop Riski: 1.931,47 TL | Gerekçe: Yapay Zeka Haber Katalizörü (%86 Güven): Kripto piyasasında kurumsal çıkış, likidasyon veya teslimiyet (satış) dalgası tespit edildi."
     },
     {
       "id": "ACT-OPEN-ENT-TRD-SOLUSD-56702",
@@ -1497,12 +1510,12 @@
       "riskAmountTRY": 2148.47,
       "executionCostTRY": 179.74,
       "entryPrice": 70.88,
-      "exitPrice": 70.86,
+      "exitPrice": 71.04,
       "stopLoss": 69.86,
       "tp1": 72.38,
       "tp2": 73.4,
-      "pnlImpactTRY": -401.69,
-      "message": "AKTİF POZİSYON AÇILDI: SOL/USD (AL (LONG)) @ 70.88 (Güncel: 70.86) | Basılan Ana Para (Teminat): 49.928,02 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 149.784,23 TL (41.9748 SOL / 0.42 Lot) | Maks. Stop Riski: 2.148,47 TL | Gerekçe: Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 15.5) + Likidite Dip Alımı."
+      "pnlImpactTRY": -21.78,
+      "message": "AKTİF POZİSYON AÇILDI: SOL/USD (AL (LONG)) @ 70.88 (Güncel: 71.04) | Basılan Ana Para (Teminat): 49.928,02 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 149.784,23 TL (41.9748 SOL / 0.42 Lot) | Maks. Stop Riski: 2.148,47 TL | Gerekçe: Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 15.5) + Likidite Dip Alımı."
     },
     {
       "id": "ACT-OPEN-ENT-TRD-BNBUSD-56702",
@@ -1521,12 +1534,12 @@
       "riskAmountTRY": 1388.32,
       "executionCostTRY": 179.61,
       "entryPrice": 595.47,
-      "exitPrice": 595.29,
+      "exitPrice": 595.32,
       "stopLoss": 589.95,
       "tp1": 603.64,
       "tp2": 609.17,
-      "pnlImpactTRY": -404.41,
-      "message": "AKTİF POZİSYON AÇILDI: BNB/USD (AL (LONG)) @ 595.47 (Güncel: 595.29) | Basılan Ana Para (Teminat): 49.892,08 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 149.674,95 TL (4.9927 BNB / 0.499 Lot) | Maks. Stop Riski: 1.388,32 TL | Gerekçe: Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 22.3) + Likidite Dip Alımı."
+      "pnlImpactTRY": -396.87,
+      "message": "AKTİF POZİSYON AÇILDI: BNB/USD (AL (LONG)) @ 595.47 (Güncel: 595.32) | Basılan Ana Para (Teminat): 49.892,08 TL | Kaldıraç: 3x (Kasa Kaldıracı: 0.6x) | Açılan Toplam Hacim: 149.674,95 TL (4.9927 BNB / 0.499 Lot) | Maks. Stop Riski: 1.388,32 TL | Gerekçe: Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: 22.3) + Likidite Dip Alımı."
     },
     {
       "id": "ACT-INIT-START",
