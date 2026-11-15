@@ -369,6 +369,8 @@ export function synthesizeAssetNewsAI(symbol: string, newsList: any[]): {
   primaryHeadline: string;
   primarySource: string;
   publishedAt: string;
+  newestTimestamp: number;
+  isRecapOnly: boolean;
   whatHappened: string;
   causalMechanism: string;
 } {
@@ -384,6 +386,8 @@ export function synthesizeAssetNewsAI(symbol: string, newsList: any[]): {
       primaryHeadline: '',
       primarySource: '',
       publishedAt: '',
+      newestTimestamp: 0,
+      isRecapOnly: false,
       whatHappened: 'Son 24 saatte bu varlık için yön değiştirici bir haber kaydedilmedi.',
       causalMechanism: 'Saf teknik analiz ve fiyat hareketi geçerlidir.',
     };
@@ -443,6 +447,8 @@ export function synthesizeAssetNewsAI(symbol: string, newsList: any[]): {
       primaryHeadline: '',
       primarySource: '',
       publishedAt: '',
+      newestTimestamp: 0,
+      isRecapOnly: false,
       whatHappened: `${symbol} için son 24 saatte ters bir haber şoku yok.`,
       causalMechanism: 'İşlem kararlarında teknik trend ve destek/direnç seviyeleri esas alınır.',
     };
@@ -451,6 +457,11 @@ export function synthesizeAssetNewsAI(symbol: string, newsList: any[]): {
   matchingArticles.sort((a, b) => b.weight * b.impact.conviction - a.weight * a.impact.conviction);
   const top = matchingArticles[0];
   const topAi: ArticleAiAnalysis | undefined = top.article.aiAnalysis;
+  const newestTimestamp = Math.max(0, ...matchingArticles.map((m) => Number(m.article.publishedTimestamp) || 0));
+  const topTitleLower = `${top.article.originalTitle || top.article.title || ''} ${top.article.originalSummary || ''}`.toLowerCase();
+  const isRecapHeadline = /\b(falls to|fell to|drops to|slumps below|drops below|four-month low|3-month low|month low|crypto selloff|selloff deepens|bitcoin rallies|bitcoin surges)\b/i.test(topTitleLower);
+  const hasRealShock = matchingArticles.some((m) => /\b(fed|fomc|rate cut|rate hike|cpi|inflation|tariff|war|missile|sec lawsuit|hack|ban|earnings|guidance|opec)\b/i.test(`${m.article.originalTitle || m.article.title || ''} ${m.article.originalSummary || ''}`));
+  const isRecapOnly = isRecapHeadline && !hasRealShock;
 
   const netAiScore = Math.max(-0.95, Math.min(0.95, +(weightedSum / weightTotal).toFixed(2)));
   const absNet = Math.abs(netAiScore);
@@ -480,6 +491,8 @@ export function synthesizeAssetNewsAI(symbol: string, newsList: any[]): {
     primaryHeadline: top.article.title || '',
     primarySource: top.article.source || '',
     publishedAt: top.article.publishedAt || '',
+    newestTimestamp,
+    isRecapOnly,
     whatHappened: topAi?.whatHappened || top.impact.reason,
     causalMechanism: topAi?.causalMechanism || top.impact.reason,
   };

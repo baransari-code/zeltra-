@@ -706,6 +706,8 @@ const NON_FINANCIAL_LIFESTYLE_BLOCKLIST = [
   'wedding', 'divorce', 'mother-in-law', 'stepchild', 'inheritance', 'etiquette',
   'tipping', 'horoscope', 'celebrity', 'recipe', 'diet', 'workout', 'cruise ship',
   'hotel room', 'dating', 'spouse', 'funeral', 'pet', 'dog', 'cat',
+  'worst fight', 'is that unreasonable', 'retire at', 'my older brother', 'only sister',
+  'out of his will', 'do i tell', 'moneyist', 'dear penny', 'prediction markets call',
 ];
 
 // Enstrüman Bazlı Kurumsal Anahtar Kelime Haritası (Tam Kelime Sınırı Kontrollü)
@@ -1139,6 +1141,8 @@ export interface NewsContext {
   source: string;
   biasDescription: string;
   newsTimeAgo: string;
+  newestTimestamp?: number;
+  isRecapOnly?: boolean;
 }
 
 export function extractNewsSentimentForAsset(symbol: string, newsList: any[]): NewsContext {
@@ -1150,6 +1154,8 @@ export function extractNewsSentimentForAsset(symbol: string, newsList: any[]): N
       source: '',
       biasDescription: 'Haber akışı sakin; saf teknik model devrede.',
       newsTimeAgo: '',
+      newestTimestamp: 0,
+      isRecapOnly: false,
     };
   }
 
@@ -1165,6 +1171,8 @@ export function extractNewsSentimentForAsset(symbol: string, newsList: any[]): N
       source: aiSynth.primarySource,
       biasDescription: `${aiSynth.aiDecision} (%${aiSynth.convictionScore} Güven) — ${aiSynth.causalMechanism}`,
       newsTimeAgo: aiSynth.publishedAt,
+      newestTimestamp: aiSynth.newestTimestamp,
+      isRecapOnly: aiSynth.isRecapOnly,
     };
   }
 
@@ -1245,6 +1253,8 @@ export function extractNewsSentimentForAsset(symbol: string, newsList: any[]): N
     source: bestNews.source,
     biasDescription,
     newsTimeAgo: bestNews.publishedAt,
+    newestTimestamp: Number(bestNews.publishedTimestamp) || 0,
+    isRecapOnly: /\b(falls to|fell to|drops to|slumps below|drops below|four-month low|3-month low|month low|crypto selloff|selloff deepens|bitcoin rallies|bitcoin surges)\b/i.test(rawLower),
   };
 }
 

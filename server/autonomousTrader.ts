@@ -220,7 +220,7 @@ export interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
   decisionReason: string;
   scannedAt: string;
 }
@@ -352,45 +352,69 @@ export function computeIbkrCommissionTRY(
 }
 
 /**
- * Piyasa Seans Kontrolü:
- * Kripto (BTC, ETH, SOL, BNB, XRP, AVAX, LINK, DOGE): 7 gün 24 saat kesintisiz açık.
- * Forex & Emtia (EUR, GBP, JPY, XAU, WTI): Cuma 22:00 UTC kapanır, Pazar 22:00 UTC açılır.
- * ABD Hisse & Endeksler (NAS100, SPX500, NVDA): Hafta sonları tamamen kapalı.
+ * Piyasa Seans Kontrolü (DST Duyarlı NY Saati):
+ * Kripto (8 coin): 7 gün 24 saat kesintisiz açık.
+ * Forex (EUR/USD, GBP/USD, USD/JPY): Pazar 17:00 NY -> Cuma 17:00 NY açık.
+ * Küresel Vadeli (XAU/USD, NAS100, SPX500, WTI): Pazar 18:00 NY -> Cuma 17:00 NY açık (kışın 23:00 UTC / 02:00 TR).
+ * ABD Hisse (NVDA): Hafta içi 09:00-16:00 NY ön-seans & nakit saatleri açık.
  */
+function getNewYorkTimeParts(d: Date): { day: number; hour: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+  const wdStr = parts.find((p) => p.type === 'weekday')?.value || 'Mon';
+  const hrStr = parts.find((p) => p.type === 'hour')?.value || '12';
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return { day: map[wdStr] ?? d.getUTCDay(), hour: parseInt(hrStr, 10) % 24 };
+}
+
 export function isMarketOpenForAsset(symbol: string, d: Date = new Date()): { isOpen: boolean; reason?: string } {
   const spec = getSpec(symbol);
   if (spec.cluster.startsWith('CRYPTO')) {
     return { isOpen: true };
   }
 
-  const dayUtc = d.getUTCDay(); // 0 = Pazar, 5 = Cuma, 6 = Cumartesi
-  const hourUtc = d.getUTCHours();
+  const ny = getNewYorkTimeParts(d);
+  const isFx = spec.cluster === 'USD_MAJORS';
+  const isSingleStock = symbol === 'NVDA';
 
-  // Cumartesi: Tüm geleneksel piyasalar kapalı
-  if (dayUtc === 6) {
+  if (ny.day === 6) {
     return {
       isOpen: false,
       reason: 'Hafta sonu: Küresel geleneksel piyasalar kapalı. Yalnızca 7/24 Kripto varlıklar işlem görür.',
     };
   }
 
-  // Pazar: 22:00 UTC'ye kadar (Sydney/Tokyo seansı açılana kadar) kapalı
-  if (dayUtc === 0 && hourUtc < 22) {
+  if (isSingleStock) {
+    if (ny.day === 0 || ny.hour < 9 || ny.hour >= 16) {
+      return {
+        isOpen: false,
+        reason: 'ABD Hisse Seansı Kapalı: NVDA yalnızca hafta içi 09:00-16:00 NY (17:00-00:00 TR) seansında işlenir.',
+      };
+    }
+    return { isOpen: true };
+  }
+
+  const sunOpenNy = isFx ? 17 : 18;
+  if (ny.day === 0 && ny.hour < sunOpenNy) {
     return {
       isOpen: false,
-      reason: 'Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.',
+      reason: isFx
+        ? 'Hafta sonu: Forex piyasası Pazar 17:00 NY (01:00 TR) Asya açılışına kadar kapalıdır.'
+        : 'Hafta sonu: CME Vadeli (Altın/Endeks/Petrol) Pazar 18:00 NY (02:00 TR) açılışına kadar kapalıdır.',
     };
   }
 
-  // Cuma: 22:00 UTC'den sonra kapalı
-  if (dayUtc === 5 && hourUtc >= 22) {
+  if (ny.day === 5 && ny.hour >= 17) {
     return {
       isOpen: false,
-      reason: 'Hafta sonu tatili başladı (Cuma 22:00 UTC kapanışı). Pazar gecesi Asya açılışı bekleniyor.',
+      reason: 'Hafta sonu tatili başladı (Cuma 17:00 NY kapanışı). Pazar gecesi açılış bekleniyor.',
     };
   }
 
-  // ABD Hisse ve Endeksler (NVDA, NAS100, SPX500) hafta içi gece seansları hariç hafta sonu kapalıdır
   return { isOpen: true };
 }
 
@@ -1728,7 +1752,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v5.2-quant-alpha',
+    strategyVersion: 'v5.3-quant-alpha',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1835,11 +1859,12 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v5.3-quant-alpha' ||
           parsed.strategyVersion === 'v5.2-quant-alpha' ||
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v5.2-quant-alpha';
+          parsed.strategyVersion = 'v5.3-quant-alpha';
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -2021,13 +2046,19 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         }
       }
 
-      // CANLI HABER ACİL RİSK KALKANI (Pozisyon açıldıktan sonra en az 15 dk geçmişse ve yeni ters şok oluştuysa)
+      // CANLI HABER ACİL RİSK KALKANI (Yalnızca pozisyon açıldıktan SONRA yayınlanan <3 saatlik taze ve gerçek temel şoklarda tetiklenir)
       const newsCtx = extractNewsSentimentForAsset(pos.symbol, liveNews);
+      const newsTs = newsCtx.newestTimestamp || 0;
+      const isFreshPostEntryShock =
+        newsTs > (pos.entryTimestamp || now) + 60 * 1000 &&
+        now - newsTs <= 3 * 3600 * 1000 &&
+        !newsCtx.isRecapOnly;
       const heldLongEnough = now - (pos.entryTimestamp || 0) >= 15 * 60 * 1000;
       const isSevereAdverseNews =
         heldLongEnough &&
-        ((pos.direction === 'AL (LONG)' && newsCtx.sentimentScore <= -0.55) ||
-          (pos.direction === 'SAT (SHORT)' && newsCtx.sentimentScore >= 0.55));
+        isFreshPostEntryShock &&
+        ((pos.direction === 'AL (LONG)' && newsCtx.sentimentScore <= -0.65) ||
+          (pos.direction === 'SAT (SHORT)' && newsCtx.sentimentScore >= 0.65));
 
       if (isSevereAdverseNews && !pos.tp1Hit) {
         const closeUnits = calcRemainingUnits();
@@ -2108,7 +2139,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         });
       }
 
-      // 2. Kademe Sürekli Chandelier (1.55x ATR) İz Süren Stop: Fiyat +1.35R lehimize gittiğinde zirveden dinamik takip başlat
+      // 2. Kademe Sürekli Chandelier İz Süren Stop (Kripto: +1.35R / 1.55x ATR | Küresel TradFi: +1.25R / 1.45x ATR)
+      const isPosCrypto = spec.cluster.startsWith('CRYPTO');
+      const trailTriggerR = isPosCrypto ? 1.35 : 1.25;
+      const trailAtrMult = isPosCrypto ? 1.55 : 1.45;
       const trailAtr = pos.forensicXRay?.indicatorSnapshot?.tradeAtr || slDist / 2.0;
       const recordedMfePrice = pos.forensicXRay?.excursion?.mfePrice;
       const peakPrice =
@@ -2119,11 +2153,11 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           : livePrice;
       const peakFav = isLong ? peakPrice - pos.entryPrice : pos.entryPrice - peakPrice;
 
-      if (peakFav >= slDist * 1.35) {
+      if (peakFav >= slDist * trailTriggerR) {
         pos.trailingStopActive = true;
         const chandelierStop = isLong
-          ? +(peakPrice - trailAtr * 1.55).toFixed(pos.digits)
-          : +(peakPrice + trailAtr * 1.55).toFixed(pos.digits);
+          ? +(peakPrice - trailAtr * trailAtrMult).toFixed(pos.digits)
+          : +(peakPrice + trailAtr * trailAtrMult).toFixed(pos.digits);
         const minProfitLock = isLong
           ? +(pos.entryPrice + slDist * 0.25).toFixed(pos.digits)
           : +(pos.entryPrice - slDist * 0.25).toFixed(pos.digits);
@@ -2435,10 +2469,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const rawNewsScore = newsCtx.sentimentScore;
       let newsScore = rawNewsScore;
 
-      if (isCrypto && Math.abs(newsScore) < 0.05 && Math.abs(macroCryptoSentiment) >= 0.15) {
-        newsScore = +(macroCryptoSentiment * 0.65).toFixed(2);
-      } else if (isCrypto && macroCryptoSentiment <= -0.45 && newsScore > 0) {
-        newsScore = +(newsScore + macroCryptoSentiment * 0.35).toFixed(2);
+      if (isCrypto && Math.abs(newsScore) < 0.05 && Math.abs(macroCryptoSentiment) >= 0.35) {
+        newsScore = +(macroCryptoSentiment * 0.45).toFixed(2);
       }
 
       const trendRegime: MarketScannerItem['trendRegime'] =
@@ -2498,7 +2530,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           now - (c.closeTimestamp || c.entryTimestamp) < 15 * 60 * 1000
       );
 
-      // v5.2 3-Motorlu Kantitatif Giriş Kuralları (6/6 Walk-Forward Pozitif: Hızlı Reversal Uyumu)
+      // v5.3 3-Motorlu Kantitatif Giriş Kuralları (Gecikmiş haber özetleri teknik dönüşleri kilitlemez; <3s taze temel şoklar veto edilir)
       if (isCrypto) {
         // 1) 1S Kurumsal Trend Kırılımı (Donchian 20 — hEma100 gecikme kilidi olmadan hızlı dönüş yakalar)
         const hQual = hBars.length >= 40 && hEr >= 0.16 && hAdx.adx >= 18 && hRvol >= 0.95;
@@ -2509,8 +2541,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           (hEma21 >= hEma50 * 0.992 || midPrice > hEma50) &&
           hRsi >= 50 &&
           hRsi <= 74 &&
-          btcBullMacro &&
-          newsScore >= -0.35
+          btcBullMacro
         ) {
           direction = 'AL (LONG)';
           entryTimeframe = '1H';
@@ -2522,8 +2553,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           (hEma21 <= hEma50 * 1.008 || midPrice < hEma50) &&
           hRsi >= 20 &&
           hRsi <= 50 &&
-          btcBearMacro &&
-          newsScore <= 0.35
+          btcBearMacro
         ) {
           direction = 'SAT (SHORT)';
           entryTimeframe = '1H';
@@ -2547,8 +2577,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           midPrice > hEma21 &&
           m15Rsi >= 50 &&
           m15Rsi <= 72 &&
-          btcBullMacro &&
-          newsScore >= -0.35
+          btcBullMacro
         ) {
           direction = 'AL (LONG)';
           entryTimeframe = '15M';
@@ -2561,8 +2590,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           midPrice < hEma21 &&
           m15Rsi >= 22 &&
           m15Rsi <= 50 &&
-          btcBearMacro &&
-          newsScore <= 0.35
+          btcBearMacro
         ) {
           direction = 'SAT (SHORT)';
           entryTimeframe = '15M';
@@ -2585,8 +2613,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           midPrice > m15Ema20 &&
           midPrice > m15Ema50 &&
           m15Rsi >= 52 &&
-          m15Rsi <= 72 &&
-          newsScore >= -0.35
+          m15Rsi <= 72
         ) {
           direction = 'AL (LONG)';
           entryTimeframe = '15M';
@@ -2600,20 +2627,19 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           midPrice < m15Ema20 &&
           midPrice < m15Ema50 &&
           m15Rsi >= 20 &&
-          m15Rsi <= 48 &&
-          newsScore <= 0.35
+          m15Rsi <= 48
         ) {
           direction = 'SAT (SHORT)';
           entryTimeframe = '15M';
           rationale = `4S Yüksek-Hacim Aşağı İmpuls (Donchian16 < ${m15Don16.low.toFixed(candidate.digits)}): 15dk ER ${m15Er} | RVOL ${m15Rvol}x | ADX ${m15Adx.adx}`;
         }
 
-        // Kraken L2 Emir Defteri Aşırı Duvar Kalkanı
+        // Kraken L2 Emir Defteri Aşırı Duvar Kalkanı (Yalnızca ekstrem flash-wall dengesizliğinde müdahale eder)
         const hasDepth = obDepth.bidVol + obDepth.askVol > 0;
-        if (direction === 'SAT (SHORT)' && hasDepth && obDepth.ratio >= 2.8) {
+        if (direction === 'SAT (SHORT)' && hasDepth && obDepth.ratio >= 4.5) {
           vetoReason = `Emir Defteri Kalkanı: Kraken alıcı derinliği (Bid/Ask ${obDepth.ratio}x) ekstrem taban oluşturuyor; destek üstüne Short engellendi.`;
           direction = null;
-        } else if (direction === 'AL (LONG)' && hasDepth && obDepth.ratio <= 0.36) {
+        } else if (direction === 'AL (LONG)' && hasDepth && obDepth.ratio <= 0.22) {
           vetoReason = `Emir Defteri Kalkanı: Kraken satıcı duvarı (Bid/Ask ${obDepth.ratio}x) yukarı kırılımı baskılıyor; dirence karşı Long engellendi.`;
           direction = null;
         }
@@ -2690,16 +2716,21 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const maxTradeAtr = midPrice * (isCrypto ? (entryTimeframe === '15M' ? 0.021 : 0.024) : 0.009);
       const tradeAtr = Math.min(maxTradeAtr, Math.max(minTradeAtr, activeRawAtr));
 
-      // AI Ters Haber Veto Denetimi
+      // AI Ters Haber Veto Denetimi (Yalnızca son 3 saatlik taze temel/makro şoklarda engeller; geriye dönük fiyat özetleri vetolanmaz)
+      const isFreshAiShock =
+        aiNews.hasNews &&
+        aiNews.newestTimestamp > 0 &&
+        now - aiNews.newestTimestamp <= 3 * 3600 * 1000 &&
+        !aiNews.isRecapOnly;
       if (
         direction &&
-        aiNews.hasNews &&
-        aiNews.convictionScore >= 76 &&
-        ((direction === 'AL (LONG)' && aiNews.netAiScore <= -0.4) ||
-          (direction === 'SAT (SHORT)' && aiNews.netAiScore >= 0.4))
+        isFreshAiShock &&
+        aiNews.convictionScore >= 78 &&
+        ((direction === 'AL (LONG)' && aiNews.netAiScore <= -0.45) ||
+          (direction === 'SAT (SHORT)' && aiNews.netAiScore >= 0.45))
       ) {
         isNewsVeto = true;
-        vetoReason = `AI Haber Vetosu (%${aiNews.convictionScore}): ${aiNews.whatHappened}`;
+        vetoReason = `AI Taze Haber Vetosu (%${aiNews.convictionScore}): ${aiNews.whatHappened}`;
         direction = null;
       }
 
@@ -2841,7 +2872,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     }
   }
 
-  // Pass 2: En Yüksek Kaliteli Kırılımları Önceliklendirerek Maksimum 4 Pozisyona Dağıt (%1.4 Risk / %16 Teminat / Max 1 Küme / Max 2 Aynı Yön Kripto)
+  // Pass 2: v5.3 Konviksiyon Ağırlıklı Sermaye Dağıtımı (A+ kurulumlar %30 daha güçlü boyutlanır; TradFi + Kripto 5/3/2 portföy sınırı)
   if (state.isRunning) {
     const qualified = evaluatedList
       .filter((e) => e.direction && !e.existingOpen && !e.isMarketClosed)
@@ -2855,14 +2886,20 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       if (!direction) continue;
 
       const isCrypto = candidate.cluster.startsWith('CRYPTO');
+      const totalCryptoOpen = state.openPositions.filter((p) => getSpec(p.symbol).cluster.startsWith('CRYPTO')).length;
       const sameClusterOpen = state.openPositions.filter((p) => getSpec(p.symbol).cluster === candidate.cluster).length;
       const sameDirCryptoOpen = state.openPositions.filter(
         (p) => getSpec(p.symbol).cluster.startsWith('CRYPTO') && p.direction === direction
       ).length;
 
-      if (state.openPositions.length >= 4) {
-        item.blockedStatus = 'LİMİT DOLU (4/4)';
-        item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100 — ${rationale}) ancak portföydeki maksimum 4 açık pozisyon koruma limiti dolu.`;
+      if (state.openPositions.length >= 5) {
+        item.blockedStatus = 'LİMİT DOLU (5/5)';
+        item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100 — ${rationale}) ancak portföydeki maksimum 5 açık pozisyon sınırı dolu.`;
+        continue;
+      }
+      if (isCrypto && totalCryptoOpen >= 3) {
+        item.blockedStatus = 'KORELASYON KALKANI';
+        item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100) ancak kripto sepeti kotası (3/3) dolu; kalan kapasite küresel piyasalar (Altın/Endeks/FX) için korunuyor.`;
         continue;
       }
       if (sameClusterOpen >= 1) {
@@ -2876,14 +2913,17 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         continue;
       }
 
+      const convRiskMult = item.candidateScore >= 86 ? 1.30 : item.candidateScore >= 78 ? 1.12 : 0.90;
+      const effScale = +(riskScale * convRiskMult).toFixed(2);
+
       const usedMarginTRY = state.openPositions.reduce(
         (s, p) => s + p.allocatedCapitalTRY * (p.tp1Hit ? 0.5 : 1),
         0
       );
       const freeMarginTRY = Math.max(0, state.cashBalanceTRY - usedMarginTRY);
       const currentEq = state.cashBalanceTRY;
-      const desiredRiskTRY = +(currentEq * 0.014 * riskScale).toFixed(2);
-      const rawAllocTRY = +(currentEq * 0.16 * riskScale).toFixed(2);
+      const desiredRiskTRY = +(currentEq * 0.014 * effScale).toFixed(2);
+      const rawAllocTRY = +(currentEq * 0.16 * effScale).toFixed(2);
       const allocTRY = +Math.min(rawAllocTRY, freeMarginTRY * 0.95).toFixed(2);
       if (allocTRY < 5000) continue;
 
@@ -2902,8 +2942,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           : +(liveBid - candidate.slippagePts).toFixed(candidate.digits);
 
       const slDist = tradeAtr * 2.0;
-      const tp1Dist = tradeAtr * 3.2;
-      const tp2Dist = tradeAtr * 5.8;
+      const tp1Dist = tradeAtr * (isCrypto ? 3.2 : 3.0);
+      const tp2Dist = tradeAtr * (isCrypto ? 5.8 : 6.8);
 
       const stopLoss =
         direction === 'AL (LONG)'
