@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Bell, ExternalLink } from 'lucide-react';
 import { NewsNotification } from '../types';
 
-export type AppTab = 'signals' | 'catalog' | 'news' | 'glossary' | 'calculator' | 'test';
+export type AppTab = 'signals' | 'catalog' | 'news' | 'glossary' | 'calculator' | 'test' | 'test2';
 
 interface NavbarProps {
   notifications: NewsNotification[];
@@ -91,6 +91,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               Canlı Test Verileri
+            </button>
+            <button
+              onClick={() => setActiveTab('test2')}
+              className={`px-3 py-1.5 rounded transition-colors ${
+                activeTab === 'test2' ? 'text-emerald-300 font-medium bg-emerald-950/60 border border-emerald-700/50' : 'text-emerald-400/90 hover:text-emerald-300'
+              }`}
+            >
+              Arena (/test2)
             </button>
           </nav>
         </div>
@@ -212,6 +220,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           Canlı Test Verileri
+        </button>
+        <button
+          onClick={() => setActiveTab('test2')}
+          className={`px-3 py-1 rounded whitespace-nowrap border transition-colors ${
+            activeTab === 'test2'
+              ? 'bg-emerald-950/70 text-emerald-300 font-medium border-emerald-700/60'
+              : 'bg-zinc-900/60 text-emerald-400 border-zinc-800'
+          }`}
+        >
+          Arena (/test2)
         </button>
         <button
           onClick={() => setActiveTab('catalog')}

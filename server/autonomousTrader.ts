@@ -291,7 +291,7 @@ export interface AutonomousLedgerState {
 
 const LEDGER_FILE = path.resolve(process.cwd(), 'data', 'autonomous_trader_ledger.json');
 
-interface InstrumentMicroSpec {
+export interface InstrumentMicroSpec {
   symbol: string;
   name: string;
   digits: number;
@@ -306,7 +306,7 @@ interface InstrumentMicroSpec {
   cluster: 'CRYPTO_MAJOR' | 'CRYPTO_L1' | 'CRYPTO_PAY' | 'CRYPTO_INFRA' | 'USD_MAJORS' | 'PRECIOUS' | 'US_TECH' | 'ENERGY';
 }
 
-const CORE_UNIVERSE: InstrumentMicroSpec[] = [
+export const CORE_UNIVERSE: InstrumentMicroSpec[] = [
   // 7/24 AÇIK KURUMSAL KRİPTO PİYASASI (IBKR Kripto/CME Vadeli Komisyon & 3x Başlangıç Teminatı — 8 Enstrüman)
   { symbol: 'BTC/USD', name: 'Bitcoin / ABD Doları', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
   { symbol: 'ETH/USD', name: 'Ethereum / ABD Doları', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
@@ -328,11 +328,11 @@ const CORE_UNIVERSE: InstrumentMicroSpec[] = [
   { symbol: 'WTI', name: 'ABD Ham Petrolü (WTI)', digits: 2, contractSize: 100, unitLabel: 'Varil', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'ENERGY' },
 ];
 
-function getSpec(symbol: string): InstrumentMicroSpec {
+export function getSpec(symbol: string): InstrumentMicroSpec {
   return CORE_UNIVERSE.find((c) => c.symbol === symbol) || CORE_UNIVERSE[0];
 }
 
-function computeIbkrCommissionTRY(
+export function computeIbkrCommissionTRY(
   spec: InstrumentMicroSpec,
   notionalTRY: number,
   units: number,
@@ -906,7 +906,7 @@ export function saveLedger(state: AutonomousLedgerState): void {
   }
 }
 
-function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
+export function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
   let openMargin = 0;
   let openFloating = 0;
 

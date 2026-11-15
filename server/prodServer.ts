@@ -20,6 +20,10 @@ import {
   resetAutonomousBot,
   resetAutonomousBotCleanZero,
 } from './autonomousTrader';
+import {
+  executeManualTradingTick,
+  handleManualTestHttpRequest,
+} from './manualTrader';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -209,6 +213,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 3c. API: 250.000 TL Manuel IBKR Arena & Sen vs Bot Yarışı (/test2 & /ttest2 API'si)
+  if (pathname === '/api/manual-test') {
+    await handleManualTestHttpRequest(req, res);
+    return;
+  }
+
   // 4. STATİK DOSYA SUNUMU (SPA - React Frontend; /test dahil tüm rotaları index.html'e yönlendir + Path Traversal Koruması)
   const safeRelPath = pathname.replace(/^\/+/, '');
   let filePath = path.resolve(DIST_DIR, safeRelPath);
@@ -247,5 +257,6 @@ server.listen(PORT, () => {
   }, 30 * 60 * 1000);
   setInterval(() => {
     executeAutonomousTradingTick(false).catch(console.error);
+    executeManualTradingTick(false).catch(console.error);
   }, 10 * 1000);
 });

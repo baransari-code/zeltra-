@@ -19,6 +19,9 @@ import {
   resetAutonomousBot,
   resetAutonomousBotCleanZero,
 } from './server/autonomousTrader'
+import {
+  handleManualTestHttpRequest,
+} from './server/manualTrader'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -141,6 +144,10 @@ export default defineConfig({
         });
 
         // Canlı USD/TRY Kur Uç Noktası
+        server.middlewares.use('/api/manual-test', async (req, res) => {
+          await handleManualTestHttpRequest(req, res);
+        });
+
         server.middlewares.use('/api/live-fx-rate', async (_req, res) => {
           try {
             const usdTry = await fetchLiveUsdTryRate();

@@ -9,6 +9,7 @@ import { MarketCatalog } from './components/MarketCatalog';
 import { ForexGlossary } from './components/ForexGlossary';
 import { HourlyForecastView } from './components/HourlyForecastView';
 import { AutonomousTestView } from './components/AutonomousTestView';
+import { ManualArenaView } from './components/ManualArenaView';
 import {
   ALL_ASSETS,
   fetchRealAssetData,
@@ -23,8 +24,10 @@ export const App: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>(ALL_ASSETS);
   const [selectedSymbol, setSelectedSymbol] = useState<string>('XAU/USD');
   const [activeTab, setActiveTabState] = useState<AppTab>(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/test') {
-      return 'test';
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname;
+      if (p === '/test') return 'test';
+      if (p === '/test2' || p === '/ttest2') return 'test2';
     }
     return 'signals';
   });
@@ -37,7 +40,7 @@ export const App: React.FC = () => {
   const setActiveTab = useCallback((tab: AppTab) => {
     setActiveTabState(tab);
     if (typeof window !== 'undefined') {
-      const targetPath = tab === 'test' ? '/test' : '/';
+      const targetPath = tab === 'test' ? '/test' : tab === 'test2' ? '/test2' : '/';
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath);
       }
@@ -46,8 +49,11 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const onPopState = () => {
-      if (window.location.pathname === '/test') {
+      const p = window.location.pathname;
+      if (p === '/test') {
         setActiveTabState('test');
+      } else if (p === '/test2' || p === '/ttest2') {
+        setActiveTabState('test2');
       } else {
         setActiveTabState('signals');
       }
@@ -215,6 +221,8 @@ export const App: React.FC = () => {
       <main className="flex-1 max-w-6xl mx-auto w-full px-2.5 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
         {activeTab === 'test' ? (
           <AutonomousTestView />
+        ) : activeTab === 'test2' ? (
+          <ManualArenaView onGoToBotTest={() => setActiveTab('test')} />
         ) : isLoading && candles.length === 0 ? (
           <div className="p-8 text-center text-xs text-zinc-400 font-mono">
             {selectedSymbol} için son 1 yıllık resmi borsa mumları ve anlık fiyat yükleniyor...
