@@ -204,7 +204,7 @@ interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (4/4)' | 'TEKNİK TEYİT BEKLİYOR';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (4/4)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
   decisionReason: string;
   scannedAt: string;
 }
@@ -301,7 +301,7 @@ export const AutonomousTestView: React.FC = () => {
     fetchLedgerStatus('status');
     const timer = setInterval(() => {
       fetchLedgerStatus('status');
-    }, 30000);
+    }, 4000);
     return () => clearInterval(timer);
   }, [fetchLedgerStatus]);
 
@@ -320,27 +320,9 @@ export const AutonomousTestView: React.FC = () => {
     }
   };
 
-  const handleReset = async () => {
-    const confirmed = window.confirm(
-      '250.000 TL Otonom Portföy geçmişini sıfırlayıp son 5 günlük gerçek borsa verileriyle yeniden başlatmak istediğinize emin misiniz?'
-    );
-    if (!confirmed) return;
-    setScanning(true);
-    try {
-      const res = await fetch('/api/autonomous-test?action=reset');
-      if (res.ok) {
-        const data = await res.json();
-        setLedger(data);
-        setSelectedTradeId(data.openPositions?.[0]?.id || data.closedTrades?.[0]?.id || null);
-      }
-    } finally {
-      setScanning(false);
-    }
-  };
-
   const handleResetCleanZero = async () => {
     const confirmed = window.confirm(
-      'Geçmiş tüm işlemleri silip 250.000,00 TL nakit ve 0 işlem ile tam şu andan itibaren sıfırdan başlatmak istediğinize emin misiniz?'
+      'Geçmiş tüm işlemleri silip 250.000,00 TL nakit ile tam şu andan itibaren sıfırdan başlatmak istediğinize emin misiniz?'
     );
     if (!confirmed) return;
     setScanning(true);
@@ -349,7 +331,7 @@ export const AutonomousTestView: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         setLedger(data);
-        setSelectedTradeId(null);
+        setSelectedTradeId(data.openPositions?.[0]?.id || null);
       }
     } finally {
       setScanning(false);
@@ -388,8 +370,11 @@ export const AutonomousTestView: React.FC = () => {
   const getMarketHoursNote = (symbol: string) => {
     const day = new Date().getDay(); // 0 Pazar, 6 Cumartesi
     const isWeekend = day === 0 || day === 6;
-    if (symbol.startsWith('BTC') || symbol.startsWith('ETH')) {
-      return '7/24 Açık Piyasa';
+    const isCrypto = ['BTC/', 'ETH/', 'SOL/', 'BNB/', 'XRP/', 'AVAX/', 'LINK/', 'DOGE/', 'ADA/'].some((p) =>
+      symbol.startsWith(p)
+    );
+    if (isCrypto) {
+      return '7/24 Kesintisiz Açık Piyasa';
     }
     if (isWeekend) {
       return 'Hafta Sonu Kapalı (Pzt 01:00 Açılışını Bekliyor)';
@@ -464,8 +449,8 @@ export const AutonomousTestView: React.FC = () => {
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-zinc-400">
               <span className="inline-flex items-center gap-1.5 text-zinc-200">
-                <span className={`w-2 h-2 rounded-full ${ledger.isRunning ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                {ledger.isRunning ? 'Otonom Sistem Çalışıyor' : 'Duraklatıldı'}
+                <span className={`w-2 h-2 rounded-full ${ledger.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                {ledger.isRunning ? 'Otonom Sistem Çalışıyor (4 Sn Canlı Akış)' : 'Duraklatıldı'}
               </span>
               <span className="text-zinc-700">•</span>
               <span>Güncel Dolar Kuru: <strong className="text-zinc-200 font-mono">{ledger.liveUsdTry.toFixed(2)} TL</strong></span>
@@ -497,20 +482,10 @@ export const AutonomousTestView: React.FC = () => {
               onClick={handleResetCleanZero}
               disabled={scanning}
               className="inline-flex items-center space-x-1 text-xs px-2.5 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-colors"
-              title="Geçmiş 5 günlük simülasyonu silip tam şu andan itibaren 250.000 TL ve 0 işlemle başlat"
+              title="Tüm işlemleri sıfırlayıp tam şu andan itibaren 250.000 TL ile yeniden başlat"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Sıfırdan Başlat (0 İşlem)</span>
-            </button>
-
-            <button
-              onClick={handleReset}
-              disabled={scanning}
-              className="inline-flex items-center space-x-1 text-xs px-2.5 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
-              title="Son 5 günlük gerçek saatlik borsa verileriyle yeniden başlat"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>5 Günlük Testi Yenile</span>
             </button>
           </div>
         </div>
@@ -522,7 +497,9 @@ export const AutonomousTestView: React.FC = () => {
             <div className="text-lg font-semibold font-mono text-white tabular-nums">
               {formatTRY(ledger.initialCapitalTRY)}
             </div>
-            <div className="text-[11px] text-zinc-500">10 Kasım başlangıç ana parası</div>
+            <div className="text-[11px] text-zinc-500">
+              Başlangıç: {new Date(ledger.startedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+            </div>
           </div>
 
           <div className="bg-zinc-950 border border-zinc-800/90 rounded p-3.5 space-y-1">
@@ -551,7 +528,7 @@ export const AutonomousTestView: React.FC = () => {
               %{ledger.metrics.winRatePercent} <span className="text-xs text-zinc-400 font-normal">({ledger.metrics.winningTrades} Kazanç / {ledger.metrics.losingTrades} Kayıp)</span>
             </div>
             <div className="text-[11px] text-zinc-500">
-              Ort. Kazanç: +{formatTRY(ledger.metrics.avgWinTRY ?? 7753)} • Ort. Kayıp: -{formatTRY(ledger.metrics.avgLossTRY ?? 3917)}
+              Ort. Kazanç: +{formatTRY(ledger.metrics.avgWinTRY ?? 0)} • Ort. Kayıp: -{formatTRY(ledger.metrics.avgLossTRY ?? 0)}
             </div>
           </div>
         </div>
@@ -571,31 +548,31 @@ export const AutonomousTestView: React.FC = () => {
           <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
             <div className="text-xs text-zinc-400">Kaldıraç Kullanımı</div>
             <div className="text-sm font-semibold font-mono text-zinc-100">
-              Evet • Ortalama {ledger.metrics.avgMarginLeverage ?? 22}x
+              {(ledger.metrics.avgMarginLeverage ?? 0) > 1 ? `Evet • Ortalama ${ledger.metrics.avgMarginLeverage}x` : 'Kaldıraçsız (1x)'}
             </div>
             <div className="text-[11px] text-zinc-500">
-              Stop olunca kasanın sadece %1,5&apos;i (~3.900 TL) gidecek şekilde ayarlanır
+              Stop olunca kasanın sadece %1,5&apos;i (~3.750 TL) gidecek şekilde ayarlanır
             </div>
           </div>
 
           <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
             <div className="text-xs text-zinc-400">Açık İşlemlerin Kaldıraçlı Hacmi</div>
             <div className="text-sm font-semibold font-mono text-zinc-100">
-              {formatTRY(ledger.metrics.activeNotionalVolumeTRY ?? 2672511)}
+              {formatTRY(ledger.metrics.activeNotionalVolumeTRY ?? 0)}
             </div>
             <div className="text-[11px] text-zinc-500">
-              16 işlemde dönen toplam hacim: {formatTRY(ledger.metrics.totalCumulativeVolumeTRY ?? 18736843)}
+              Toplam işlem hacmi: {formatTRY(ledger.metrics.totalCumulativeVolumeTRY ?? 0)}
             </div>
           </div>
 
           <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
             <div className="text-xs text-zinc-400">Kaldıraçsız (1x Spot) Oynansaydı</div>
             <div className="text-sm font-semibold font-mono text-zinc-200">
-              {(ledger.metrics.spot1xTotalNetProfitTRY ?? 225.92) >= 0 ? '+' : ''}
-              {formatTRY(ledger.metrics.spot1xTotalNetProfitTRY ?? 225.92)}
+              {(ledger.metrics.spot1xTotalNetProfitTRY ?? 0) >= 0 ? '+' : ''}
+              {formatTRY(ledger.metrics.spot1xTotalNetProfitTRY ?? 0)}
             </div>
             <div className="text-[11px] text-zinc-500">
-              Kaldıraçlı (%1,5 sabit riskli) gerçek kazanç: <span className="text-emerald-400">+{formatTRY(ledger.netProfitTRY)}</span>
+              Kaldıraçlı (%1,5 sabit riskli) gerçek kazanç: <span className={ledger.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{ledger.netProfitTRY >= 0 ? '+' : ''}{formatTRY(ledger.netProfitTRY)}</span>
             </div>
           </div>
         </div>
@@ -606,7 +583,7 @@ export const AutonomousTestView: React.FC = () => {
             { key: 'all', label: 'Genel Görünüm' },
             { key: 'xray', label: 'İşlem Detayı (Nasıl & Neden Açıldı?)' },
             { key: 'logs', label: `Tüm İşlem Kayıtları (${ledger.activityLog.length})` },
-            { key: 'scanner', label: '9 Varlık Piyasa Taraması' },
+            { key: 'scanner', label: '16 Varlık Piyasa Taraması' },
             { key: 'attribution', label: 'Varlık Bazlı Kazanç Özeti' },
           ].map((tab) => (
             <button
@@ -982,15 +959,15 @@ export const AutonomousTestView: React.FC = () => {
         </div>
       )}
 
-      {/* 5. 9-VARLIK PİYASA TARAMA LİSTESİ */}
+      {/* 5. 16-VARLIK PİYASA TARAMA LİSTESİ */}
       {(subView === 'all' || subView === 'scanner') && ledger.marketScanner && ledger.marketScanner.length > 0 && (
         <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
           <div className="border-b border-zinc-800 pb-3">
             <h2 className="text-sm font-semibold text-white">
-              9 Varlık Canlı Piyasa Tarama Listesi
+              {ledger.marketScanner.length} Varlık Canlı Piyasa Tarama Listesi (8 Kripto 7/24 + 8 Küresel Forex/Endeks)
             </h2>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Sistemin takip ettiği 9 varlıkta şu anki fiyat, trend yönü ve neden işleme girildiği veya beklendiği.
+              Sistemin 4 saniyede bir taradığı varlıklarda anlık fiyat, trend yönü ve neden işleme girildiği veya beklendiği.
             </p>
           </div>
 

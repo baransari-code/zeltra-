@@ -122,7 +122,7 @@ export default defineConfig({
             if (action === 'tick' || action === 'scan') {
               state = await executeAutonomousTradingTick(true);
             } else if (action === 'toggle') {
-              const running = urlObj.searchParams.get('running') === 'true';
+              const running = urlObj.searchParams.get('running') === 'true' || urlObj.searchParams.get('state') === 'start';
               state = await toggleAutonomousBot(running);
             } else if (action === 'reset') {
               state = await resetAutonomousBot(250000);

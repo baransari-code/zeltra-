@@ -152,18 +152,98 @@ export const SYMBOL_MAP: Record<string, string> = {
   'USO': 'USO',
 };
 
-// In-Memory OHLC & Hourly History Cache + In-Flight Deduplication (45s TTL)
-const OHLC_CACHE_TTL = 45 * 1000;
+// In-Memory OHLC & Hourly History Cache + In-Flight Deduplication (20s OHLC + 2.5s Real-Time Orderbook Tick Overlay)
+const OHLC_CACHE_TTL = 20 * 1000;
 const ohlcCache = new Map<string, { timestamp: number; data: any }>();
 const inFlightOhlc = new Map<string, Promise<any>>();
 const hourlyCache = new Map<string, { timestamp: number; data: { timestamp: number; close: number }[] }>();
 const inFlightHourly = new Map<string, Promise<{ timestamp: number; close: number }[]>>();
 
-// Real 1-Year OHLC Data Fetcher (with TTL Cache, In-Flight Deduplication & True 24h Daily Change)
+const KRAKEN_PAIR_MAP: Record<string, string> = {
+  'BTC/USD': 'XXBTZUSD',
+  'ETH/USD': 'XETHZUSD',
+  'SOL/USD': 'SOLUSD',
+  'BNB/USD': 'BNBUSD',
+  'XRP/USD': 'XXRPZUSD',
+  'AVAX/USD': 'AVAXUSD',
+  'LINK/USD': 'LINKUSD',
+  'DOGE/USD': 'XDGUSD',
+  'ADA/USD': 'ADAUSD',
+};
+
+let krakenTickCache: { timestamp: number; prices: Record<string, number> } | null = null;
+let inFlightKrakenTick: Promise<Record<string, number>> | null = null;
+
+export async function fetchLiveCryptoSpotTicks(): Promise<Record<string, number>> {
+  const now = Date.now();
+  if (krakenTickCache && now - krakenTickCache.timestamp < 2500) {
+    return krakenTickCache.prices;
+  }
+  if (inFlightKrakenTick) {
+    return inFlightKrakenTick;
+  }
+
+  inFlightKrakenTick = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    try {
+      const resp = await fetch(
+        'https://api.kraken.com/0/public/Ticker?pair=XBTUSD,ETHUSD,SOLUSD,BNBUSD,XRPUSD,AVAXUSD,LINKUSD,XDGUSD,ADAUSD',
+        { signal: controller.signal, headers: { Accept: 'application/json' } }
+      );
+      if (!resp.ok) return krakenTickCache?.prices || {};
+      const json: any = await resp.json();
+      const result = json?.result || {};
+      const prices: Record<string, number> = {};
+      for (const [sym, kKey] of Object.entries(KRAKEN_PAIR_MAP)) {
+        const entry = result[kKey];
+        if (entry && entry.a && entry.b) {
+          const ask = Number(entry.a[0]);
+          const bid = Number(entry.b[0]);
+          const last = entry.c ? Number(entry.c[0]) : (ask + bid) / 2;
+          if (Number.isFinite(ask) && Number.isFinite(bid) && ask > 0 && bid > 0) {
+            // Orderbook Mid + Last Trade harmanı ile milisaniyelik gerçek borsa tiki
+            prices[sym] = +(((ask + bid) / 2) * 0.5 + last * 0.5).toFixed(sym === 'XRP/USD' || sym === 'DOGE/USD' || sym === 'ADA/USD' ? 4 : 2);
+          }
+        }
+      }
+      krakenTickCache = { timestamp: Date.now(), prices };
+      return prices;
+    } catch {
+      return krakenTickCache?.prices || {};
+    } finally {
+      clearTimeout(timeout);
+      inFlightKrakenTick = null;
+    }
+  })();
+
+  return inFlightKrakenTick;
+}
+
+// Real 1-Year OHLC Data Fetcher (with TTL Cache, In-Flight Deduplication & Real-Time Crypto Orderbook Tick Overlay)
 export async function fetchReal1YearData(symbol: string) {
   const now = Date.now();
   const cached = ohlcCache.get(symbol);
   if (cached && now - cached.timestamp < OHLC_CACHE_TTL) {
+    if (KRAKEN_PAIR_MAP[symbol]) {
+      const liveTicks = await fetchLiveCryptoSpotTicks();
+      const liveSpot = liveTicks[symbol];
+      if (liveSpot && liveSpot > 0) {
+        const cloned = { ...cached.data, price: liveSpot, lastUpdated: new Date().toISOString() };
+        if (Array.isArray(cloned.candles) && cloned.candles.length > 0) {
+          const candlesCopy = cloned.candles.slice();
+          const lastIdx = candlesCopy.length - 1;
+          candlesCopy[lastIdx] = {
+            ...candlesCopy[lastIdx],
+            close: liveSpot,
+            high: Math.max(candlesCopy[lastIdx].high, liveSpot),
+            low: Math.min(candlesCopy[lastIdx].low, liveSpot),
+          };
+          cloned.candles = candlesCopy;
+        }
+        return cloned;
+      }
+    }
     return cached.data;
   }
   if (inFlightOhlc.has(symbol)) {
@@ -236,10 +316,17 @@ export async function fetchReal1YearData(symbol: string) {
       const lastCandleClose = candles.length > 0 ? candles[candles.length - 1].close : 0;
       const rawRegular = Number(meta.regularMarketPrice);
       // Eğer meta.regularMarketPrice son mumdan aşırı kopuksa (>%15 veri sağlayıcı artefaktı) son mumu esas al
-      const currentPrice =
+      let currentPrice =
         Number.isFinite(rawRegular) && rawRegular > 0 && (lastCandleClose === 0 || Math.abs(rawRegular - lastCandleClose) / lastCandleClose < 0.15)
           ? rawRegular
           : lastCandleClose;
+
+      if (KRAKEN_PAIR_MAP[symbol]) {
+        const liveTicks = await fetchLiveCryptoSpotTicks();
+        if (liveTicks[symbol] && liveTicks[symbol] > 0) {
+          currentPrice = liveTicks[symbol];
+        }
+      }
 
       if (candles.length > 0 && currentPrice > 0) {
         const lastIdx = candles.length - 1;
@@ -394,7 +481,12 @@ const ASSET_KEYWORD_MAP: Record<string, string[]> = {
   'BTC/USD': ['btc/usd', 'btc', 'bitcoin', 'crypto', 'coindesk', 'cointelegraph', 'bitcoin etf', 'crypto etf', 'mining', 'capitulation', 'halving', 'binance', 'coinbase', 'kripto'],
   'ETH/USD': ['eth/usd', 'ethereum', 'ether', 'defi', 'ether etf', 'staking'],
   'SOL/USD': ['sol/usd', 'solana'],
+  'BNB/USD': ['bnb/usd', 'bnb', 'binance coin', 'binance', 'bsc'],
   'XRP/USD': ['xrp/usd', 'ripple', 'xrp'],
+  'AVAX/USD': ['avax/usd', 'avax', 'avalanche'],
+  'LINK/USD': ['link/usd', 'chainlink'],
+  'DOGE/USD': ['doge/usd', 'doge', 'dogecoin'],
+  'ADA/USD': ['ada/usd', 'cardano'],
   'NVDA': ['nvidia', 'nvda', 'jensen huang', 'huang', 'blackwell', 'semiconductor', 'chips', 'gpu', 'ai chip', 'yapay zeka çip'],
   'AAPL': ['apple', 'aapl', 'iphone', 'tim cook', 'cupertino'],
   'MSFT': ['microsoft', 'msft', 'satya nadella', 'azure', 'copilot'],

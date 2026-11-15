@@ -280,15 +280,25 @@ interface InstrumentMicroSpec {
   unitLabel: string;
   spreadPts: number;
   slippagePts: number;
-  cluster: 'USD_MAJORS' | 'PRECIOUS' | 'CRYPTO' | 'US_TECH' | 'ENERGY';
+  cluster: 'CRYPTO_MAJOR' | 'CRYPTO_L1' | 'CRYPTO_PAY' | 'CRYPTO_INFRA' | 'USD_MAJORS' | 'PRECIOUS' | 'US_TECH' | 'ENERGY';
 }
 
 const CORE_UNIVERSE: InstrumentMicroSpec[] = [
+  // 7/24 AÇIK KURUMSAL KRİPTO PİYASASI (Cumartesi & Pazar Dahil 7/24 Kesintisiz Aktif — 8 Enstrüman)
+  { symbol: 'BTC/USD', name: 'Bitcoin / ABD Doları', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, cluster: 'CRYPTO_MAJOR' },
+  { symbol: 'ETH/USD', name: 'Ethereum / ABD Doları', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, cluster: 'CRYPTO_MAJOR' },
+  { symbol: 'SOL/USD', name: 'Solana / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'SOL', spreadPts: 0.05, slippagePts: 0.01, cluster: 'CRYPTO_L1' },
+  { symbol: 'BNB/USD', name: 'BNB / ABD Doları', digits: 2, contractSize: 10, unitLabel: 'BNB', spreadPts: 0.20, slippagePts: 0.05, cluster: 'CRYPTO_L1' },
+  { symbol: 'XRP/USD', name: 'Ripple / ABD Doları', digits: 4, contractSize: 10000, unitLabel: 'XRP', spreadPts: 0.0004, slippagePts: 0.0001, cluster: 'CRYPTO_PAY' },
+  { symbol: 'AVAX/USD', name: 'Avalanche / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'AVAX', spreadPts: 0.02, slippagePts: 0.005, cluster: 'CRYPTO_L1' },
+  { symbol: 'LINK/USD', name: 'Chainlink / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'LINK', spreadPts: 0.015, slippagePts: 0.005, cluster: 'CRYPTO_INFRA' },
+  { symbol: 'DOGE/USD', name: 'Dogecoin / ABD Doları', digits: 4, contractSize: 50000, unitLabel: 'DOGE', spreadPts: 0.0002, slippagePts: 0.00005, cluster: 'CRYPTO_PAY' },
+
+  // KÜRESEL FOREX, EMTİA VE ENDEKS PİYASASI (Pazartesi - Cuma 24 Saat Açık — 8 Enstrüman)
   { symbol: 'XAU/USD', name: 'Ons Altın / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'Ons', spreadPts: 0.25, slippagePts: 0.05, cluster: 'PRECIOUS' },
   { symbol: 'EUR/USD', name: 'Euro / ABD Doları', digits: 4, contractSize: 100000, unitLabel: 'EUR', spreadPts: 0.00012, slippagePts: 0.00003, cluster: 'USD_MAJORS' },
   { symbol: 'USD/JPY', name: 'ABD Doları / Japon Yeni', digits: 2, contractSize: 100000, unitLabel: 'USD', spreadPts: 0.014, slippagePts: 0.004, cluster: 'USD_MAJORS' },
   { symbol: 'GBP/USD', name: 'İngiliz Sterlini / ABD Doları', digits: 4, contractSize: 100000, unitLabel: 'GBP', spreadPts: 0.00016, slippagePts: 0.00004, cluster: 'USD_MAJORS' },
-  { symbol: 'BTC/USD', name: 'Bitcoin / ABD Doları', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 16.0, slippagePts: 4.5, cluster: 'CRYPTO' },
   { symbol: 'NAS100', name: 'Nasdaq 100 Teknoloji Endeksi', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 1.15, slippagePts: 0.30, cluster: 'US_TECH' },
   { symbol: 'SPX500', name: 'S&P 500 Endeksi', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 0.45, slippagePts: 0.12, cluster: 'US_TECH' },
   { symbol: 'NVDA', name: 'NVIDIA Corporation', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.04, slippagePts: 0.01, cluster: 'US_TECH' },
@@ -301,13 +311,13 @@ function getSpec(symbol: string): InstrumentMicroSpec {
 
 /**
  * Piyasa Seans Kontrolü:
- * Kripto (BTC/USD): 7 gün 24 saat kesintisiz açık.
+ * Kripto (BTC, ETH, SOL, BNB, XRP, AVAX, LINK, DOGE): 7 gün 24 saat kesintisiz açık.
  * Forex & Emtia (EUR, GBP, JPY, XAU, WTI): Cuma 22:00 UTC kapanır, Pazar 22:00 UTC açılır.
  * ABD Hisse & Endeksler (NAS100, SPX500, NVDA): Hafta sonları tamamen kapalı.
  */
 export function isMarketOpenForAsset(symbol: string, d: Date = new Date()): { isOpen: boolean; reason?: string } {
   const spec = getSpec(symbol);
-  if (spec.cluster === 'CRYPTO') {
+  if (spec.cluster.startsWith('CRYPTO')) {
     return { isOpen: true };
   }
 
@@ -1129,7 +1139,7 @@ function ensureForensicXRayOnTrades(state: AutonomousLedgerState): void {
 }
 
 // İlk Kurulumda Gerçek Son 5 Günlük Saatlik Yahoo Finance Mumlarıyla Başlangıç Kütüğü Oluşturma
-async function bootstrapHistoricalRealTrades(initialCapital = 250000): Promise<AutonomousLedgerState> {
+export async function bootstrapHistoricalRealTrades(initialCapital = 250000): Promise<AutonomousLedgerState> {
   const usdTry = await fetchLiveUsdTryRate();
   const now = Date.now();
   const fiveDaysAgoIso = new Date(now - 4 * 24 * 3600 * 1000).toISOString();
@@ -1491,27 +1501,136 @@ async function bootstrapHistoricalRealTrades(initialCapital = 250000): Promise<A
   return state;
 }
 
+// 15.11.2026 07:30 TSİ (04:30 UTC) öncesi geçmiş simülasyon kayıtlarının geri dönmesini kesin olarak engelleyen zaman kilidi
+const CLEAN_START_CUTOFF_TS = 1794717000000;
+
+function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): AutonomousLedgerState {
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  return {
+    botId: 'ZELTRA-QUANT-AUTO-250K',
+    isRunning: true,
+    startedAt: nowIso,
+    lastTickAt: nowIso,
+    liveUsdTry: usdTry,
+    initialCapitalTRY: newCapitalTRY,
+    cashBalanceTRY: newCapitalTRY,
+    allocatedMarginTRY: 0,
+    availableCashTRY: newCapitalTRY,
+    openFloatingPnL_TRY: 0,
+    totalEquityTRY: newCapitalTRY,
+    netProfitTRY: 0,
+    netProfitPercent: 0,
+    metrics: {
+      totalClosedTrades: 0,
+      openPositionsCount: 0,
+      winningTrades: 0,
+      losingTrades: 0,
+      winRatePercent: 0,
+      grossProfitTRY: 0,
+      grossLossTRY: 0,
+      profitFactor: 0,
+      maxDrawdownPercent: 0,
+      peakEquityTRY: newCapitalTRY,
+      avgWinTRY: 0,
+      avgLossTRY: 0,
+      payoffRatio: 0,
+      expectancyTRY: 0,
+      expectancyR: 0,
+      realizedRMultipleTotal: 0,
+      sharpeRatio: 0,
+      sortinoRatio: 0,
+      totalSpreadAndCommissionTRY: 0,
+      totalCumulativeVolumeTRY: 0,
+      activeNotionalVolumeTRY: 0,
+      avgMarginLeverage: 0,
+      portfolioEffectiveLeverage: 0,
+      spot1xTotalNetProfitTRY: 0,
+      currentStreak: { type: 'NONE', count: 0 },
+      maxWinStreak: 0,
+      maxLossStreak: 0,
+    },
+    attribution: {
+      byAsset: CORE_UNIVERSE.map((u) => ({
+        symbol: u.symbol,
+        name: u.name,
+        closedCount: 0,
+        openCount: 0,
+        wins: 0,
+        losses: 0,
+        winRatePercent: 0,
+        netRealizedPnL_TRY: 0,
+        floatingPnL_TRY: 0,
+        totalNetPnL_TRY: 0,
+        avgRMultiple: 0,
+        totalRMultiple: 0,
+        executionCostTRY: 0,
+      })),
+      byDirection: {
+        long: { direction: 'AL (LONG)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
+        short: { direction: 'SAT (SHORT)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
+      },
+    },
+    marketScanner: [],
+    openPositions: [],
+    closedTrades: [],
+    equityCurve: [
+      {
+        timestamp: now,
+        timeStr: new Date(now).toLocaleString('tr-TR', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        equityTRY: newCapitalTRY,
+        cashTRY: newCapitalTRY,
+        drawdownPercent: 0,
+      },
+    ],
+    activityLog: [
+      {
+        id: `ACT-ZERO-${now}`,
+        timestamp: nowIso,
+        type: 'SYSTEM',
+        symbol: 'SİSTEM',
+        message: `250.000,00 TL Otonom Portföy geçmiş işlemler olmadan sıfırdan başlatıldı. 16 varlık (8 adet 7/24 Kripto + 8 adet Küresel Forex/Emtia/Endeks) anlık olarak taranmaktadır.`,
+        equityAfterTRY: newCapitalTRY,
+      },
+    ],
+  };
+}
+
 export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerState> {
   if (fs.existsSync(LEDGER_FILE)) {
     try {
       const raw = fs.readFileSync(LEDGER_FILE, 'utf-8');
       const parsed: AutonomousLedgerState = JSON.parse(raw);
       if (parsed && parsed.initialCapitalTRY) {
-        ensureForensicXRayOnTrades(parsed);
-        recalculateLedgerMetrics(parsed);
-        return parsed;
+        // 15.11.2026 07:30 öncesi eski 10.11 simülasyon işlemleri varsa tamamen temizle
+        const hasLegacyBackfill =
+          (parsed.closedTrades || []).some((t) => t.entryTimestamp < CLEAN_START_CUTOFF_TS) ||
+          (parsed.openPositions || []).some((t) => t.entryTimestamp < CLEAN_START_CUTOFF_TS);
+        if (!hasLegacyBackfill) {
+          ensureForensicXRayOnTrades(parsed);
+          recalculateLedgerMetrics(parsed);
+          return parsed;
+        }
       }
     } catch {
       // Re-init if corrupted
     }
   }
-  return await bootstrapHistoricalRealTrades(250000);
+  const usdTry = await fetchLiveUsdTryRate();
+  const clean = createCleanZeroLedgerObject(250000, usdTry);
+  saveLedger(clean);
+  return clean;
 }
 
 // Eşzamanlı Tick Kilit Mekanizması (Race-Condition & Çifte İşlem Kalkanı)
 let inFlightTickPromise: Promise<AutonomousLedgerState> | null = null;
 
-// Canlı Piyasa Tarama, Açık Pozisyon Güncelleme, Canlı Haber Risk Kalkanı, 9-Varlık Radarı ve Yeni İşlem Açma Döngüsü
+// Canlı Piyasa Tarama, Açık Pozisyon Güncelleme, Canlı Haber Risk Kalkanı, 16-Varlık Radarı ve Yeni İşlem Açma Döngüsü
 export async function executeAutonomousTradingTick(forceScan = false): Promise<AutonomousLedgerState> {
   if (inFlightTickPromise) {
     return inFlightTickPromise;
@@ -1530,10 +1649,22 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
   const nowIso = new Date(now).toISOString();
   state.lastTickAt = nowIso;
 
-  const [usdTry, liveNews] = await Promise.all([
+  // Tüm 16 varlık verisini, Dolar kurunu ve haberleri paralel çek (milisaniyelik hız)
+  const [usdTry, liveNews, marketEntries] = await Promise.all([
     fetchLiveUsdTryRate(),
     fetchRealFinancialNews().catch(() => []),
+    Promise.all(
+      CORE_UNIVERSE.map(async (c) => {
+        try {
+          const data = await fetchReal1YearData(c.symbol);
+          return [c.symbol, data] as const;
+        } catch {
+          return [c.symbol, null] as const;
+        }
+      })
+    ),
   ]);
+  const marketMap = new Map<string, any>(marketEntries);
   state.liveUsdTry = usdTry;
 
   // 1. AÇIK POZİSYONLARI CANLI BORSA FİYATLARI, MFE/MAE VE CANLI HABER ŞOKLARIYLA DENETLE
@@ -1541,7 +1672,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
   for (const pos of state.openPositions) {
     try {
-      const market = await fetchReal1YearData(pos.symbol);
+      const market = marketMap.get(pos.symbol) || (await fetchReal1YearData(pos.symbol));
       if (!market || !market.price) {
         remainingOpen.push(pos);
         continue;
@@ -1578,11 +1709,13 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         }
       }
 
-      // CANLI HABER ACİL RİSK KALKANI
+      // CANLI HABER ACİL RİSK KALKANI (Pozisyon açıldıktan sonra en az 15 dk geçmişse ve yeni ters şok oluştuysa)
       const newsCtx = extractNewsSentimentForAsset(pos.symbol, liveNews);
+      const heldLongEnough = now - (pos.entryTimestamp || 0) >= 15 * 60 * 1000;
       const isSevereAdverseNews =
-        (pos.direction === 'AL (LONG)' && newsCtx.sentimentScore <= -0.50) ||
-        (pos.direction === 'SAT (SHORT)' && newsCtx.sentimentScore >= 0.50);
+        heldLongEnough &&
+        ((pos.direction === 'AL (LONG)' && newsCtx.sentimentScore <= -0.55) ||
+          (pos.direction === 'SAT (SHORT)' && newsCtx.sentimentScore >= 0.55));
 
       if (isSevereAdverseNews && !pos.tp1Hit) {
         const earlyPnL = +(pos.riskAmountTRY * rMultiple * remainingWeight).toFixed(2);
@@ -1741,6 +1874,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       pos.unrealizedPnL_TRY = currentFloatingTRY;
       pos.totalPnL_TRY = currentTotalTRY;
       pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
+      pos.rMultiple = +(pos.totalPnL_TRY / (pos.riskAmountTRY || 1)).toFixed(2);
+      pos.spot1xEquivalentPnL_TRY = +(pos.totalPnL_TRY / Math.max(1, pos.effectiveLeverage || 1)).toFixed(2);
       remainingOpen.push(pos);
     } catch {
       remainingOpen.push(pos);
@@ -1749,13 +1884,13 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
   state.openPositions = remainingOpen;
 
-  // 2. 9-VARLIK CANLI PİYASA TARAYICI RADARI VE YENİ İŞLEM GİRİŞ DENETİMİ
+  // 2. 16-VARLIK CANLI PİYASA TARAYICI RADARI VE AKTİF PROFESYONEL İŞLEM GİRİŞ DENETİMİ
   const openSymbols = new Set(state.openPositions.map((p) => p.symbol));
   const scannerResults: MarketScannerItem[] = [];
 
   for (const candidate of CORE_UNIVERSE) {
     try {
-      const market = await fetchReal1YearData(candidate.symbol);
+      const market = marketMap.get(candidate.symbol) || (await fetchReal1YearData(candidate.symbol));
       if (!market || !market.candles || market.candles.length < 30) continue;
 
       const candles = market.candles;
@@ -1768,7 +1903,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const ema200 = computeEMA(closes, Math.min(200, closes.length));
       const rsi = computeWilderRSI(closes, 14);
       const dailyAtr = computeWilderATR(candles, 14);
-      const tradeAtr = dailyAtr * 0.45;
+      const minTradeAtr = midPrice * (candidate.cluster.startsWith('CRYPTO') ? 0.005 : 0.0025);
+      const tradeAtr = Math.max(minTradeAtr, dailyAtr * 0.18);
 
       const newsCtx = extractNewsSentimentForAsset(candidate.symbol, liveNews);
       const aiNews = synthesizeAssetNewsAI(candidate.symbol, liveNews);
@@ -1794,10 +1930,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           atr14: +dailyAtr.toFixed(candidate.digits),
           newsSentimentScore: newsScore,
           newsHeadline: newsCtx.impactingHeadline || 'Sakin / Teknik Akış',
-          confluenceScore: existingOpen.confluenceScore || 86,
+          confluenceScore: existingOpen.confluenceScore || 88,
           candidateDirection: existingOpen.direction,
           status: 'POZİSYONDA (AÇIK)',
-          decisionReason: `Aktif ${existingOpen.direction} (${existingOpen.lotSize || 0.25} Lot) pozisyonu yönetiliyor (${existingOpen.tp1Hit ? 'TP1 Alındı, Başabaş Stop Aktif' : `SL: ${existingOpen.stopLoss} Kalkanı Aktif`}).`,
+          decisionReason: `Aktif ${existingOpen.direction} (${existingOpen.lotSize || 0.25} Lot) pozisyonu anlık yönetiliyor (${existingOpen.tp1Hit ? 'TP1 Alındı, Başabaş Stop Aktif' : `SL: ${existingOpen.stopLoss} | TP1: ${existingOpen.takeProfit1}`}).`,
           scannedAt: nowIso,
         });
         continue;
@@ -1805,71 +1941,72 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
       // Piyasa Açık / Kapalı Kontrolü (Hafta Sonu Filtresi)
       const marketSession = isMarketOpenForAsset(candidate.symbol, new Date(now));
-      let isMarketClosed = !marketSession.isOpen;
+      const isMarketClosed = !marketSession.isOpen;
 
-      // Aday yön ve 6-Kapı değerlendirmesi
+      // Profesyonel Aktif Borsacı Karar Motoru (Açık Piyasalarda Ölü Bölge Bırakmayan Kurumsal 6-Kapı Analizi)
       let direction: 'AL (LONG)' | 'SAT (SHORT)' | null = null;
       let rationale = '';
       let riskScale = 1.0;
       let vetoReason = '';
       let isNewsVeto = false;
 
-      if (midPrice >= ema50 && ema8 >= ema21 * 0.999 && rsi >= 36 && rsi <= 65) {
-        if (newsScore <= -0.35) {
-          isNewsVeto = true;
-          vetoReason = `Teknik AL sinyali mevcut ancak canlı olumsuz haber şoku (${newsScore}) nedeniyle ALIM VETO EDİLDİ ("${newsCtx.impactingHeadline.slice(0, 50)}...").`;
-        } else {
+      if (aiNews.hasNews && aiNews.convictionScore >= 72 && Math.abs(aiNews.netAiScore) >= 0.35) {
+        if (aiNews.direction === 'AL (LONG)') {
           direction = 'AL (LONG)';
-          rationale = hasNewsHeadline && newsScore >= 0.2
-            ? `Çift Teyit (Teknik + Olumlu Haber): Fiyat > EMA50, Wilder RSI (${rsi}) ve "${newsCtx.impactingHeadline.slice(0, 55)}..." haberi alımı destekliyor.`
-            : `Trend Pozitif (Fiyat > EMA50), EMA8/21 Alıcı Akışı ve Wilder RSI (${rsi}) Uygun Bölgede.`;
-        }
-      } else if (midPrice < ema50 && ema8 <= ema21 * 1.001 && rsi >= 34 && rsi <= 63) {
-        if (newsScore >= 0.35) {
-          isNewsVeto = true;
-          vetoReason = `Teknik SAT sinyali mevcut ancak canlı olumlu haber şoku (+${newsScore}) nedeniyle SATIŞ VETO EDİLDİ ("${newsCtx.impactingHeadline.slice(0, 50)}...").`;
-        } else {
+          rationale = `Yapay Zeka Haber Katalizörü (%${aiNews.convictionScore} Güven): ${aiNews.whatHappened}`;
+        } else if (aiNews.direction === 'SAT (SHORT)') {
           direction = 'SAT (SHORT)';
-          rationale = hasNewsHeadline && newsScore <= -0.2
-            ? `Çift Teyit (Teknik + Olumsuz Haber): Fiyat < EMA50, Wilder RSI (${rsi}) ve "${newsCtx.impactingHeadline.slice(0, 55)}..." haberi satış baskısını teyit ediyor.`
-            : `Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Satış Baskısı ve Wilder RSI (${rsi}) Teyitli.`;
+          rationale = `Yapay Zeka Haber Katalizörü (%${aiNews.convictionScore} Güven): ${aiNews.whatHappened}`;
         }
-      } else if (rsi < 33) {
-        if (newsScore <= -0.45 && midPrice < ema50) {
-          direction = 'SAT (SHORT)';
-          riskScale = 0.75;
-          rationale = `Canlı Negatif Haber Katalizörü ("${newsCtx.impactingHeadline.slice(0, 55)}...") + EMA50 Altı Kırılım Teyitli Satış.`;
-        } else if (newsScore > -0.25) {
-          direction = 'AL (LONG)';
-          rationale = `Aşırı Satım Tepki Bölgesi (Wilder RSI: ${rsi}) + Ters Haber Şoku Yok.`;
-        } else {
-          isNewsVeto = true;
-          vetoReason = `RSI (${rsi}) aşırı satımda ancak negatif haber baskısı (${newsScore}) nedeniyle düşen bıçak tutulmadı.`;
-        }
-      } else if (rsi > 69) {
-        if (newsScore < 0.25) {
-          direction = 'SAT (SHORT)';
-          rationale = `Aşırı Alım Yorulma Bölgesi (Wilder RSI: ${rsi}) + Ortalamaya Dönüş Satışı.`;
-        } else {
-          isNewsVeto = true;
-          vetoReason = `RSI (${rsi}) aşırı alımda ancak güçlü pozitif haber (+${newsScore}) nedeniyle erken satış veto edildi.`;
-        }
-      } else if (aiNews.hasNews && aiNews.convictionScore >= 70 && Math.abs(aiNews.netAiScore) >= 0.40) {
-        // Yapay Zeka Haber Fırsatı: Güçlü nedensel haber + kısa vadeli EMA8/EMA21 momentum uyumu
-        if (aiNews.direction === 'AL (LONG)' && ema8 >= ema21 * 0.998 && rsi <= 68) {
-          direction = 'AL (LONG)';
-          rationale = `Yapay Zeka Haber Fırsatı (%${aiNews.convictionScore} Güven): ${aiNews.whatHappened} (${aiNews.causalMechanism})`;
-        } else if (aiNews.direction === 'SAT (SHORT)' && ema8 <= ema21 * 1.002 && rsi >= 32) {
-          direction = 'SAT (SHORT)';
-          rationale = `Yapay Zeka Haber Fırsatı (%${aiNews.convictionScore} Güven): ${aiNews.whatHappened} (${aiNews.causalMechanism})`;
-        } else {
-          vetoReason = `Yapay Zeka ${aiNews.aiDecision} (%${aiNews.convictionScore} Güven) tespit etti ancak kısa vadeli fiyat momentumu (EMA8/21) henüz haberi teyit etmedi.`;
-        }
-      } else {
-        vetoReason = `Fiyat (${midPrice}) vs EMA50 (${ema50.toFixed(candidate.digits)}) ve Wilder RSI (${rsi}) — EMA8/21 kurumsal momentum kesişimi bekleniyor.`;
       }
 
-      // Korelasyon Kümesi Kontrolü (Aynı kümede maksimum 2 açık işlem)
+      if (!direction) {
+        if (rsi < 34) {
+          if (newsScore <= -0.20 && midPrice < ema50) {
+            direction = 'SAT (SHORT)';
+            rationale = `Negatif Haber Akışı (${newsScore}) + EMA50 Altı Düşüş Momentum Kırılımı (Wilder RSI: ${rsi}).`;
+          } else {
+            direction = 'AL (LONG)';
+            rationale = `Aşırı Satım Kurumsal Tepki Bölgesi (Wilder RSI: ${rsi}) + Likidite Dip Alımı.`;
+          }
+        } else if (rsi > 66) {
+          if (newsScore >= 0.20 && midPrice >= ema50) {
+            direction = 'AL (LONG)';
+            rationale = `Pozitif Haber Katalizörü (+${newsScore}) + Güçlü Momentum Rallisi (Wilder RSI: ${rsi}).`;
+          } else {
+            direction = 'SAT (SHORT)';
+            rationale = `Aşırı Alım Yorulma Bölgesi (Wilder RSI: ${rsi}) + Kurumsal Kâr Realizasyonu Satışı.`;
+          }
+        } else if (midPrice >= ema50) {
+          if (newsScore <= -0.40) {
+            direction = 'SAT (SHORT)';
+            rationale = `Canlı Negatif Haber Şoku (${newsScore}) Nedeniyle Taktiksel Satış (Short) Pozisyonu.`;
+          } else if (ema8 >= ema21 * 0.997) {
+            direction = 'AL (LONG)';
+            rationale = hasNewsHeadline && newsScore >= 0.15
+              ? `Çift Teyit (Trend + Olumlu Haber): Fiyat > EMA50, EMA8/21 Alıcı Akışı ve Wilder RSI (${rsi}).`
+              : `Yükseliş Rejimi (Fiyat > EMA50), EMA8/21 Kurumsal Alıcı Akışı ve Wilder RSI (${rsi}) Teyitli.`;
+          } else {
+            direction = 'AL (LONG)';
+            rationale = `Ana Trend Pozitif (Fiyat > EMA50) — Kurumsal Düzeltme (Pullback) Destek Alımı (Wilder RSI: ${rsi}).`;
+          }
+        } else {
+          if (newsScore >= 0.40) {
+            direction = 'AL (LONG)';
+            rationale = `Canlı Pozitif Haber Katalizörü (+${newsScore}) Nedeniyle Taktiksel Tepki Alımı (Long).`;
+          } else if (ema8 <= ema21 * 1.003) {
+            direction = 'SAT (SHORT)';
+            rationale = hasNewsHeadline && newsScore <= -0.15
+              ? `Çift Teyit (Trend + Olumsuz Haber): Fiyat < EMA50, EMA8/21 Satış Baskısı ve Wilder RSI (${rsi}).`
+              : `Düşüş Rejimi (Fiyat < EMA50), EMA8/21 Kurumsal Satış Baskısı ve Wilder RSI (${rsi}) Teyitli.`;
+          } else {
+            direction = 'SAT (SHORT)';
+            rationale = `Ana Trend Negatif (Fiyat < EMA50) — EMA50 Direnç Bölgesinden Kurumsal Satış (Wilder RSI: ${rsi}).`;
+          }
+        }
+      }
+
+      // Korelasyon Kümesi Kontrolü (Aynı alt-kümede maksimum 2 açık işlem)
       const sameClusterOpen = state.openPositions.filter((p) => getSpec(p.symbol).cluster === candidate.cluster).length;
 
       // Hafta sonu piyasa kapalılık denetimi: Geleneksel piyasalara hafta sonu emir iletilmez, yalnızca 7/24 Kripto işlem görür
@@ -1888,8 +2025,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const allocTRY = +(currentEq * 0.20 * riskScale).toFixed(2);
 
         const slDist = tradeAtr * 1.25;
-        const tp1Dist = tradeAtr * 1.90;
-        const tp2Dist = tradeAtr * 3.20;
+        const tp1Dist = tradeAtr * 1.85;
+        const tp2Dist = tradeAtr * 3.10;
 
         const stopLoss = direction === 'AL (LONG)'
           ? +(entryPrice - slDist).toFixed(candidate.digits)
@@ -1948,7 +2085,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           entryTimestamp: now,
           midEntryPrice: midPrice,
           entryPrice,
-          currentPrice: entryPrice,
+          currentPrice: midPrice,
           takeProfit1: tp1,
           takeProfit2: tp2,
           stopLoss,
@@ -1958,8 +2095,12 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           positionSizeUnits: built.positionSizeUnits,
           lotSize: built.lotSize,
           contractSize: built.contractSize,
+          unitLabel: candidate.unitLabel,
           notionalValueTRY: built.notionalValueTRY,
           effectiveLeverage: built.effectiveLeverage,
+          accountLeverage: built.accountLeverage,
+          isLeveraged: built.isLeveraged,
+          spot1xEquivalentPnL_TRY: 0,
           spreadPts: built.spreadPts,
           slippagePts: built.slippagePts,
           executionCostTRY: built.executionCostTRY,
@@ -2013,8 +2154,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       } else {
         // Neden girilmediğini şeffaf biçimde radara yaz
         let scanStatus: MarketScannerItem['status'] = 'TEKNİK TEYİT BEKLİYOR';
-        let scanReason = vetoReason;
-        let scanScore = direction ? 82 : 58;
+        let scanReason = vetoReason || rationale;
+        let scanScore = direction ? 84 : 58;
 
         if (isMarketClosed) {
           scanStatus = 'PİYASA KAPALI (HAFTA SONU)';
@@ -2025,10 +2166,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           scanScore = 44;
         } else if (direction && sameClusterOpen >= 2) {
           scanStatus = 'KORELASYON KALKANI';
-          scanReason = `${direction} sinyali hazır (${scanScore}/100) ancak aynı korelasyon kümesinde (${candidate.cluster}) 2 açık işlem bulunduğu için aşırı yoğunlaşma engellendi.`;
+          scanReason = `${direction} sinyali hazır (${scanScore}/100 — ${rationale}) ancak aynı korelasyon kümesinde (${candidate.cluster}) 2 açık işlem bulunduğu için risk çeşitlendirmesi korundu.`;
         } else if (direction && state.openPositions.length >= 4) {
           scanStatus = 'LİMİT DOLU (4/4)';
-          scanReason = `${direction} sinyali hazır (${scanScore}/100 — ${rationale}) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında devreye girecek.`;
+          scanReason = `${direction} sinyali hazır (${scanScore}/100 — ${rationale}) ancak maksimum 4 eşzamanlı işlem kalkanı dolu (%80 teminat sınırı). Açık işlemlerden biri kapandığında anında devreye girecek.`;
         }
 
         scannerResults.push({
@@ -2061,7 +2202,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
   recalculateLedgerMetrics(state);
 
   const lastEqPoint = state.equityCurve[state.equityCurve.length - 1];
-  if (!lastEqPoint || now - lastEqPoint.timestamp >= 15 * 60 * 1000 || Math.abs(lastEqPoint.equityTRY - state.totalEquityTRY) >= 50) {
+  if (!lastEqPoint || now - lastEqPoint.timestamp >= 60 * 1000 || Math.abs(lastEqPoint.equityTRY - state.totalEquityTRY) >= 15) {
     state.equityCurve.push({
       timestamp: now,
       timeStr: new Date(now).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
@@ -2101,113 +2242,14 @@ export async function toggleAutonomousBot(isRunning: boolean): Promise<Autonomou
 }
 
 export async function resetAutonomousBot(newCapitalTRY = 250000): Promise<AutonomousLedgerState> {
-  if (fs.existsSync(LEDGER_FILE)) {
-    fs.unlinkSync(LEDGER_FILE);
-  }
-  await bootstrapHistoricalRealTrades(newCapitalTRY);
-  return await executeAutonomousTradingTick(true);
+  return await resetAutonomousBotCleanZero(newCapitalTRY);
 }
 
 // Kullanıcı "Sıfırdan Başlat (0 İşlem)" butonuna bastığında geçmiş 5 günlük simülasyonu dahil etmeden,
-// tam o saniyeden itibaren 250.000 TL nakit ve 0 işlem ile tertemiz başlatır.
+// tam o saniyeden itibaren 250.000 TL nakit ile tertemiz başlatır ve anında canlı taramayı tetikler.
 export async function resetAutonomousBotCleanZero(newCapitalTRY = 250000): Promise<AutonomousLedgerState> {
-  const now = Date.now();
-  const nowIso = new Date(now).toISOString();
   const usdTry = await fetchLiveUsdTryRate();
-
-  const cleanState: AutonomousLedgerState = {
-    botId: 'ZELTRA-QUANT-AUTO-250K',
-    isRunning: true,
-    startedAt: nowIso,
-    lastTickAt: nowIso,
-    liveUsdTry: usdTry,
-    initialCapitalTRY: newCapitalTRY,
-    cashBalanceTRY: newCapitalTRY,
-    allocatedMarginTRY: 0,
-    availableCashTRY: newCapitalTRY,
-    openFloatingPnL_TRY: 0,
-    totalEquityTRY: newCapitalTRY,
-    netProfitTRY: 0,
-    netProfitPercent: 0,
-    metrics: {
-      totalClosedTrades: 0,
-      openPositionsCount: 0,
-      winningTrades: 0,
-      losingTrades: 0,
-      winRatePercent: 0,
-      grossProfitTRY: 0,
-      grossLossTRY: 0,
-      profitFactor: 0,
-      maxDrawdownPercent: 0,
-      peakEquityTRY: newCapitalTRY,
-      avgWinTRY: 0,
-      avgLossTRY: 0,
-      payoffRatio: 0,
-      expectancyTRY: 0,
-      expectancyR: 0,
-      realizedRMultipleTotal: 0,
-      sharpeRatio: 0,
-      sortinoRatio: 0,
-      totalSpreadAndCommissionTRY: 0,
-      totalCumulativeVolumeTRY: 0,
-      activeNotionalVolumeTRY: 0,
-      avgMarginLeverage: 0,
-      portfolioEffectiveLeverage: 0,
-      spot1xTotalNetProfitTRY: 0,
-      currentStreak: { type: 'NONE', count: 0 },
-      maxWinStreak: 0,
-      maxLossStreak: 0,
-    },
-    attribution: {
-      byAsset: CORE_UNIVERSE.map((u) => ({
-        symbol: u.symbol,
-        name: u.name,
-        closedCount: 0,
-        openCount: 0,
-        wins: 0,
-        losses: 0,
-        winRatePercent: 0,
-        netRealizedPnL_TRY: 0,
-        floatingPnL_TRY: 0,
-        totalNetPnL_TRY: 0,
-        avgRMultiple: 0,
-        totalRMultiple: 0,
-        executionCostTRY: 0,
-      })),
-      byDirection: {
-        long: { direction: 'AL (LONG)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
-        short: { direction: 'SAT (SHORT)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
-      },
-    },
-    marketScanner: [],
-    openPositions: [],
-    closedTrades: [],
-    equityCurve: [
-      {
-        timestamp: now,
-        timeStr: new Date(now).toLocaleString('tr-TR', {
-          day: '2-digit',
-          month: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        equityTRY: newCapitalTRY,
-        cashTRY: newCapitalTRY,
-        drawdownPercent: 0,
-      },
-    ],
-    activityLog: [
-      {
-        id: `ACT-ZERO-${now}`,
-        timestamp: nowIso,
-        type: 'SYSTEM',
-        symbol: 'SİSTEM',
-        message: `250.000,00 TL Otonom Portföy geçmiş işlemler olmadan sıfırdan (0 işlemle) başlatıldı. Yalnızca bu andan itibaren oluşan canlı piyasa sinyalleriyle işlem açılacaktır.`,
-        equityAfterTRY: newCapitalTRY,
-      },
-    ],
-  };
-
+  const cleanState = createCleanZeroLedgerObject(newCapitalTRY, usdTry);
   saveLedger(cleanState);
-  return cleanState;
+  return await executeAutonomousTradingTick(true);
 }
