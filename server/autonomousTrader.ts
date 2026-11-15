@@ -1728,7 +1728,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v4.1-hedge-alpha',
+    strategyVersion: 'v5.0-quant-alpha',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1834,7 +1834,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
         const hasLegacyNonIbkr =
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
-        const isCurrentStrategy = parsed.strategyVersion === 'v4.1-hedge-alpha';
+        const isCurrentStrategy = parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
@@ -2104,8 +2104,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         });
       }
 
-      // 2. Kademe Sürekli Chandelier (1.6x ATR) İz Süren Stop: Fiyat +1.4R lehimize gittiğinde zirveden dinamik takip başlat
-      const trailAtr = pos.forensicXRay?.indicatorSnapshot?.tradeAtr || slDist / 2.1;
+      // 2. Kademe Sürekli Chandelier (1.55x ATR) İz Süren Stop: Fiyat +1.35R lehimize gittiğinde zirveden dinamik takip başlat
+      const trailAtr = pos.forensicXRay?.indicatorSnapshot?.tradeAtr || slDist / 2.0;
       const recordedMfePrice = pos.forensicXRay?.excursion?.mfePrice;
       const peakPrice =
         recordedMfePrice !== undefined
@@ -2115,11 +2115,11 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           : livePrice;
       const peakFav = isLong ? peakPrice - pos.entryPrice : pos.entryPrice - peakPrice;
 
-      if (peakFav >= slDist * 1.4) {
+      if (peakFav >= slDist * 1.35) {
         pos.trailingStopActive = true;
         const chandelierStop = isLong
-          ? +(peakPrice - trailAtr * 1.6).toFixed(pos.digits)
-          : +(peakPrice + trailAtr * 1.6).toFixed(pos.digits);
+          ? +(peakPrice - trailAtr * 1.55).toFixed(pos.digits)
+          : +(peakPrice + trailAtr * 1.55).toFixed(pos.digits);
         const minProfitLock = isLong
           ? +(pos.entryPrice + slDist * 0.25).toFixed(pos.digits)
           : +(pos.entryPrice - slDist * 0.25).toFixed(pos.digits);
@@ -2319,12 +2319,14 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
   const btcDEma21Ref = btcDClosesRef.length >= 21 ? computeEMA(btcDClosesRef, 21) : btcLivePrice;
   const btcBullMacro =
     btcLivePrice === 0 ||
-    btcLivePrice >= btcHEma50Ref * 0.998 ||
-    (btcHEma21Ref >= btcHEma50Ref * 0.999 && btcLivePrice >= btcDEma21Ref * 0.995);
+    btcLivePrice >= btcHEma50Ref * 0.996 ||
+    btcLivePrice >= btcHEma21Ref ||
+    (btcHEma21Ref >= btcHEma50Ref * 0.998 && btcLivePrice >= btcDEma21Ref * 0.995);
   const btcBearMacro =
     btcLivePrice === 0 ||
-    btcLivePrice <= btcHEma50Ref * 1.002 ||
-    (btcHEma21Ref <= btcHEma50Ref * 1.001 && btcLivePrice <= btcDEma21Ref * 1.005);
+    btcLivePrice <= btcHEma50Ref * 1.004 ||
+    btcLivePrice <= btcHEma21Ref ||
+    (btcHEma21Ref <= btcHEma50Ref * 1.002 && btcLivePrice <= btcDEma21Ref * 1.005);
 
   interface EvaluatedCandidate {
     candidate: InstrumentMicroSpec;
@@ -2387,6 +2389,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       }
       const hCandles = hBars.map((b) => ({ high: b.high ?? b.close, low: b.low ?? b.close, close: b.close }));
       const hCloses = hBars.length >= 25 ? hBars.map((b) => b.close) : closes;
+      const hEma21 = hCloses.length >= 21 ? computeEMA(hCloses, 21) : ema21;
       const hEma50 = hCloses.length >= 50 ? computeEMA(hCloses, 50) : computeEMA(hCloses, Math.min(21, hCloses.length));
       const hEma100 = hCloses.length >= 100 ? computeEMA(hCloses, 100) : hEma50;
       const hRsi = hCloses.length >= 20 ? computeWilderRSI(hCloses, 14) : rsi;
@@ -2394,8 +2397,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const hAdx = hCandles.length >= 30 ? computeWilderADX(hCandles, 14) : { adx: 15, pdi: 15, ndi: 15 };
       const hEr = hCloses.length >= 20 ? computeKaufmanER(hCloses, 16) : 0.15;
       const hRvol = hBars.length >= 25 ? computeRelativeVolume(hBars, 60, now) : 1.0;
-      const hDon36 = computeDonchianChannel(hBars, 36);
-      const hDon48 = computeDonchianChannel(hBars, Math.min(48, Math.max(20, hBars.length - 2)));
+      const hDon20 = computeDonchianChannel(hBars, 20);
+      const hDon24 = computeDonchianChannel(hBars, 24);
       const lastHBar = hBars[hBars.length - 1];
       const hRange = Math.max(1e-9, (lastHBar?.high ?? midPrice) - (lastHBar?.low ?? midPrice));
       const hClosePos = ((lastHBar?.close ?? midPrice) - (lastHBar?.low ?? midPrice)) / hRange;
@@ -2411,6 +2414,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       }
       const m15Candles = m15Bars.map((b) => ({ high: b.high ?? b.close, low: b.low ?? b.close, close: b.close }));
       const m15Closes = m15Bars.map((b) => b.close);
+      const m15Ema20 = m15Closes.length >= 20 ? computeEMA(m15Closes, 20) : hEma21;
       const m15Ema50 = m15Closes.length >= 50 ? computeEMA(m15Closes, 50) : hEma50;
       const m15Ema200 = m15Closes.length >= 120 ? computeEMA(m15Closes, Math.min(200, m15Closes.length)) : m15Ema50;
       const m15Rsi = m15Closes.length >= 20 ? computeWilderRSI(m15Closes, 14) : hRsi;
@@ -2418,7 +2422,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const m15Adx = m15Candles.length >= 30 ? computeWilderADX(m15Candles, 14) : { adx: 15, pdi: 15, ndi: 15 };
       const m15Er = m15Closes.length >= 20 ? computeKaufmanER(m15Closes, 16) : 0.15;
       const m15Rvol = m15Bars.length >= 25 ? computeRelativeVolume(m15Bars, 15, now) : 1.0;
-      const m15Don36 = computeDonchianChannel(m15Bars, 36);
+      const m15Don28 = computeDonchianChannel(m15Bars, 28);
+      const m15Don16 = computeDonchianChannel(m15Bars, 16);
 
       const obDepth = orderbookMap.get(candidate.symbol) || { ratio: 1, bidVol: 0, askVol: 0 };
 
@@ -2477,12 +2482,12 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       let isNewsVeto = false;
       let candidateScore = 52;
 
-      // 4 Saatlik Stop / Time-Stop Soğuma Kalkanı (Testere yeniden girişlerini tamamen keser)
+      // 2.5 Saatlik Stop / Time-Stop Soğuma Kalkanı (Testere yeniden girişlerini keser)
       const recentStopSameSymbol = state.closedTrades.find(
         (c) =>
           c.symbol === candidate.symbol &&
           (c.status === 'STOP_LOSS' || c.status === 'MANUEL_KAPANDI') &&
-          now - (c.closeTimestamp || c.entryTimestamp) < 240 * 60 * 1000
+          now - (c.closeTimestamp || c.entryTimestamp) < 150 * 60 * 1000
       );
       const recentAnyClose = state.closedTrades.find(
         (c) =>
@@ -2490,194 +2495,233 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           now - (c.closeTimestamp || c.entryTimestamp) < 15 * 60 * 1000
       );
 
-      // Çift Ufuklu Kantitatif Giriş Kuralları (Yalnızca doğrulanmış yapısal kırılımlarda işlem açılır)
+      // v5.0 3-Motorlu Kantitatif Giriş Kuralları (1S Don20 + 15dk Don28 + 4-Saat Yüksek-Hacimli Impuls Kırılımı)
       if (isCrypto) {
-        // 1) 1S Yapısal Donchian(36) Kırılımı
-        const hQual = hBars.length >= 40 && hEr >= 0.18 && hAdx.adx >= 20 && hRvol >= 1.1;
+        // 1) 1S Kurumsal Trend Kırılımı (Donchian 20 — 30D +7.5D kârlı ana motor)
+        const hQual = hBars.length >= 40 && hEr >= 0.16 && hAdx.adx >= 18 && hRvol >= 0.95;
         if (
           hQual &&
-          midPrice > hDon36.high * 1.0005 &&
-          midPrice > hEma50 &&
-          hEma50 >= hEma100 * 0.997 &&
+          midPrice > hDon20.high * 1.0004 &&
+          midPrice > hEma21 &&
+          hEma21 >= hEma100 * 0.995 &&
           hRsi >= 50 &&
-          hRsi <= 68 &&
+          hRsi <= 74 &&
           btcBullMacro &&
           newsScore >= -0.35
         ) {
           direction = 'AL (LONG)';
           entryTimeframe = '1H';
-          rationale = `1S Yapısal Kırılım (Donchian36 > ${hDon36.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
+          rationale = `1S Yapısal Kırılım (Donchian20 > ${hDon20.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
         } else if (
           hQual &&
-          midPrice < hDon36.low * 0.9995 &&
-          midPrice < hEma50 &&
-          hEma50 <= hEma100 * 1.003 &&
-          hRsi >= 32 &&
+          midPrice < hDon20.low * 0.9996 &&
+          midPrice < hEma21 &&
+          hEma21 <= hEma100 * 1.005 &&
+          hRsi >= 20 &&
           hRsi <= 50 &&
           btcBearMacro &&
           newsScore <= 0.35
         ) {
           direction = 'SAT (SHORT)';
           entryTimeframe = '1H';
-          rationale = `1S Aşağı Kırılım (Donchian36 < ${hDon36.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
+          rationale = `1S Aşağı Kırılım (Donchian20 < ${hDon20.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
         }
 
-        // 2) 15dk Hassas Momentum Kırılımı (1S kırılmadıysa ve 1S tükenmede değilse)
+        // 2) 15dk Yapısal Kırılım (Donchian 28 — orta vadeli trend kırılımı)
         const mQual =
           !direction &&
           m15Bars.length >= 40 &&
           m15Er >= 0.18 &&
           m15Adx.adx >= 20 &&
           m15Rvol >= 1.1 &&
-          hRsi >= 32 &&
-          hRsi <= 68;
+          hRsi >= 22 &&
+          hRsi <= 74;
         if (
           mQual &&
-          midPrice > m15Don36.high * 1.0005 &&
+          midPrice > m15Don28.high * 1.0004 &&
           midPrice > m15Ema50 &&
           m15Ema50 >= m15Ema200 * 0.996 &&
-          midPrice >= hEma50 * 0.998 &&
+          midPrice >= hEma50 * 0.996 &&
           m15Rsi >= 50 &&
-          m15Rsi <= 68 &&
+          m15Rsi <= 72 &&
           btcBullMacro &&
           newsScore >= -0.35
         ) {
           direction = 'AL (LONG)';
           entryTimeframe = '15M';
-          rationale = `15dk Hassas Kırılım (Donchian36 > ${m15Don36.high.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx} | RVOL ${m15Rvol}x | 15dk RSI ${m15Rsi}`;
+          rationale = `15dk Yapısal Kırılım (Donchian28 > ${m15Don28.high.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx} | RVOL ${m15Rvol}x | 15dk RSI ${m15Rsi}`;
         } else if (
           mQual &&
-          midPrice < m15Don36.low * 0.9995 &&
+          midPrice < m15Don28.low * 0.9996 &&
           midPrice < m15Ema50 &&
           m15Ema50 <= m15Ema200 * 1.004 &&
-          midPrice <= hEma50 * 1.002 &&
-          m15Rsi >= 32 &&
+          midPrice <= hEma50 * 1.004 &&
+          m15Rsi >= 22 &&
           m15Rsi <= 50 &&
           btcBearMacro &&
           newsScore <= 0.35
         ) {
           direction = 'SAT (SHORT)';
           entryTimeframe = '15M';
-          rationale = `15dk Aşağı Kırılım (Donchian36 < ${m15Don36.low.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx} | RVOL ${m15Rvol}x | 15dk RSI ${m15Rsi}`;
+          rationale = `15dk Aşağı Kırılım (Donchian28 < ${m15Don28.low.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx} | RVOL ${m15Rvol}x | 15dk RSI ${m15Rsi}`;
         }
 
-        // Kraken L2 Emir Defteri Alıcı/Satıcı Duvar Kalkanı
+        // 3) 4-Saat Yüksek-Hacimli İmpuls Kırılımı (Donchian 16 — 1S ana trend yönünde hacimli taze ivme)
+        const impQual =
+          !direction &&
+          m15Bars.length >= 40 &&
+          m15Er >= 0.28 &&
+          m15Adx.adx >= 20 &&
+          m15Rvol >= 1.5;
+        if (
+          impQual &&
+          midPrice > hEma21 &&
+          hEma21 >= hEma50 * 0.998 &&
+          btcBullMacro &&
+          midPrice > m15Don16.high * 1.0005 &&
+          midPrice > m15Ema20 &&
+          midPrice > m15Ema50 &&
+          m15Rsi >= 52 &&
+          m15Rsi <= 72 &&
+          newsScore >= -0.35
+        ) {
+          direction = 'AL (LONG)';
+          entryTimeframe = '15M';
+          rationale = `4S Yüksek-Hacim İmpuls Kırılımı (Donchian16 > ${m15Don16.high.toFixed(candidate.digits)}): 15dk ER ${m15Er} | RVOL ${m15Rvol}x | ADX ${m15Adx.adx}`;
+        } else if (
+          impQual &&
+          midPrice < hEma21 &&
+          hEma21 <= hEma50 * 1.002 &&
+          btcBearMacro &&
+          midPrice < m15Don16.low * 0.9995 &&
+          midPrice < m15Ema20 &&
+          midPrice < m15Ema50 &&
+          m15Rsi >= 20 &&
+          m15Rsi <= 48 &&
+          newsScore <= 0.35
+        ) {
+          direction = 'SAT (SHORT)';
+          entryTimeframe = '15M';
+          rationale = `4S Yüksek-Hacim Aşağı İmpuls (Donchian16 < ${m15Don16.low.toFixed(candidate.digits)}): 15dk ER ${m15Er} | RVOL ${m15Rvol}x | ADX ${m15Adx.adx}`;
+        }
+
+        // Kraken L2 Emir Defteri Aşırı Duvar Kalkanı
         const hasDepth = obDepth.bidVol + obDepth.askVol > 0;
-        if (direction === 'SAT (SHORT)' && hasDepth && obDepth.ratio >= 2.4) {
-          vetoReason = `Emir Defteri Kalkanı: Kraken alıcı derinliği (Bid/Ask ${obDepth.ratio}x) güçlü taban oluşturuyor; destek üstüne Short engellendi.`;
+        if (direction === 'SAT (SHORT)' && hasDepth && obDepth.ratio >= 2.8) {
+          vetoReason = `Emir Defteri Kalkanı: Kraken alıcı derinliği (Bid/Ask ${obDepth.ratio}x) ekstrem taban oluşturuyor; destek üstüne Short engellendi.`;
           direction = null;
-        } else if (direction === 'AL (LONG)' && hasDepth && obDepth.ratio <= 0.42) {
+        } else if (direction === 'AL (LONG)' && hasDepth && obDepth.ratio <= 0.36) {
           vetoReason = `Emir Defteri Kalkanı: Kraken satıcı duvarı (Bid/Ask ${obDepth.ratio}x) yukarı kırılımı baskılıyor; dirence karşı Long engellendi.`;
           direction = null;
         }
       } else if (isFx) {
-        const hFxQual = hBars.length >= 40 && hEr >= 0.22 && hAdx.adx >= 20;
+        const hFxQual = hBars.length >= 40 && hEr >= 0.2 && hAdx.adx >= 18;
         if (
           hFxQual &&
-          midPrice > hDon36.high * 1.0003 &&
+          midPrice > hDon24.high * 1.0003 &&
           midPrice > hEma50 &&
           hEma50 >= hEma100 * 0.998 &&
           hRsi >= 50 &&
-          hRsi <= 68 &&
-          hClosePos >= 0.55
+          hRsi <= 72 &&
+          hClosePos >= 0.52
         ) {
           direction = 'AL (LONG)';
           entryTimeframe = '1H';
-          rationale = `1S FX Kırılım (Donchian36 > ${hDon36.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | Kapanış Gücü %${Math.round(hClosePos * 100)}`;
+          rationale = `1S FX Kırılım (Donchian24 > ${hDon24.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | Kapanış Gücü %${Math.round(hClosePos * 100)}`;
         } else if (
           hFxQual &&
-          midPrice < hDon36.low * 0.9997 &&
+          midPrice < hDon24.low * 0.9997 &&
           midPrice < hEma50 &&
           hEma50 <= hEma100 * 1.002 &&
-          hRsi >= 32 &&
+          hRsi >= 28 &&
           hRsi <= 50 &&
-          hClosePos <= 0.45
+          hClosePos <= 0.48
         ) {
           direction = 'SAT (SHORT)';
           entryTimeframe = '1H';
-          rationale = `1S FX Aşağı Kırılım (Donchian36 < ${hDon36.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | Satıcı Kapanış`;
+          rationale = `1S FX Aşağı Kırılım (Donchian24 < ${hDon24.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | Satıcı Kapanış`;
         } else if (
           m15Bars.length >= 40 &&
-          m15Er >= 0.22 &&
-          m15Adx.adx >= 20 &&
-          hRsi >= 32 &&
-          hRsi <= 68
+          m15Er >= 0.2 &&
+          m15Adx.adx >= 18 &&
+          hRsi >= 28 &&
+          hRsi <= 72
         ) {
           if (
-            midPrice > m15Don36.high * 1.0003 &&
+            midPrice > m15Don28.high * 1.0003 &&
             midPrice > m15Ema50 &&
             midPrice >= hEma50 * 0.999 &&
             m15Rsi >= 50 &&
-            m15Rsi <= 68
+            m15Rsi <= 70
           ) {
             direction = 'AL (LONG)';
             entryTimeframe = '15M';
-            rationale = `15dk FX Kırılım (Donchian36 > ${m15Don36.high.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
+            rationale = `15dk FX Kırılım (Donchian28 > ${m15Don28.high.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
           } else if (
-            midPrice < m15Don36.low * 0.9997 &&
+            midPrice < m15Don28.low * 0.9997 &&
             midPrice < m15Ema50 &&
             midPrice <= hEma50 * 1.001 &&
-            m15Rsi >= 32 &&
+            m15Rsi >= 30 &&
             m15Rsi <= 50
           ) {
             direction = 'SAT (SHORT)';
             entryTimeframe = '15M';
-            rationale = `15dk FX Aşağı Kırılım (Donchian36 < ${m15Don36.low.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
+            rationale = `15dk FX Aşağı Kırılım (Donchian28 < ${m15Don28.low.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
           }
         }
       } else {
-        // Altın, WTI Petrol, Küresel Endeksler & NVDA (1S Donchian48 veya 15dk Donchian36)
-        const hMacQual = hBars.length >= 40 && hEr >= 0.22 && hAdx.adx >= 20 && hRvol >= 1.05;
+        // Altın, WTI Petrol, Küresel Endeksler & NVDA (1S Donchian24 veya 15dk Donchian28)
+        const hMacQual = hBars.length >= 40 && hEr >= 0.2 && hAdx.adx >= 18 && hRvol >= 1.0;
         if (
           hMacQual &&
-          midPrice > hDon48.high * 1.0004 &&
+          midPrice > hDon24.high * 1.0004 &&
           midPrice > hEma50 &&
           hEma50 >= hEma100 * 0.998 &&
           hRsi >= 50 &&
-          hRsi <= 68
+          hRsi <= 72
         ) {
           direction = 'AL (LONG)';
           entryTimeframe = '1H';
-          rationale = `1S Makro Kırılım (Donchian48 > ${hDon48.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x`;
+          rationale = `1S Makro Kırılım (Donchian24 > ${hDon24.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x`;
         } else if (
           hMacQual &&
-          midPrice < hDon48.low * 0.9996 &&
+          midPrice < hDon24.low * 0.9996 &&
           midPrice < hEma50 &&
           hEma50 <= hEma100 * 1.002 &&
-          hRsi >= 32 &&
+          hRsi >= 28 &&
           hRsi <= 50
         ) {
           direction = 'SAT (SHORT)';
           entryTimeframe = '1H';
-          rationale = `1S Makro Aşağı Kırılım (Donchian48 < ${hDon48.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x`;
+          rationale = `1S Makro Aşağı Kırılım (Donchian24 < ${hDon24.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x`;
         } else if (
           m15Bars.length >= 40 &&
-          m15Er >= 0.22 &&
-          m15Adx.adx >= 20 &&
-          m15Rvol >= 1.05 &&
-          hRsi >= 32 &&
-          hRsi <= 68
+          m15Er >= 0.2 &&
+          m15Adx.adx >= 18 &&
+          m15Rvol >= 1.0 &&
+          hRsi >= 28 &&
+          hRsi <= 72
         ) {
           if (
-            midPrice > m15Don36.high * 1.0004 &&
+            midPrice > m15Don28.high * 1.0004 &&
             midPrice > m15Ema50 &&
             midPrice >= hEma50 * 0.999 &&
             m15Rsi >= 50 &&
-            m15Rsi <= 68
+            m15Rsi <= 70
           ) {
             direction = 'AL (LONG)';
             entryTimeframe = '15M';
-            rationale = `15dk Makro Kırılım (Donchian36 > ${m15Don36.high.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
+            rationale = `15dk Makro Kırılım (Donchian28 > ${m15Don28.high.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
           } else if (
-            midPrice < m15Don36.low * 0.9996 &&
+            midPrice < m15Don28.low * 0.9996 &&
             midPrice < m15Ema50 &&
             midPrice <= hEma50 * 1.001 &&
-            m15Rsi >= 32 &&
+            m15Rsi >= 30 &&
             m15Rsi <= 50
           ) {
             direction = 'SAT (SHORT)';
             entryTimeframe = '15M';
-            rationale = `15dk Makro Aşağı Kırılım (Donchian36 < ${m15Don36.low.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
+            rationale = `15dk Makro Aşağı Kırılım (Donchian28 < ${m15Don28.low.toFixed(candidate.digits)}): ER ${m15Er} | ADX ${m15Adx.adx}`;
           }
         }
       }
@@ -2701,18 +2745,18 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         direction = null;
       }
 
-      // Soğuma Kalkanı Denetimi (Stop/Time-Stop sonrası 4 saat bekle)
+      // Soğuma Kalkanı Denetimi (Stop/Time-Stop sonrası 2.5 saat bekle)
       if (direction && recentStopSameSymbol) {
-        vetoReason = `Soğuma Kalkanı: ${candidate.symbol} son 4 saat içinde kapandığı için testere koruması gereği yeniden giriş kilitlendi.`;
+        vetoReason = `Soğuma Kalkanı: ${candidate.symbol} son 2.5 saat içinde kapandığı için testere koruması gereği yeniden giriş kilitlendi.`;
         direction = null;
       } else if (direction && recentAnyClose) {
         vetoReason = `Kapanış Sonrası Bekleme: ${candidate.symbol} kapanışının üzerinden 15 dakika geçmedi.`;
         direction = null;
       }
 
-      // Komisyon-Verimlilik Kapısı (Hedef TP1 = 3.3x ATR hareketi çift yönlü IBKR komisyonunun en az 5.5 katı olmalı)
-      const tp1RatioPct = (tradeAtr * 3.3) / (midPrice || 1);
-      const minViableTpPct = Math.max(isCrypto ? 0.015 : 0.0025, candidate.ibkrCommissionRate * 2 * 5.5);
+      // Komisyon-Verimlilik Kapısı (Hedef TP1 = 3.2x ATR hareketi çift yönlü IBKR komisyonunun en az 5.5 katı olmalı)
+      const tp1RatioPct = (tradeAtr * 3.2) / (midPrice || 1);
+      const minViableTpPct = Math.max(isCrypto ? 0.014 : 0.0025, candidate.ibkrCommissionRate * 2 * 5.5);
       if (direction && tp1RatioPct < minViableTpPct) {
         vetoReason = `Komisyon Verimlilik Filtresi: Beklenen TP1 hareketi (%${(tp1RatioPct * 100).toFixed(2)}) IBKR komisyon eşiği (%${(minViableTpPct * 100).toFixed(2)}) altında; dar yatayda nakit korunuyor.`;
         direction = null;
@@ -2725,21 +2769,21 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const sigRvol = entryTimeframe === '15M' ? m15Rvol : hRvol;
         const sigRsi = entryTimeframe === '15M' ? m15Rsi : hRsi;
 
-        const erPts = sigEr >= 0.36 ? 26 : sigEr >= 0.28 ? 22 : 18;
-        const adxPts = sigAdx >= 30 ? 22 : sigAdx >= 24 ? 19 : 16;
-        const rvolPts = sigRvol >= 1.8 ? 16 : sigRvol >= 1.35 ? 14 : 11;
+        const erPts = sigEr >= 0.34 ? 26 : sigEr >= 0.24 ? 22 : 18;
+        const adxPts = sigAdx >= 28 ? 22 : sigAdx >= 22 ? 19 : 16;
+        const rvolPts = sigRvol >= 1.6 ? 16 : sigRvol >= 1.15 ? 14 : 11;
         const rsiCenterPts =
           direction === 'AL (LONG)'
-            ? sigRsi >= 52 && sigRsi <= 63
+            ? sigRsi >= 50 && sigRsi <= 68
               ? 16
               : 12
-            : sigRsi >= 37 && sigRsi <= 48
+            : sigRsi >= 24 && sigRsi <= 50
               ? 16
               : 12;
 
         const macroObPts = isCrypto
-          ? (direction === 'AL (LONG)' && obDepth.ratio >= 1.25) ||
-            (direction === 'SAT (SHORT)' && obDepth.ratio <= 0.8)
+          ? (direction === 'AL (LONG)' && obDepth.ratio >= 1.2) ||
+            (direction === 'SAT (SHORT)' && obDepth.ratio <= 0.85)
             ? 10
             : 6
           : 8;
@@ -2747,18 +2791,18 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const feePts = tp1RatioPct >= minViableTpPct * 1.4 ? 8 : 5;
         candidateScore = Math.max(0, Math.min(98, erPts + adxPts + rvolPts + rsiCenterPts + macroObPts + feePts));
 
-        if (candidateScore < 72) {
-          vetoReason = `Kalite Puanı Yetersiz (${candidateScore}/100 < 72): ${rationale}`;
+        if (candidateScore < 68) {
+          vetoReason = `Kalite Puanı Yetersiz (${candidateScore}/100 < 68): ${rationale}`;
           direction = null;
         }
       } else {
         // Bekleme / Yatay Sıkışma Halinde Canlı Kırılım Hazırlık Puanı (24 - 70 Arası Dinamik Skor)
-        const erTarget = isCrypto ? 0.18 : 0.22;
+        const erTarget = isCrypto ? 0.18 : 0.20;
         const bestEr = Math.max(hEr, m15Er);
         const bestAdx = Math.max(hAdx.adx, m15Adx.adx);
         const bestRvol = Math.max(hRvol, m15Rvol);
 
-        const activeRefBand = m15Bars.length >= 40 ? m15Don36 : hDon36;
+        const activeRefBand = m15Bars.length >= 40 ? m15Don16 : hDon20;
         const bandWidth = Math.max(1e-9, activeRefBand.high - activeRefBand.low);
         const distTopPct = Math.max(0, (activeRefBand.high - midPrice) / bandWidth);
         const distBotPct = Math.max(0, (midPrice - activeRefBand.low) / bandWidth);
@@ -2780,7 +2824,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
               : bestRvol < 1.1
                 ? `Hacim Teyidi Düşük (RVOL ${bestRvol}x/1.10x)`
                 : `Fiyat Henüz Bant İçinde`;
-          vetoReason = `Nakit Kalkanı — Kırılım Bekleniyor (AL > ${trigHi} | SAT < ${trigLo}): ${erGapNote} · 15dk ER ${m15Er} / Hacim ${m15Rvol}x${obNote}. Erken işlemde komisyon yakmamak için tetik bekleniyor.`;
+          vetoReason = `Nakit Kalkanı — Yakın Kırılım Tetikleyicisi (AL > ${trigHi} | SAT < ${trigLo}): ${erGapNote} · 15dk ER ${m15Er} / Hacim ${m15Rvol}x${obNote}. Doğrulanmamış girişte komisyon yakmamak için tetik bekleniyor.`;
         }
       }
 
@@ -2818,7 +2862,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     }
   }
 
-  // Pass 2: En Yüksek Kaliteli Kırılımları Önceliklendirerek Maksimum 3 Pozisyona Dağıt (%1.2 Risk / %16 Teminat / Max 1 Küme / Max 2 Aynı Yön Kripto)
+  // Pass 2: En Yüksek Kaliteli Kırılımları Önceliklendirerek Maksimum 4 Pozisyona Dağıt (%1.4 Risk / %16 Teminat / Max 1 Küme / Max 2 Aynı Yön Kripto)
   if (state.isRunning) {
     const qualified = evaluatedList
       .filter((e) => e.direction && !e.existingOpen && !e.isMarketClosed)
@@ -2837,9 +2881,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         (p) => getSpec(p.symbol).cluster.startsWith('CRYPTO') && p.direction === direction
       ).length;
 
-      if (state.openPositions.length >= 3) {
-        item.blockedStatus = 'LİMİT DOLU (3/3)';
-        item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100 — ${rationale}) ancak portföydeki maksimum 3 açık pozisyon koruma limiti dolu.`;
+      if (state.openPositions.length >= 4) {
+        item.blockedStatus = 'LİMİT DOLU (4/4)';
+        item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100 — ${rationale}) ancak portföydeki maksimum 4 açık pozisyon koruma limiti dolu.`;
         continue;
       }
       if (sameClusterOpen >= 1) {
@@ -2859,7 +2903,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       );
       const freeMarginTRY = Math.max(0, state.cashBalanceTRY - usedMarginTRY);
       const currentEq = state.cashBalanceTRY;
-      const desiredRiskTRY = +(currentEq * 0.012 * riskScale).toFixed(2);
+      const desiredRiskTRY = +(currentEq * 0.014 * riskScale).toFixed(2);
       const rawAllocTRY = +(currentEq * 0.16 * riskScale).toFixed(2);
       const allocTRY = +Math.min(rawAllocTRY, freeMarginTRY * 0.95).toFixed(2);
       if (allocTRY < 5000) continue;
@@ -2878,9 +2922,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           ? +(liveAsk + candidate.slippagePts).toFixed(candidate.digits)
           : +(liveBid - candidate.slippagePts).toFixed(candidate.digits);
 
-      const slDist = tradeAtr * 2.1;
-      const tp1Dist = tradeAtr * 3.3;
-      const tp2Dist = tradeAtr * 6.0;
+      const slDist = tradeAtr * 2.0;
+      const tp1Dist = tradeAtr * 3.2;
+      const tp2Dist = tradeAtr * 5.8;
 
       const stopLoss =
         direction === 'AL (LONG)'
