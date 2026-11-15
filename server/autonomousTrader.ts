@@ -208,7 +208,7 @@ export interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (4/4)' | 'TEKNİK TEYİT BEKLİYOR';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (4/4)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
   decisionReason: string;
   scannedAt: string;
 }
@@ -297,6 +297,49 @@ const CORE_UNIVERSE: InstrumentMicroSpec[] = [
 
 function getSpec(symbol: string): InstrumentMicroSpec {
   return CORE_UNIVERSE.find((c) => c.symbol === symbol) || CORE_UNIVERSE[0];
+}
+
+/**
+ * Piyasa Seans Kontrolü:
+ * Kripto (BTC/USD): 7 gün 24 saat kesintisiz açık.
+ * Forex & Emtia (EUR, GBP, JPY, XAU, WTI): Cuma 22:00 UTC kapanır, Pazar 22:00 UTC açılır.
+ * ABD Hisse & Endeksler (NAS100, SPX500, NVDA): Hafta sonları tamamen kapalı.
+ */
+export function isMarketOpenForAsset(symbol: string, d: Date = new Date()): { isOpen: boolean; reason?: string } {
+  const spec = getSpec(symbol);
+  if (spec.cluster === 'CRYPTO') {
+    return { isOpen: true };
+  }
+
+  const dayUtc = d.getUTCDay(); // 0 = Pazar, 5 = Cuma, 6 = Cumartesi
+  const hourUtc = d.getUTCHours();
+
+  // Cumartesi: Tüm geleneksel piyasalar kapalı
+  if (dayUtc === 6) {
+    return {
+      isOpen: false,
+      reason: 'Hafta sonu: Küresel geleneksel piyasalar kapalı. Yalnızca 7/24 Kripto varlıklar işlem görür.',
+    };
+  }
+
+  // Pazar: 22:00 UTC'ye kadar (Sydney/Tokyo seansı açılana kadar) kapalı
+  if (dayUtc === 0 && hourUtc < 22) {
+    return {
+      isOpen: false,
+      reason: 'Hafta sonu: Küresel piyasalar Pazar 22:00 UTC Asya seansı açılışına kadar kapalıdır.',
+    };
+  }
+
+  // Cuma: 22:00 UTC'den sonra kapalı
+  if (dayUtc === 5 && hourUtc >= 22) {
+    return {
+      isOpen: false,
+      reason: 'Hafta sonu tatili başladı (Cuma 22:00 UTC kapanışı). Pazar gecesi Asya açılışı bekleniyor.',
+    };
+  }
+
+  // ABD Hisse ve Endeksler (NVDA, NAS100, SPX500) hafta içi gece seansları hariç hafta sonu kapalıdır
+  return { isOpen: true };
 }
 
 // Wilder's RSI & ATR Yardımcıları
@@ -1760,6 +1803,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         continue;
       }
 
+      // Piyasa Açık / Kapalı Kontrolü (Hafta Sonu Filtresi)
+      const marketSession = isMarketOpenForAsset(candidate.symbol, new Date(now));
+      let isMarketClosed = !marketSession.isOpen;
+
       // Aday yön ve 6-Kapı değerlendirmesi
       let direction: 'AL (LONG)' | 'SAT (SHORT)' | null = null;
       let rationale = '';
@@ -1824,6 +1871,11 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
       // Korelasyon Kümesi Kontrolü (Aynı kümede maksimum 2 açık işlem)
       const sameClusterOpen = state.openPositions.filter((p) => getSpec(p.symbol).cluster === candidate.cluster).length;
+
+      // Hafta sonu piyasa kapalılık denetimi: Geleneksel piyasalara hafta sonu emir iletilmez, yalnızca 7/24 Kripto işlem görür
+      if (isMarketClosed) {
+        direction = null;
+      }
 
       if (direction && state.isRunning && state.openPositions.length < 4 && sameClusterOpen < 2) {
         const halfSpread = candidate.spreadPts / 2 + candidate.slippagePts;
@@ -1964,7 +2016,11 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         let scanReason = vetoReason;
         let scanScore = direction ? 82 : 58;
 
-        if (isNewsVeto) {
+        if (isMarketClosed) {
+          scanStatus = 'PİYASA KAPALI (HAFTA SONU)';
+          scanReason = marketSession.reason || 'Hafta sonu nedeniyle piyasa kapalıdır. Pazartesi Asya/Londra seansı açılışı bekleniyor.';
+          scanScore = 50;
+        } else if (isNewsVeto) {
           scanStatus = 'HABER VETOSU';
           scanScore = 44;
         } else if (direction && sameClusterOpen >= 2) {
