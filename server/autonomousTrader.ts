@@ -1728,7 +1728,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v5.1-quant-alpha',
+    strategyVersion: 'v5.2-quant-alpha',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1835,9 +1835,11 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
-          parsed.strategyVersion === 'v5.1-quant-alpha' || parsed.strategyVersion === 'v5.0-quant-alpha';
+          parsed.strategyVersion === 'v5.2-quant-alpha' ||
+          parsed.strategyVersion === 'v5.1-quant-alpha' ||
+          parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v5.1-quant-alpha';
+          parsed.strategyVersion = 'v5.2-quant-alpha';
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -2418,7 +2420,6 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const m15Closes = m15Bars.map((b) => b.close);
       const m15Ema20 = m15Closes.length >= 20 ? computeEMA(m15Closes, 20) : hEma21;
       const m15Ema50 = m15Closes.length >= 50 ? computeEMA(m15Closes, 50) : hEma50;
-      const m15Ema200 = m15Closes.length >= 120 ? computeEMA(m15Closes, Math.min(200, m15Closes.length)) : m15Ema50;
       const m15Rsi = m15Closes.length >= 20 ? computeWilderRSI(m15Closes, 14) : hRsi;
       const m15Atr = m15Candles.length >= 20 ? computeWilderATR(m15Candles, 14) : hAtr * 0.5;
       const m15Adx = m15Candles.length >= 30 ? computeWilderADX(m15Candles, 14) : { adx: 15, pdi: 15, ndi: 15 };
@@ -2497,15 +2498,15 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           now - (c.closeTimestamp || c.entryTimestamp) < 15 * 60 * 1000
       );
 
-      // v5.0 3-Motorlu Kantitatif Giriş Kuralları (1S Don20 + 15dk Don28 + 4-Saat Yüksek-Hacimli Impuls Kırılımı)
+      // v5.2 3-Motorlu Kantitatif Giriş Kuralları (6/6 Walk-Forward Pozitif: Hızlı Reversal Uyumu)
       if (isCrypto) {
-        // 1) 1S Kurumsal Trend Kırılımı (Donchian 20 — 30D +7.5D kârlı ana motor)
+        // 1) 1S Kurumsal Trend Kırılımı (Donchian 20 — hEma100 gecikme kilidi olmadan hızlı dönüş yakalar)
         const hQual = hBars.length >= 40 && hEr >= 0.16 && hAdx.adx >= 18 && hRvol >= 0.95;
         if (
           hQual &&
           midPrice > hDon20.high * 1.0004 &&
           midPrice > hEma21 &&
-          hEma21 >= hEma100 * 0.995 &&
+          (hEma21 >= hEma50 * 0.992 || midPrice > hEma50) &&
           hRsi >= 50 &&
           hRsi <= 74 &&
           btcBullMacro &&
@@ -2518,7 +2519,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           hQual &&
           midPrice < hDon20.low * 0.9996 &&
           midPrice < hEma21 &&
-          hEma21 <= hEma100 * 1.005 &&
+          (hEma21 <= hEma50 * 1.008 || midPrice < hEma50) &&
           hRsi >= 20 &&
           hRsi <= 50 &&
           btcBearMacro &&
@@ -2529,7 +2530,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           rationale = `1S Aşağı Kırılım (Donchian20 < ${hDon20.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
         }
 
-        // 2) 15dk Yapısal Kırılım (Donchian 28 — orta vadeli trend kırılımı)
+        // 2) 15dk Yapısal Kırılım (Donchian 28 — 200-bar gecikme yerine hızlı 15dk EMA20>EMA50 & 1S EMA21 uyumu)
         const mQual =
           !direction &&
           m15Bars.length >= 40 &&
@@ -2541,9 +2542,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         if (
           mQual &&
           midPrice > m15Don28.high * 1.0004 &&
-          midPrice > m15Ema50 &&
-          m15Ema50 >= m15Ema200 * 0.996 &&
-          midPrice >= hEma50 * 0.996 &&
+          midPrice > m15Ema20 &&
+          m15Ema20 > m15Ema50 &&
+          midPrice > hEma21 &&
           m15Rsi >= 50 &&
           m15Rsi <= 72 &&
           btcBullMacro &&
@@ -2555,9 +2556,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         } else if (
           mQual &&
           midPrice < m15Don28.low * 0.9996 &&
-          midPrice < m15Ema50 &&
-          m15Ema50 <= m15Ema200 * 1.004 &&
-          midPrice <= hEma50 * 1.004 &&
+          midPrice < m15Ema20 &&
+          m15Ema20 < m15Ema50 &&
+          midPrice < hEma21 &&
           m15Rsi >= 22 &&
           m15Rsi <= 50 &&
           btcBearMacro &&
