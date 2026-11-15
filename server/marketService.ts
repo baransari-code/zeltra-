@@ -171,13 +171,20 @@ const KRAKEN_PAIR_MAP: Record<string, string> = {
   'ADA/USD': 'ADAUSD',
 };
 
-let krakenTickCache: { timestamp: number; prices: Record<string, number> } | null = null;
-let inFlightKrakenTick: Promise<Record<string, number>> | null = null;
+export interface LiveOrderbookQuote {
+  bid: number;
+  ask: number;
+  mid: number;
+  last: number;
+}
 
-export async function fetchLiveCryptoSpotTicks(): Promise<Record<string, number>> {
+let krakenTickCache: { timestamp: number; quotes: Record<string, LiveOrderbookQuote> } | null = null;
+let inFlightKrakenTick: Promise<Record<string, LiveOrderbookQuote>> | null = null;
+
+export async function fetchLiveCryptoQuotes(): Promise<Record<string, LiveOrderbookQuote>> {
   const now = Date.now();
   if (krakenTickCache && now - krakenTickCache.timestamp < 2500) {
-    return krakenTickCache.prices;
+    return krakenTickCache.quotes;
   }
   if (inFlightKrakenTick) {
     return inFlightKrakenTick;
@@ -191,26 +198,38 @@ export async function fetchLiveCryptoSpotTicks(): Promise<Record<string, number>
         'https://api.kraken.com/0/public/Ticker?pair=XBTUSD,ETHUSD,SOLUSD,BNBUSD,XRPUSD,AVAXUSD,LINKUSD,XDGUSD,ADAUSD',
         { signal: controller.signal, headers: { Accept: 'application/json' } }
       );
-      if (!resp.ok) return krakenTickCache?.prices || {};
+      if (!resp.ok) return krakenTickCache?.quotes || {};
       const json: any = await resp.json();
       const result = json?.result || {};
-      const prices: Record<string, number> = {};
+      const quotes: Record<string, LiveOrderbookQuote> = {};
       for (const [sym, kKey] of Object.entries(KRAKEN_PAIR_MAP)) {
         const entry = result[kKey];
         if (entry && entry.a && entry.b) {
           const ask = Number(entry.a[0]);
           const bid = Number(entry.b[0]);
           const last = entry.c ? Number(entry.c[0]) : (ask + bid) / 2;
+          const decimals =
+            sym === 'DOGE/USD'
+              ? 6
+              : sym === 'XRP/USD' || sym === 'ADA/USD'
+              ? 4
+              : sym === 'AVAX/USD' || sym === 'LINK/USD'
+              ? 3
+              : 2;
           if (Number.isFinite(ask) && Number.isFinite(bid) && ask > 0 && bid > 0) {
-            // Orderbook Mid + Last Trade harmanı ile milisaniyelik gerçek borsa tiki
-            prices[sym] = +(((ask + bid) / 2) * 0.5 + last * 0.5).toFixed(sym === 'XRP/USD' || sym === 'DOGE/USD' || sym === 'ADA/USD' ? 4 : 2);
+            quotes[sym] = {
+              bid: +bid.toFixed(decimals),
+              ask: +ask.toFixed(decimals),
+              mid: +((bid + ask) / 2).toFixed(decimals),
+              last: +last.toFixed(decimals),
+            };
           }
         }
       }
-      krakenTickCache = { timestamp: Date.now(), prices };
-      return prices;
+      krakenTickCache = { timestamp: Date.now(), quotes };
+      return quotes;
     } catch {
-      return krakenTickCache?.prices || {};
+      return krakenTickCache?.quotes || {};
     } finally {
       clearTimeout(timeout);
       inFlightKrakenTick = null;
@@ -220,24 +239,30 @@ export async function fetchLiveCryptoSpotTicks(): Promise<Record<string, number>
   return inFlightKrakenTick;
 }
 
-// Real 1-Year OHLC Data Fetcher (with TTL Cache, In-Flight Deduplication & Real-Time Crypto Orderbook Tick Overlay)
+// Real 1-Year OHLC Data Fetcher (with TTL Cache, In-Flight Deduplication & Real-Time Kraken Bid/Ask Quote Overlay)
 export async function fetchReal1YearData(symbol: string) {
   const now = Date.now();
   const cached = ohlcCache.get(symbol);
   if (cached && now - cached.timestamp < OHLC_CACHE_TTL) {
     if (KRAKEN_PAIR_MAP[symbol]) {
-      const liveTicks = await fetchLiveCryptoSpotTicks();
-      const liveSpot = liveTicks[symbol];
-      if (liveSpot && liveSpot > 0) {
-        const cloned = { ...cached.data, price: liveSpot, lastUpdated: new Date().toISOString() };
+      const liveQuotes = await fetchLiveCryptoQuotes();
+      const q = liveQuotes[symbol];
+      if (q && q.mid > 0) {
+        const cloned = {
+          ...cached.data,
+          price: q.mid,
+          bid: q.bid,
+          ask: q.ask,
+          lastUpdated: new Date().toISOString(),
+        };
         if (Array.isArray(cloned.candles) && cloned.candles.length > 0) {
           const candlesCopy = cloned.candles.slice();
           const lastIdx = candlesCopy.length - 1;
           candlesCopy[lastIdx] = {
             ...candlesCopy[lastIdx],
-            close: liveSpot,
-            high: Math.max(candlesCopy[lastIdx].high, liveSpot),
-            low: Math.min(candlesCopy[lastIdx].low, liveSpot),
+            close: q.mid,
+            high: Math.max(candlesCopy[lastIdx].high, q.mid),
+            low: Math.min(candlesCopy[lastIdx].low, q.mid),
           };
           cloned.candles = candlesCopy;
         }
@@ -321,10 +346,15 @@ export async function fetchReal1YearData(symbol: string) {
           ? rawRegular
           : lastCandleClose;
 
+      let liveBid: number | undefined;
+      let liveAsk: number | undefined;
       if (KRAKEN_PAIR_MAP[symbol]) {
-        const liveTicks = await fetchLiveCryptoSpotTicks();
-        if (liveTicks[symbol] && liveTicks[symbol] > 0) {
-          currentPrice = liveTicks[symbol];
+        const liveQuotes = await fetchLiveCryptoQuotes();
+        const q = liveQuotes[symbol];
+        if (q && q.mid > 0) {
+          currentPrice = q.mid;
+          liveBid = q.bid;
+          liveAsk = q.ask;
         }
       }
 
@@ -350,6 +380,8 @@ export async function fetchReal1YearData(symbol: string) {
         symbol,
         ticker: yahooTicker,
         price: currentPrice,
+        bid: liveBid,
+        ask: liveAsk,
         change24h,
         changePercent24h,
         currency: meta.currency || 'USD',

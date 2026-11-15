@@ -112,6 +112,14 @@ export interface AutonomousTrade {
   spreadPts?: number;
   slippagePts?: number;
   executionCostTRY?: number;
+  entryCommissionTRY?: number;
+  exitCommissionTRY?: number;
+  financingCostTRY?: number;
+  lastSwapDateUTC?: string;
+  usdTryAtEntry?: number;
+  grossUnrealizedPnL_TRY?: number;
+  bidAtTick?: number;
+  askAtTick?: number;
   rMultiple?: number;
   mfeTRY?: number;
   mfeR?: number;
@@ -280,33 +288,56 @@ interface InstrumentMicroSpec {
   unitLabel: string;
   spreadPts: number;
   slippagePts: number;
+  ibkrCommissionRate: number;
+  ibkrMinFeeUSD: number;
+  ibkrPerShareUSD?: number;
+  maxIbkrLeverage: number;
   cluster: 'CRYPTO_MAJOR' | 'CRYPTO_L1' | 'CRYPTO_PAY' | 'CRYPTO_INFRA' | 'USD_MAJORS' | 'PRECIOUS' | 'US_TECH' | 'ENERGY';
 }
 
 const CORE_UNIVERSE: InstrumentMicroSpec[] = [
-  // 7/24 AÇIK KURUMSAL KRİPTO PİYASASI (Cumartesi & Pazar Dahil 7/24 Kesintisiz Aktif — 8 Enstrüman)
-  { symbol: 'BTC/USD', name: 'Bitcoin / ABD Doları', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, cluster: 'CRYPTO_MAJOR' },
-  { symbol: 'ETH/USD', name: 'Ethereum / ABD Doları', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, cluster: 'CRYPTO_MAJOR' },
-  { symbol: 'SOL/USD', name: 'Solana / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'SOL', spreadPts: 0.05, slippagePts: 0.01, cluster: 'CRYPTO_L1' },
-  { symbol: 'BNB/USD', name: 'BNB / ABD Doları', digits: 2, contractSize: 10, unitLabel: 'BNB', spreadPts: 0.20, slippagePts: 0.05, cluster: 'CRYPTO_L1' },
-  { symbol: 'XRP/USD', name: 'Ripple / ABD Doları', digits: 4, contractSize: 10000, unitLabel: 'XRP', spreadPts: 0.0004, slippagePts: 0.0001, cluster: 'CRYPTO_PAY' },
-  { symbol: 'AVAX/USD', name: 'Avalanche / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'AVAX', spreadPts: 0.02, slippagePts: 0.005, cluster: 'CRYPTO_L1' },
-  { symbol: 'LINK/USD', name: 'Chainlink / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'LINK', spreadPts: 0.015, slippagePts: 0.005, cluster: 'CRYPTO_INFRA' },
-  { symbol: 'DOGE/USD', name: 'Dogecoin / ABD Doları', digits: 4, contractSize: 50000, unitLabel: 'DOGE', spreadPts: 0.0002, slippagePts: 0.00005, cluster: 'CRYPTO_PAY' },
+  // 7/24 AÇIK KURUMSAL KRİPTO PİYASASI (IBKR Kripto/CME Vadeli Komisyon & 3x Başlangıç Teminatı — 8 Enstrüman)
+  { symbol: 'BTC/USD', name: 'Bitcoin / ABD Doları', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
+  { symbol: 'ETH/USD', name: 'Ethereum / ABD Doları', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
+  { symbol: 'SOL/USD', name: 'Solana / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'SOL', spreadPts: 0.05, slippagePts: 0.01, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_L1' },
+  { symbol: 'BNB/USD', name: 'BNB / ABD Doları', digits: 2, contractSize: 10, unitLabel: 'BNB', spreadPts: 0.20, slippagePts: 0.05, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_L1' },
+  { symbol: 'XRP/USD', name: 'Ripple / ABD Doları', digits: 4, contractSize: 10000, unitLabel: 'XRP', spreadPts: 0.0004, slippagePts: 0.0001, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_PAY' },
+  { symbol: 'AVAX/USD', name: 'Avalanche / ABD Doları', digits: 3, contractSize: 100, unitLabel: 'AVAX', spreadPts: 0.02, slippagePts: 0.005, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_L1' },
+  { symbol: 'LINK/USD', name: 'Chainlink / ABD Doları', digits: 3, contractSize: 100, unitLabel: 'LINK', spreadPts: 0.015, slippagePts: 0.005, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_INFRA' },
+  { symbol: 'DOGE/USD', name: 'Dogecoin / ABD Doları', digits: 5, contractSize: 50000, unitLabel: 'DOGE', spreadPts: 0.0002, slippagePts: 0.00005, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_PAY' },
 
-  // KÜRESEL FOREX, EMTİA VE ENDEKS PİYASASI (Pazartesi - Cuma 24 Saat Açık — 8 Enstrüman)
-  { symbol: 'XAU/USD', name: 'Ons Altın / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'Ons', spreadPts: 0.25, slippagePts: 0.05, cluster: 'PRECIOUS' },
-  { symbol: 'EUR/USD', name: 'Euro / ABD Doları', digits: 4, contractSize: 100000, unitLabel: 'EUR', spreadPts: 0.00012, slippagePts: 0.00003, cluster: 'USD_MAJORS' },
-  { symbol: 'USD/JPY', name: 'ABD Doları / Japon Yeni', digits: 2, contractSize: 100000, unitLabel: 'USD', spreadPts: 0.014, slippagePts: 0.004, cluster: 'USD_MAJORS' },
-  { symbol: 'GBP/USD', name: 'İngiliz Sterlini / ABD Doları', digits: 4, contractSize: 100000, unitLabel: 'GBP', spreadPts: 0.00016, slippagePts: 0.00004, cluster: 'USD_MAJORS' },
-  { symbol: 'NAS100', name: 'Nasdaq 100 Teknoloji Endeksi', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 1.15, slippagePts: 0.30, cluster: 'US_TECH' },
-  { symbol: 'SPX500', name: 'S&P 500 Endeksi', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 0.45, slippagePts: 0.12, cluster: 'US_TECH' },
-  { symbol: 'NVDA', name: 'NVIDIA Corporation', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.04, slippagePts: 0.01, cluster: 'US_TECH' },
-  { symbol: 'WTI', name: 'ABD Ham Petrolü (WTI)', digits: 2, contractSize: 100, unitLabel: 'Varil', spreadPts: 0.03, slippagePts: 0.01, cluster: 'ENERGY' },
+  // KÜRESEL FOREX, EMTİA VE ENDEKS PİYASASI (IBKR Pro IdealPro/CFD/Reg-T Komisyon & Kaldıraç Limitleri — 8 Enstrüman)
+  { symbol: 'XAU/USD', name: 'Ons Altın / ABD Doları', digits: 2, contractSize: 100, unitLabel: 'Ons', spreadPts: 0.25, slippagePts: 0.05, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
+  { symbol: 'EUR/USD', name: 'Euro / ABD Doları', digits: 4, contractSize: 100000, unitLabel: 'EUR', spreadPts: 0.00012, slippagePts: 0.00003, ibkrCommissionRate: 0.00002, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 20, cluster: 'USD_MAJORS' },
+  { symbol: 'USD/JPY', name: 'ABD Doları / Japon Yeni', digits: 2, contractSize: 100000, unitLabel: 'USD', spreadPts: 0.014, slippagePts: 0.004, ibkrCommissionRate: 0.00002, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 20, cluster: 'USD_MAJORS' },
+  { symbol: 'GBP/USD', name: 'İngiliz Sterlini / ABD Doları', digits: 4, contractSize: 100000, unitLabel: 'GBP', spreadPts: 0.00016, slippagePts: 0.00004, ibkrCommissionRate: 0.00002, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 20, cluster: 'USD_MAJORS' },
+  { symbol: 'NAS100', name: 'Nasdaq 100 Teknoloji Endeksi', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 1.15, slippagePts: 0.30, ibkrCommissionRate: 0.0001, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
+  { symbol: 'SPX500', name: 'S&P 500 Endeksi', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 0.45, slippagePts: 0.12, ibkrCommissionRate: 0.0001, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
+  { symbol: 'NVDA', name: 'NVIDIA Corporation', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.04, slippagePts: 0.01, ibkrCommissionRate: 0.0002, ibkrMinFeeUSD: 1.0, ibkrPerShareUSD: 0.005, maxIbkrLeverage: 2, cluster: 'US_TECH' },
+  { symbol: 'WTI', name: 'ABD Ham Petrolü (WTI)', digits: 2, contractSize: 100, unitLabel: 'Varil', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'ENERGY' },
 ];
 
 function getSpec(symbol: string): InstrumentMicroSpec {
   return CORE_UNIVERSE.find((c) => c.symbol === symbol) || CORE_UNIVERSE[0];
+}
+
+function computeIbkrCommissionTRY(
+  spec: InstrumentMicroSpec,
+  notionalTRY: number,
+  units: number,
+  usdTry: number
+): number {
+  const safeNotional = Math.max(0, notionalTRY);
+  if (safeNotional <= 0 || units <= 0) return 0;
+  const minFeeTRY = spec.ibkrMinFeeUSD * usdTry;
+  let feeTRY = safeNotional * spec.ibkrCommissionRate;
+  if (spec.ibkrPerShareUSD && spec.ibkrPerShareUSD > 0) {
+    const shareFeeTRY = units * spec.ibkrPerShareUSD * usdTry;
+    feeTRY = Math.min(safeNotional * 0.01, Math.max(minFeeTRY, shareFeeTRY));
+  } else {
+    feeTRY = Math.max(minFeeTRY, feeTRY);
+  }
+  return +feeTRY.toFixed(2);
 }
 
 /**
@@ -437,6 +468,10 @@ function buildForensicXRayForTrade(params: {
   maeR: number;
   maeTRY: number;
   exitReason?: string;
+  fixedUnits?: number;
+  fixedSpreadPts?: number;
+  fixedExecutionCostTRY?: number;
+  fixedRiskAmountTRY?: number;
 }): {
   xray: TradeForensicXRay;
   lotSize: number;
@@ -458,17 +493,28 @@ function buildForensicXRayForTrade(params: {
   const slDist = Math.abs(params.entryPrice - params.stopLoss) || 0.0001;
   const unitRiskTRY = slDist * quoteToUsd * params.usdTry;
 
-  // Tam Matematiksel Eşitlik: Birim × Stop Mesafesi × USD/TRY = Risk Tutarı (TL)
-  const rawUnitsByRisk = params.riskAmountTRY / (unitRiskTRY || 1);
-  const positionSizeUnits = +Math.max(0.0001, rawUnitsByRisk).toFixed(4);
-  const lotSize = +Math.max(0.01, positionSizeUnits / spec.contractSize).toFixed(2);
+  // IBKR Başlangıç Teminatı Sınırı (%1.5 Risk & Gerçek Kurumsal Kaldıraç Tavanı Birlikte Denetlenir)
+  const unitDecimals = params.entryPrice >= 1000 ? 5 : params.entryPrice >= 1 ? 4 : 2;
+  const rawUnitsByRisk = (params.fixedRiskAmountTRY ?? params.riskAmountTRY) / (unitRiskTRY || 1);
+  const maxUnitsByMargin =
+    (params.allocatedCapitalTRY * spec.maxIbkrLeverage) /
+    ((params.entryPrice * quoteToUsd * params.usdTry) || 1);
+  const positionSizeUnits =
+    params.fixedUnits !== undefined && params.fixedUnits > 0
+      ? +params.fixedUnits.toFixed(unitDecimals)
+      : +Math.max(0.00001, Math.min(rawUnitsByRisk, maxUnitsByMargin)).toFixed(unitDecimals);
+
+  const lotSize = +Math.max(0.001, positionSizeUnits / spec.contractSize).toFixed(3);
   const notionalValueTRY = +(positionSizeUnits * params.entryPrice * quoteToUsd * params.usdTry).toFixed(2);
   const effectiveLeverage = +(notionalValueTRY / (params.allocatedCapitalTRY || 1)).toFixed(2);
   const accountLeverage = +(notionalValueTRY / (params.cashBalanceTRY || 250000)).toFixed(2);
   const isLeveraged = effectiveLeverage > 1.05;
   const spot1xEquivalentPnL_TRY = +(params.realizedPnL_TRY / Math.max(1, effectiveLeverage)).toFixed(2);
-  const rawExecCost = (spec.spreadPts + spec.slippagePts) * positionSizeUnits * quoteToUsd * params.usdTry;
-  const executionCostTRY = +Math.min(params.riskAmountTRY * 0.06, Math.max(12.5, rawExecCost)).toFixed(2);
+  const actualSpreadPts = params.fixedSpreadPts !== undefined ? params.fixedSpreadPts : spec.spreadPts;
+  const executionCostTRY =
+    params.fixedExecutionCostTRY !== undefined
+      ? +params.fixedExecutionCostTRY.toFixed(2)
+      : computeIbkrCommissionTRY(spec, notionalValueTRY, positionSizeUnits, params.usdTry);
 
   // 6 Kapı Puanlaması (0 - 100 ICS)
   const isTrendAligned =
@@ -574,11 +620,11 @@ function buildForensicXRayForTrade(params: {
       title: 'Kapı 6: Sermaye Kalkanı, Lot & Mikro-Yapı Denklemi',
       metricLabel: 'Basılan Para / Kaldıraç / Hacim',
       metricValue: `Teminat: ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL | Kaldıraç: ${effectiveLeverage}x (Kasa: ${accountLeverage}x) | Hacim: ${notionalValueTRY.toLocaleString('tr-TR')} TL`,
-      threshold: 'Maks. Kasa Riski <= %1.50 & Standart Kurumsal Kaldıraç',
+      threshold: `Maks. Kasa Riski <= %1.50 & IBKR Tavan Kaldıraç (${spec.maxIbkrLeverage}x)`,
       score: 15,
       maxScore: 15,
       passed: true,
-      note: `Basılan Ana Para: ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL -> ${effectiveLeverage}x kaldıraç ile ${notionalValueTRY.toLocaleString('tr-TR')} TL (${positionSizeUnits} ${spec.unitLabel} / ${lotSize} Lot) pozisyon açıldı. Spread (${spec.spreadPts}) + Slippage (${spec.slippagePts}) maliyeti: ${executionCostTRY} TL.`,
+      note: `Basılan Ana Para: ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL -> ${effectiveLeverage}x kaldıraç ile ${notionalValueTRY.toLocaleString('tr-TR')} TL (${positionSizeUnits} ${spec.unitLabel} / ${lotSize} Lot) pozisyon açıldı. IBKR Komisyon + Spread Maliyeti: ${executionCostTRY.toLocaleString('tr-TR')} TL.`,
     },
   ];
 
@@ -677,7 +723,7 @@ function buildForensicXRayForTrade(params: {
       microstructure: {
         midQuotePrice: +params.midPrice.toFixed(params.digits),
         fillPrice: +params.entryPrice.toFixed(params.digits),
-        spreadPts: spec.spreadPts,
+        spreadPts: actualSpreadPts,
         slippagePts: spec.slippagePts,
         executionCostTRY,
         contractSize: spec.contractSize,
@@ -711,7 +757,7 @@ function buildForensicXRayForTrade(params: {
     accountLeverage,
     isLeveraged,
     spot1xEquivalentPnL_TRY,
-    spreadPts: spec.spreadPts,
+    spreadPts: actualSpreadPts,
     slippagePts: spec.slippagePts,
     executionCostTRY,
     confluenceScore,
@@ -778,7 +824,9 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
   for (const t of chronologicalClosed) {
     const r = t.realizedPnL_TRY / (t.riskAmountTRY || 3750);
     totalR += r;
-    totalExecCost += t.executionCostTRY || 24.5;
+    const paidFee =
+      (t.entryCommissionTRY ?? 0) + (t.exitCommissionTRY ?? 0) + (t.financingCostTRY ?? 0);
+    totalExecCost += paidFee > 0 ? paidFee : t.executionCostTRY || 0;
     tradeReturns.push(t.realizedPnL_TRY / state.initialCapitalTRY);
 
     if (t.realizedPnL_TRY >= 0) {
@@ -838,6 +886,11 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
   const currentDd = peak > 0 ? ((peak - state.totalEquityTRY) / peak) * 100 : 0;
   if (currentDd > maxDd) maxDd = currentDd;
 
+  // Açık pozisyonlarda halihazırda nakitten kesilmiş IBKR giriş komisyonu & taşıma maliyetini de ekle
+  for (const op of state.openPositions) {
+    totalExecCost += (op.entryCommissionTRY ?? 0) + (op.exitCommissionTRY ?? 0) + (op.financingCostTRY ?? 0);
+  }
+
   // Toplam Hacim, Kaldıraç ve Kaldıraçsız (1x Spot) Karşılaştırma Metrikleri
   const allTradesForVol = [...state.closedTrades, ...state.openPositions];
   const totalCumulativeVolumeTRY = +allTradesForVol.reduce((s, t) => s + (t.notionalValueTRY || 0), 0).toFixed(2);
@@ -848,10 +901,10 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
   const portfolioEffectiveLeverage = state.totalEquityTRY > 0
     ? +(activeNotionalVolumeTRY / state.totalEquityTRY).toFixed(2)
     : 0;
-  const spot1xTotalNetProfitTRY = +allTradesForVol.reduce(
-    (s, t) => s + ((t.totalPnL_TRY || t.realizedPnL_TRY || 0) / Math.max(1, t.effectiveLeverage || 1)),
-    0
-  ).toFixed(2);
+  const spot1xTotalNetProfitTRY = +allTradesForVol.reduce((s, t) => {
+    const net = typeof t.totalPnL_TRY === 'number' ? t.totalPnL_TRY : (t.realizedPnL_TRY || 0);
+    return s + net / Math.max(1, t.effectiveLeverage || 1);
+  }, 0).toFixed(2);
 
   state.metrics = {
     totalClosedTrades: totalClosed,
@@ -892,7 +945,9 @@ function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
     const netRealized = assetClosed.reduce((s, t) => s + t.realizedPnL_TRY, 0);
     const floating = assetOpen.reduce((s, t) => s + t.unrealizedPnL_TRY, 0);
     const sumR = assetClosed.reduce((s, t) => s + (t.realizedPnL_TRY / (t.riskAmountTRY || 3750)), 0);
-    const execCost = assetClosed.reduce((s, t) => s + (t.executionCostTRY || 24.5), 0);
+    const execCost =
+      assetClosed.reduce((s, t) => s + ((t.entryCommissionTRY ?? 0) + (t.exitCommissionTRY ?? 0) + (t.financingCostTRY ?? 0) || t.executionCostTRY || 0), 0) +
+      assetOpen.reduce((s, t) => s + ((t.entryCommissionTRY ?? 0) + (t.exitCommissionTRY ?? 0) + (t.financingCostTRY ?? 0)), 0);
     return {
       symbol: spec.symbol,
       name: spec.name,
@@ -979,10 +1034,10 @@ function ensureForensicXRayOnTrades(state: AutonomousLedgerState): void {
       newsScore: snap?.newsScore ?? (t.rationale.includes('Olumsuz') || t.rationale.includes('Negatif') ? -0.65 : t.rationale.includes('Olumlu') ? 0.55 : 0),
       newsHeadline: snap?.newsHeadline || (t.rationale.includes('Haber') ? t.rationale : ''),
       newsSource: snap?.newsSource || 'Küresel Finans Akışı',
-      cashBalanceTRY: t.allocatedCapitalTRY * 5,
+      cashBalanceTRY: state.initialCapitalTRY || t.allocatedCapitalTRY * 5,
       allocatedCapitalTRY: t.allocatedCapitalTRY,
       riskAmountTRY: t.riskAmountTRY,
-      usdTry: state.liveUsdTry || 50.34,
+      usdTry: t.usdTryAtEntry || state.liveUsdTry || 50.34,
       entryTimeIso: t.entryTime,
       closeTimeIso: t.closeTime,
       closePrice: t.closePrice,
@@ -997,6 +1052,10 @@ function ensureForensicXRayOnTrades(state: AutonomousLedgerState): void {
       maeR,
       maeTRY,
       exitReason: t.exitReason,
+      fixedUnits: t.positionSizeUnits > 0 ? t.positionSizeUnits : undefined,
+      fixedSpreadPts: typeof t.spreadPts === 'number' && t.entryCommissionTRY !== undefined ? t.spreadPts : undefined,
+      fixedExecutionCostTRY: t.entryCommissionTRY !== undefined ? (t.entryCommissionTRY + (t.exitCommissionTRY || 0) + (t.financingCostTRY || 0)) : undefined,
+      fixedRiskAmountTRY: t.riskAmountTRY,
     });
 
     t.forensicXRay = built.xray;
@@ -1008,7 +1067,8 @@ function ensureForensicXRayOnTrades(state: AutonomousLedgerState): void {
     t.effectiveLeverage = built.effectiveLeverage;
     t.accountLeverage = built.accountLeverage;
     t.isLeveraged = built.isLeveraged;
-    t.spot1xEquivalentPnL_TRY = built.spot1xEquivalentPnL_TRY;
+    const netTotalFor1x = typeof t.totalPnL_TRY === 'number' ? t.totalPnL_TRY : (t.realizedPnL_TRY || 0);
+    t.spot1xEquivalentPnL_TRY = +(netTotalFor1x / Math.max(1, built.effectiveLeverage || 1)).toFixed(2);
     t.spreadPts = built.spreadPts;
     t.slippagePts = built.slippagePts;
     t.executionCostTRY = built.executionCostTRY;
@@ -1607,11 +1667,14 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
       const raw = fs.readFileSync(LEDGER_FILE, 'utf-8');
       const parsed: AutonomousLedgerState = JSON.parse(raw);
       if (parsed && parsed.initialCapitalTRY) {
-        // 15.11.2026 07:30 öncesi eski 10.11 simülasyon işlemleri varsa tamamen temizle
+        // 15.11.2026 07:30 öncesi eski 10.11 simülasyon işlemleri VEYA gerçek IBKR komisyon düşümü olmayan eski kayıtlar varsa temizle
         const hasLegacyBackfill =
           (parsed.closedTrades || []).some((t) => t.entryTimestamp < CLEAN_START_CUTOFF_TS) ||
           (parsed.openPositions || []).some((t) => t.entryTimestamp < CLEAN_START_CUTOFF_TS);
-        if (!hasLegacyBackfill) {
+        const hasLegacyNonIbkr =
+          (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
+          (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
+        if (!hasLegacyBackfill && !hasLegacyNonIbkr) {
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -1678,20 +1741,71 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         continue;
       }
 
-      const livePrice = +market.price.toFixed(pos.digits);
+      const spec = getSpec(pos.symbol);
+      const isLong = pos.direction === 'AL (LONG)';
+      const liveMid = +market.price.toFixed(pos.digits);
+      const halfSpreadFallback = spec.spreadPts / 2;
+      const liveBid = +(
+        typeof market.bid === 'number' && market.bid > 0 ? market.bid : liveMid - halfSpreadFallback
+      ).toFixed(pos.digits);
+      const liveAsk = +(
+        typeof market.ask === 'number' && market.ask > 0 ? market.ask : liveMid + halfSpreadFallback
+      ).toFixed(pos.digits);
+
+      pos.bidAtTick = liveBid;
+      pos.askAtTick = liveAsk;
+
+      // Gerçek IBKR Kapanış Fiyatı: Long pozisyon BID'den, Short pozisyon ASK'tan likide edilir
+      const livePrice = isLong ? liveBid : liveAsk;
       pos.currentPrice = livePrice;
 
+      // Günlük IBKR Kaldıraçlı Taşıma / Gecelik Finansman Maliyeti (UTC 00:00 devri, ~SOFR+%1.5 ≈ %6.8 Yıllık)
+      const todayUtc = nowIso.slice(0, 10);
+      if (!pos.lastSwapDateUTC) {
+        pos.lastSwapDateUTC = (pos.entryTime || nowIso).slice(0, 10);
+      }
+      if (todayUtc > pos.lastSwapDateUTC) {
+        const curWeightForSwap = pos.tp1Hit ? 0.5 : 1.0;
+        const swapUnits = pos.positionSizeUnits * curWeightForSwap;
+        const swapQuoteToUsd = pos.symbol === 'USD/JPY' ? 1 / (livePrice || 155) : 1;
+        const curNotionalTRY = swapUnits * livePrice * swapQuoteToUsd * usdTry;
+        const curMarginTRY = pos.allocatedCapitalTRY * curWeightForSwap;
+        const borrowedTRY = Math.max(0, curNotionalTRY - curMarginTRY);
+        if (borrowedTRY > 0) {
+          const overnightFeeTRY = +(borrowedTRY * (0.068 / 365)).toFixed(2);
+          pos.financingCostTRY = +((pos.financingCostTRY || 0) + overnightFeeTRY).toFixed(2);
+          pos.executionCostTRY = +(
+            (pos.entryCommissionTRY || 0) +
+            (pos.exitCommissionTRY || 0) +
+            pos.financingCostTRY
+          ).toFixed(2);
+          pos.realizedPnL_TRY = +(pos.realizedPnL_TRY - overnightFeeTRY).toFixed(2);
+          state.cashBalanceTRY = +(state.cashBalanceTRY - overnightFeeTRY).toFixed(2);
+        }
+        pos.lastSwapDateUTC = todayUtc;
+      }
+
+      const quoteToUsd = pos.symbol === 'USD/JPY' ? 1 / (livePrice || 155) : 1;
       const slDist = Math.abs(pos.entryPrice - pos.initialStopLoss) || 0.0001;
-      const priceDiff = pos.direction === 'AL (LONG)'
-        ? livePrice - pos.entryPrice
-        : pos.entryPrice - livePrice;
-
+      const priceDiff = isLong ? livePrice - pos.entryPrice : pos.entryPrice - livePrice;
       const rMultiple = priceDiff / slDist;
-      const remainingWeight = pos.tp1Hit ? 0.5 : 1.0;
 
-      // MFE & MAE Güncellemesi
-      const currentFloatingTRY = +(pos.riskAmountTRY * rMultiple * remainingWeight).toFixed(2);
-      const currentTotalTRY = +(pos.realizedPnL_TRY + currentFloatingTRY).toFixed(2);
+      const tp1HalfUnits = +(pos.positionSizeUnits * 0.5).toFixed(6);
+      const calcRemainingUnits = () =>
+        pos.tp1Hit ? Math.max(0, +(pos.positionSizeUnits - tp1HalfUnits).toFixed(6)) : pos.positionSizeUnits;
+
+      const calcFloatingNetTRY = () => {
+        const remUnits = calcRemainingUnits();
+        const grossTRY = remUnits * priceDiff * quoteToUsd * usdTry;
+        const closeNotionalTRY = remUnits * livePrice * quoteToUsd * usdTry;
+        const estExitFeeTRY = computeIbkrCommissionTRY(spec, closeNotionalTRY, remUnits, usdTry);
+        pos.grossUnrealizedPnL_TRY = +grossTRY.toFixed(2);
+        return +(grossTRY - estExitFeeTRY).toFixed(2);
+      };
+
+      // MFE & MAE Güncellemesi (Komisyon & Canlı Bid/Ask Dahil Gerçek Özsermaye Sapması)
+      let currentFloatingTRY = calcFloatingNetTRY();
+      let currentTotalTRY = +(pos.realizedPnL_TRY + currentFloatingTRY).toFixed(2);
       pos.mfeR = Math.max(pos.mfeR ?? 0, +rMultiple.toFixed(2));
       pos.maeR = Math.min(pos.maeR ?? 0, +rMultiple.toFixed(2));
       pos.mfeTRY = Math.max(pos.mfeTRY ?? 0, currentTotalTRY);
@@ -1718,18 +1832,30 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           (pos.direction === 'SAT (SHORT)' && newsCtx.sentimentScore >= 0.55));
 
       if (isSevereAdverseNews && !pos.tp1Hit) {
-        const earlyPnL = +(pos.riskAmountTRY * rMultiple * remainingWeight).toFixed(2);
-        pos.realizedPnL_TRY = earlyPnL;
+        const closeUnits = calcRemainingUnits();
+        const closeNotionalTRY = closeUnits * livePrice * quoteToUsd * usdTry;
+        const exitFeeTRY = computeIbkrCommissionTRY(spec, closeNotionalTRY, closeUnits, usdTry);
+        const grossCloseTRY = closeUnits * priceDiff * quoteToUsd * usdTry;
+        const netCloseDeltaTRY = +(grossCloseTRY - exitFeeTRY).toFixed(2);
+
+        pos.exitCommissionTRY = +((pos.exitCommissionTRY || 0) + exitFeeTRY).toFixed(2);
+        pos.executionCostTRY = +(
+          (pos.entryCommissionTRY || 0) +
+          pos.exitCommissionTRY +
+          (pos.financingCostTRY || 0)
+        ).toFixed(2);
+        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + netCloseDeltaTRY).toFixed(2);
+        pos.grossUnrealizedPnL_TRY = 0;
         pos.unrealizedPnL_TRY = 0;
-        pos.totalPnL_TRY = earlyPnL;
-        pos.totalPnL_Percent = +((earlyPnL / state.initialCapitalTRY) * 100).toFixed(2);
+        pos.totalPnL_TRY = pos.realizedPnL_TRY;
+        pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
         pos.closePrice = livePrice;
         pos.closeTime = nowIso;
         pos.closeTimestamp = now;
         pos.status = 'MANUEL_KAPANDI';
-        pos.exitReason = `Canlı Haber Risk Kalkanı: "${newsCtx.impactingHeadline}" (${newsCtx.source}) ters yönlü haber şoku nedeniyle tam stop beklenmeden savunma çıkışı yapıldı.`;
+        pos.exitReason = `Canlı Haber Risk Kalkanı: "${newsCtx.impactingHeadline}" (${newsCtx.source}) ters yönlü haber şoku nedeniyle tam stop beklenmeden canlı piyasa kotasyonundan (@ ${livePrice}) çıkıldı.`;
 
-        state.cashBalanceTRY = +(state.cashBalanceTRY + earlyPnL).toFixed(2);
+        state.cashBalanceTRY = +(state.cashBalanceTRY + netCloseDeltaTRY).toFixed(2);
         state.closedTrades.unshift(pos);
 
         state.activityLog.unshift({
@@ -1737,58 +1863,79 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           timestamp: nowIso,
           type: 'SYSTEM',
           symbol: pos.symbol,
-          message: `HABER RİSK KALKANI DEVREDE: ${pos.symbol} (${pos.direction}) pozisyonu "${newsCtx.impactingHeadline}" olumsuz haberi nedeniyle tam stop zararını beklemeden ${livePrice} seviyesinden savunma amaçlı kapatıldı (${earlyPnL >= 0 ? '+' : ''}${earlyPnL.toLocaleString('tr-TR')} TL).`,
-          pnlImpactTRY: earlyPnL,
+          message: `HABER RİSK KALKANI DEVREDE: ${pos.symbol} (${pos.direction}) pozisyonu "${newsCtx.impactingHeadline}" haberi nedeniyle @ ${livePrice} seviyesinden kapatıldı (Komisyon düşülmüş toplam net: ${pos.totalPnL_TRY >= 0 ? '+' : ''}${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL).`,
+          pnlImpactTRY: netCloseDeltaTRY,
         });
         continue;
       }
 
-      // TP1 Kontrolü (%50 Kâr Al + Başabaş Stop)
-      const reachedTp1 = pos.direction === 'AL (LONG)'
-        ? livePrice >= pos.takeProfit1
-        : livePrice <= pos.takeProfit1;
+      // TP1 Kontrolü (%50 Kâr Al + Başabaş Stop — Canlı Bid/Ask üzerinden IBKR çıkış komisyonu düşülerek realize edilir)
+      const reachedTp1 = isLong ? livePrice >= pos.takeProfit1 : livePrice <= pos.takeProfit1;
 
       if (!pos.tp1Hit && reachedTp1) {
         pos.tp1Hit = true;
         pos.breakevenActive = true;
         pos.stopLoss = pos.entryPrice;
-        const tp1Ratio = Math.abs(pos.takeProfit1 - pos.entryPrice) / slDist;
-        const halfProfit = +(pos.riskAmountTRY * tp1Ratio * 0.5).toFixed(2);
-        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + halfProfit).toFixed(2);
-        state.cashBalanceTRY = +(state.cashBalanceTRY + halfProfit).toFixed(2);
+
+        const tp1NotionalTRY = tp1HalfUnits * livePrice * quoteToUsd * usdTry;
+        const tp1ExitFeeTRY = computeIbkrCommissionTRY(spec, tp1NotionalTRY, tp1HalfUnits, usdTry);
+        const grossHalfProfit = tp1HalfUnits * priceDiff * quoteToUsd * usdTry;
+        const netHalfProfit = +(grossHalfProfit - tp1ExitFeeTRY).toFixed(2);
+
+        pos.exitCommissionTRY = +((pos.exitCommissionTRY || 0) + tp1ExitFeeTRY).toFixed(2);
+        pos.executionCostTRY = +(
+          (pos.entryCommissionTRY || 0) +
+          pos.exitCommissionTRY +
+          (pos.financingCostTRY || 0)
+        ).toFixed(2);
+        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + netHalfProfit).toFixed(2);
+        state.cashBalanceTRY = +(state.cashBalanceTRY + netHalfProfit).toFixed(2);
+
+        // Kalan %50 bakiye için yüzer PnL güncelle
+        currentFloatingTRY = calcFloatingNetTRY();
+        currentTotalTRY = +(pos.realizedPnL_TRY + currentFloatingTRY).toFixed(2);
 
         state.activityLog.unshift({
           id: `ACT-TP1-${now}-${pos.symbol}`,
           timestamp: nowIso,
           type: 'TP1_PARTIAL',
           symbol: pos.symbol,
-          message: `${pos.symbol} TP1 (${pos.takeProfit1}) hedefine ulaştı! Pozisyonun %50'si (+${halfProfit.toLocaleString('tr-TR')} TL) realize edildi, Stop başabaşa (${pos.entryPrice}) çekildi.`,
-          pnlImpactTRY: halfProfit,
+          message: `${pos.symbol} TP1 (${pos.takeProfit1}) seviyesini geçti @ ${livePrice}! Pozisyonun %50'si (+${netHalfProfit.toLocaleString('tr-TR')} TL net; komisyon: -${tp1ExitFeeTRY} TL) realize edildi, Stop başabaşa (${pos.entryPrice}) çekildi.`,
+          pnlImpactTRY: netHalfProfit,
         });
       }
 
       // 2. Kademe İz Süren Stop (TP2 mesafesinin %75'ine ulaşıldığında Stop'u +0.5R'ye kilitle)
       const tp2Dist = Math.abs(pos.takeProfit2 - pos.entryPrice);
-      const reached75PctTp2 = pos.direction === 'AL (LONG)'
+      const reached75PctTp2 = isLong
         ? livePrice >= pos.entryPrice + 0.75 * tp2Dist
         : livePrice <= pos.entryPrice - 0.75 * tp2Dist;
 
       if (pos.tp1Hit && !pos.trailingStopActive && reached75PctTp2) {
         pos.trailingStopActive = true;
-        pos.stopLoss = pos.direction === 'AL (LONG)'
+        pos.stopLoss = isLong
           ? +(pos.entryPrice + 0.5 * slDist).toFixed(pos.digits)
           : +(pos.entryPrice - 0.5 * slDist).toFixed(pos.digits);
       }
 
       // TP2 Kontrolü
-      const reachedTp2 = pos.direction === 'AL (LONG)'
-        ? livePrice >= pos.takeProfit2
-        : livePrice <= pos.takeProfit2;
+      const reachedTp2 = isLong ? livePrice >= pos.takeProfit2 : livePrice <= pos.takeProfit2;
 
       if (reachedTp2) {
-        const tp2Ratio = Math.abs(pos.takeProfit2 - pos.entryPrice) / slDist;
-        const secondHalfProfit = +(pos.riskAmountTRY * tp2Ratio * 0.5).toFixed(2);
-        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + secondHalfProfit).toFixed(2);
+        const finalUnits = calcRemainingUnits();
+        const tp2NotionalTRY = finalUnits * livePrice * quoteToUsd * usdTry;
+        const tp2ExitFeeTRY = computeIbkrCommissionTRY(spec, tp2NotionalTRY, finalUnits, usdTry);
+        const grossSecondHalf = finalUnits * priceDiff * quoteToUsd * usdTry;
+        const netSecondHalf = +(grossSecondHalf - tp2ExitFeeTRY).toFixed(2);
+
+        pos.exitCommissionTRY = +((pos.exitCommissionTRY || 0) + tp2ExitFeeTRY).toFixed(2);
+        pos.executionCostTRY = +(
+          (pos.entryCommissionTRY || 0) +
+          pos.exitCommissionTRY +
+          (pos.financingCostTRY || 0)
+        ).toFixed(2);
+        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + netSecondHalf).toFixed(2);
+        pos.grossUnrealizedPnL_TRY = 0;
         pos.unrealizedPnL_TRY = 0;
         pos.totalPnL_TRY = pos.realizedPnL_TRY;
         pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
@@ -1796,9 +1943,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         pos.closeTime = nowIso;
         pos.closeTimestamp = now;
         pos.status = 'TP2_TAM_HEDEF';
-        pos.exitReason = 'TP2 nihai hedef fiyatına ulaşıldı; tüm kâr realize edildi.';
+        pos.exitReason = `TP2 nihai hedef fiyatına ulaşıldı (@ ${livePrice}); tüm IBKR giriş/çıkış komisyonları düşüldükten sonra net kâr realize edildi.`;
 
-        state.cashBalanceTRY = +(state.cashBalanceTRY + secondHalfProfit).toFixed(2);
+        state.cashBalanceTRY = +(state.cashBalanceTRY + netSecondHalf).toFixed(2);
         state.closedTrades.unshift(pos);
 
         state.activityLog.unshift({
@@ -1806,66 +1953,65 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           timestamp: nowIso,
           type: 'TP2_FULL',
           symbol: pos.symbol,
-          message: `${pos.symbol} TP2 (${pos.takeProfit2}) nihai hedefine ulaştı! Toplam +${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL net kâr kasaya eklendi.`,
-          pnlImpactTRY: secondHalfProfit,
+          message: `${pos.symbol} TP2 (${pos.takeProfit2}) hedefine ulaştı @ ${livePrice}! İşlem net +${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL kazançla kapandı (Toplam IBKR komisyon: -${pos.executionCostTRY} TL).`,
+          pnlImpactTRY: netSecondHalf,
         });
         continue;
       }
 
-      // Stop Loss / Breakeven / Trailing Stop Kontrolü
-      const hitStop = pos.direction === 'AL (LONG)'
-        ? livePrice <= pos.stopLoss
-        : livePrice >= pos.stopLoss;
+      // Stop Loss / Breakeven / Trailing Stop Kontrolü (Gerçek Piyasa Stop Emri: Canlı Bid/Ask dolumu)
+      const hitStop = isLong ? livePrice <= pos.stopLoss : livePrice >= pos.stopLoss;
 
       if (hitStop) {
+        const stopUnits = calcRemainingUnits();
+        const stopNotionalTRY = stopUnits * livePrice * quoteToUsd * usdTry;
+        const stopExitFeeTRY = computeIbkrCommissionTRY(spec, stopNotionalTRY, stopUnits, usdTry);
+        const grossStopPnL = stopUnits * priceDiff * quoteToUsd * usdTry;
+        const netStopDeltaTRY = +(grossStopPnL - stopExitFeeTRY).toFixed(2);
+
+        pos.exitCommissionTRY = +((pos.exitCommissionTRY || 0) + stopExitFeeTRY).toFixed(2);
+        pos.executionCostTRY = +(
+          (pos.entryCommissionTRY || 0) +
+          pos.exitCommissionTRY +
+          (pos.financingCostTRY || 0)
+        ).toFixed(2);
+        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + netStopDeltaTRY).toFixed(2);
+        pos.grossUnrealizedPnL_TRY = 0;
+        pos.unrealizedPnL_TRY = 0;
+        pos.totalPnL_TRY = pos.realizedPnL_TRY;
+        pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
+        pos.closePrice = livePrice;
+        pos.closeTime = nowIso;
+        pos.closeTimestamp = now;
+        state.cashBalanceTRY = +(state.cashBalanceTRY + netStopDeltaTRY).toFixed(2);
+
         if (pos.tp1Hit) {
-          const trailingBonus = pos.trailingStopActive ? +(pos.riskAmountTRY * 0.5 * 0.5).toFixed(2) : 0;
-          pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + trailingBonus).toFixed(2);
-          pos.unrealizedPnL_TRY = 0;
-          pos.totalPnL_TRY = pos.realizedPnL_TRY;
-          pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
-          pos.closePrice = pos.stopLoss;
-          pos.closeTime = nowIso;
-          pos.closeTimestamp = now;
           pos.status = pos.trailingStopActive ? 'TRAILING_STOP_KAR' : 'TP1_VE_BASABAS';
           pos.exitReason = pos.trailingStopActive
-            ? 'TP1 kârı alındıktan sonra kalan %50 kısım +0.5R İz Süren Stop kâr kilidinde kapandı.'
-            : 'TP1 kârı alındıktan sonra kalan %50 kısım Başa Baş (Breakeven) korumasında 0 zararla kapandı.';
+            ? `TP1 sonrası kalan %50 kısım +0.5R İz Süren Stop seviyesinde @ ${livePrice} icra edildi.`
+            : `TP1 sonrası kalan %50 kısım Başa Baş Stop korumasıyla @ ${livePrice} fiyatından kapandı.`;
 
-          if (trailingBonus > 0) {
-            state.cashBalanceTRY = +(state.cashBalanceTRY + trailingBonus).toFixed(2);
-          }
           state.closedTrades.unshift(pos);
           state.activityLog.unshift({
             id: `ACT-BE-${now}-${pos.symbol}`,
             timestamp: nowIso,
             type: 'BREAKEVEN_EXIT',
             symbol: pos.symbol,
-            message: `${pos.symbol} ${pos.trailingStopActive ? 'İz Süren Stop (+0.5R)' : 'Başa Baş Stop'} korumasında kapandı. Toplam +${pos.realizedPnL_TRY.toLocaleString('tr-TR')} TL kâr korundu.`,
-            pnlImpactTRY: trailingBonus,
+            message: `${pos.symbol} ${pos.trailingStopActive ? 'İz Süren Stop' : 'Başa Baş Stop'} @ ${livePrice} ile kapandı. Komisyon sonrası net toplam: ${pos.totalPnL_TRY >= 0 ? '+' : ''}${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL.`,
+            pnlImpactTRY: netStopDeltaTRY,
           });
         } else {
-          const lossTRY = -pos.riskAmountTRY;
-          pos.realizedPnL_TRY = lossTRY;
-          pos.unrealizedPnL_TRY = 0;
-          pos.totalPnL_TRY = lossTRY;
-          pos.totalPnL_Percent = +((lossTRY / state.initialCapitalTRY) * 100).toFixed(2);
-          pos.closePrice = pos.stopLoss;
-          pos.closeTime = nowIso;
-          pos.closeTimestamp = now;
           pos.status = 'STOP_LOSS';
-          pos.exitReason = 'Fiyat Stop Loss emniyet kemerine değdi; kayıp %1.5 ile sınırlandırıldı.';
+          pos.exitReason = `Fiyat Stop Loss emrini (@ ${livePrice}) tetikledi; komisyon & spread dahil net zarar gerçekleşti.`;
 
-          state.cashBalanceTRY = +(state.cashBalanceTRY + lossTRY).toFixed(2);
           state.closedTrades.unshift(pos);
-
           state.activityLog.unshift({
             id: `ACT-SL-${now}-${pos.symbol}`,
             timestamp: nowIso,
             type: 'STOP_LOSS',
             symbol: pos.symbol,
-            message: `${pos.symbol} Stop Loss (${pos.stopLoss}) seviyesinde kapandı (${lossTRY.toLocaleString('tr-TR')} TL). Sermaye Kalkanı büyük zararı önledi.`,
-            pnlImpactTRY: lossTRY,
+            message: `${pos.symbol} Stop Loss (@ ${livePrice}) tetiklendi (İşlem neti: ${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL; IBKR komisyonları dahil).`,
+            pnlImpactTRY: netStopDeltaTRY,
           });
         }
         continue;
@@ -2015,14 +2161,33 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       }
 
       if (direction && state.isRunning && state.openPositions.length < 4 && sameClusterOpen < 2) {
-        const halfSpread = candidate.spreadPts / 2 + candidate.slippagePts;
-        const entryPrice = direction === 'AL (LONG)'
-          ? +(midPrice + halfSpread).toFixed(candidate.digits)
-          : +(midPrice - halfSpread).toFixed(candidate.digits);
+        const halfSpreadFallback = candidate.spreadPts / 2;
+        const liveBid = +(
+          typeof market.bid === 'number' && market.bid > 0 ? market.bid : midPrice - halfSpreadFallback
+        ).toFixed(candidate.digits);
+        const liveAsk = +(
+          typeof market.ask === 'number' && market.ask > 0 ? market.ask : midPrice + halfSpreadFallback
+        ).toFixed(candidate.digits);
+        const actualSpreadPts = +(Math.max(0, liveAsk - liveBid)).toFixed(candidate.digits);
 
+        // Gerçek IBKR Emri: Alış ASK'tan (+slippage), Satış BID'den (-slippage) dolar
+        const entryPrice = direction === 'AL (LONG)'
+          ? +(liveAsk + candidate.slippagePts).toFixed(candidate.digits)
+          : +(liveBid - candidate.slippagePts).toFixed(candidate.digits);
+
+        const usedMarginTRY = state.openPositions.reduce(
+          (s, p) => s + p.allocatedCapitalTRY * (p.tp1Hit ? 0.5 : 1),
+          0
+        );
+        const freeMarginTRY = Math.max(0, state.cashBalanceTRY - usedMarginTRY);
         const currentEq = state.cashBalanceTRY;
-        const riskTRY = +(currentEq * 0.015 * riskScale).toFixed(2);
-        const allocTRY = +(currentEq * 0.20 * riskScale).toFixed(2);
+        const desiredRiskTRY = +(currentEq * 0.015 * riskScale).toFixed(2);
+        const rawAllocTRY = +(currentEq * 0.20 * riskScale).toFixed(2);
+        const allocTRY = +Math.min(rawAllocTRY, freeMarginTRY * 0.95).toFixed(2);
+
+        if (allocTRY < 5000) {
+          continue;
+        }
 
         const slDist = tradeAtr * 1.25;
         const tp1Dist = tradeAtr * 1.85;
@@ -2037,6 +2202,30 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const tp2 = direction === 'AL (LONG)'
           ? +(entryPrice + tp2Dist).toFixed(candidate.digits)
           : +(entryPrice - tp2Dist).toFixed(candidate.digits);
+
+        const quoteToUsd = candidate.symbol === 'USD/JPY' ? 1 / (entryPrice || 155) : 1;
+        const unitDecimals = entryPrice >= 1000 ? 5 : entryPrice >= 1 ? 4 : 2;
+        const unitRiskTRY = slDist * quoteToUsd * usdTry;
+        const rawUnitsByRisk = desiredRiskTRY / (unitRiskTRY || 1);
+        const maxUnitsByMargin = (allocTRY * candidate.maxIbkrLeverage) / ((entryPrice * quoteToUsd * usdTry) || 1);
+        const actualUnits = +Math.max(0.00001, Math.min(rawUnitsByRisk, maxUnitsByMargin)).toFixed(unitDecimals);
+        const actualRiskTRY = +(actualUnits * unitRiskTRY).toFixed(2);
+        const actualNotionalTRY = +(actualUnits * entryPrice * quoteToUsd * usdTry).toFixed(2);
+
+        // Gerçek IBKR Giriş Komisyonu: Açılış anında doğrudan nakit bakiyeden kesilir!
+        const entryCommissionTRY = computeIbkrCommissionTRY(candidate, actualNotionalTRY, actualUnits, usdTry);
+        state.cashBalanceTRY = +(state.cashBalanceTRY - entryCommissionTRY).toFixed(2);
+
+        // Anlık Likidasyon Değeri (Long BID'den, Short ASK'tan bozdurulursa + tahmini çıkış komisyonu)
+        const initLiqPrice = direction === 'AL (LONG)' ? liveBid : liveAsk;
+        const initPriceDiff = direction === 'AL (LONG)' ? initLiqPrice - entryPrice : entryPrice - initLiqPrice;
+        const initQuoteToUsd = candidate.symbol === 'USD/JPY' ? 1 / (initLiqPrice || 155) : 1;
+        const initGrossFloatTRY = +(actualUnits * initPriceDiff * initQuoteToUsd * usdTry).toFixed(2);
+        const initCloseNotional = actualUnits * initLiqPrice * initQuoteToUsd * usdTry;
+        const estExitFeeTRY = computeIbkrCommissionTRY(candidate, initCloseNotional, actualUnits, usdTry);
+        const initUnrealizedTRY = +(initGrossFloatTRY - estExitFeeTRY).toFixed(2);
+        const initRealizedTRY = +(-entryCommissionTRY).toFixed(2);
+        const initTotalPnLTRY = +(initRealizedTRY + initUnrealizedTRY).toFixed(2);
 
         const built = buildForensicXRayForTrade({
           symbol: candidate.symbol,
@@ -2059,19 +2248,23 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           newsSource: newsCtx.source,
           cashBalanceTRY: currentEq,
           allocatedCapitalTRY: allocTRY,
-          riskAmountTRY: riskTRY,
+          riskAmountTRY: actualRiskTRY,
           usdTry,
           entryTimeIso: nowIso,
           status: 'ACIK',
           tp1Hit: false,
           trailingStopActive: false,
-          realizedPnL_TRY: 0,
-          mfePrice: entryPrice,
-          mfeR: 0,
-          mfeTRY: 0,
-          maePrice: entryPrice,
-          maeR: 0,
-          maeTRY: 0,
+          realizedPnL_TRY: initRealizedTRY,
+          mfePrice: initLiqPrice,
+          mfeR: +(initPriceDiff / (slDist || 1)).toFixed(2),
+          mfeTRY: initTotalPnLTRY,
+          maePrice: initLiqPrice,
+          maeR: +(initPriceDiff / (slDist || 1)).toFixed(2),
+          maeTRY: initTotalPnLTRY,
+          fixedUnits: actualUnits,
+          fixedSpreadPts: actualSpreadPts,
+          fixedExecutionCostTRY: entryCommissionTRY,
+          fixedRiskAmountTRY: actualRiskTRY,
         });
 
         const newTrade: AutonomousTrade = {
@@ -2085,13 +2278,15 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           entryTimestamp: now,
           midEntryPrice: midPrice,
           entryPrice,
-          currentPrice: midPrice,
+          currentPrice: initLiqPrice,
+          bidAtTick: liveBid,
+          askAtTick: liveAsk,
           takeProfit1: tp1,
           takeProfit2: tp2,
           stopLoss,
           initialStopLoss: stopLoss,
           allocatedCapitalTRY: allocTRY,
-          riskAmountTRY: riskTRY,
+          riskAmountTRY: actualRiskTRY,
           positionSizeUnits: built.positionSizeUnits,
           lotSize: built.lotSize,
           contractSize: built.contractSize,
@@ -2100,22 +2295,28 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           effectiveLeverage: built.effectiveLeverage,
           accountLeverage: built.accountLeverage,
           isLeveraged: built.isLeveraged,
-          spot1xEquivalentPnL_TRY: 0,
-          spreadPts: built.spreadPts,
-          slippagePts: built.slippagePts,
-          executionCostTRY: built.executionCostTRY,
-          rMultiple: 0,
-          mfeTRY: 0,
-          mfeR: 0,
-          maeTRY: 0,
-          maeR: 0,
+          spot1xEquivalentPnL_TRY: +(initTotalPnLTRY / Math.max(1, built.effectiveLeverage)).toFixed(2),
+          spreadPts: actualSpreadPts,
+          slippagePts: candidate.slippagePts,
+          executionCostTRY: entryCommissionTRY,
+          entryCommissionTRY,
+          exitCommissionTRY: 0,
+          financingCostTRY: 0,
+          lastSwapDateUTC: nowIso.slice(0, 10),
+          usdTryAtEntry: usdTry,
+          grossUnrealizedPnL_TRY: initGrossFloatTRY,
+          rMultiple: +(initTotalPnLTRY / (actualRiskTRY || 1)).toFixed(2),
+          mfeTRY: initTotalPnLTRY,
+          mfeR: +(initPriceDiff / (slDist || 1)).toFixed(2),
+          maeTRY: initTotalPnLTRY,
+          maeR: +(initPriceDiff / (slDist || 1)).toFixed(2),
           tp1Hit: false,
           breakevenActive: false,
           trailingStopActive: false,
-          realizedPnL_TRY: 0,
-          unrealizedPnL_TRY: 0,
-          totalPnL_TRY: 0,
-          totalPnL_Percent: 0,
+          realizedPnL_TRY: initRealizedTRY,
+          unrealizedPnL_TRY: initUnrealizedTRY,
+          totalPnL_TRY: initTotalPnLTRY,
+          totalPnL_Percent: +((initTotalPnLTRY / state.initialCapitalTRY) * 100).toFixed(2),
           confluenceScore: built.confluenceScore,
           rationale,
           forensicXRay: built.xray,
@@ -2129,7 +2330,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           timestamp: nowIso,
           type: 'ENTRY',
           symbol: candidate.symbol,
-          message: `YENİ İŞLEM AÇILDI: ${candidate.symbol} (${direction} — ${built.lotSize} Lot) @ ${entryPrice} | TP1: ${tp1} | TP2: ${tp2} | SL: ${stopLoss} | Uyumluluk: ${built.confluenceScore}/100 | Gerekçe: ${rationale}`,
+          message: `YENİ İŞLEM AÇILDI: ${candidate.symbol} (${direction} — ${built.positionSizeUnits} ${candidate.unitLabel}, ${built.effectiveLeverage}x) @ ${entryPrice} (IBKR Komisyon: -${entryCommissionTRY} TL) | TP1: ${tp1} | TP2: ${tp2} | SL: ${stopLoss} | Gerekçe: ${rationale}`,
+          pnlImpactTRY: initRealizedTRY,
         });
 
         scannerResults.push({

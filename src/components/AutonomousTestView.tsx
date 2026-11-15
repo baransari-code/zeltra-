@@ -108,6 +108,12 @@ interface AutonomousTrade {
   spreadPts?: number;
   slippagePts?: number;
   executionCostTRY?: number;
+  entryCommissionTRY?: number;
+  exitCommissionTRY?: number;
+  financingCostTRY?: number;
+  bidAtTick?: number;
+  askAtTick?: number;
+  grossUnrealizedPnL_TRY?: number;
   rMultiple?: number;
   mfeTRY?: number;
   mfeR?: number;
@@ -518,7 +524,7 @@ export const AutonomousTestView: React.FC = () => {
               {isProfitable ? '+' : ''}{formatTRY(ledger.netProfitTRY)}
             </div>
             <div className="text-[11px] text-zinc-500">
-              Kapanan işlemler sonrası nakit: {formatTRY(ledger.cashBalanceTRY)}
+              Nakit: {formatTRY(ledger.cashBalanceTRY)} • IBKR Komisyon: -{formatTRY(ledger.metrics.totalSpreadAndCommissionTRY ?? 0)}
             </div>
           </div>
 
@@ -551,7 +557,7 @@ export const AutonomousTestView: React.FC = () => {
               {(ledger.metrics.avgMarginLeverage ?? 0) > 1 ? `Evet • Ortalama ${ledger.metrics.avgMarginLeverage}x` : 'Kaldıraçsız (1x)'}
             </div>
             <div className="text-[11px] text-zinc-500">
-              Stop olunca kasanın sadece %1,5&apos;i (~3.750 TL) gidecek şekilde ayarlanır
+              Her işlemde IBKR başlangıç teminatı sınırı &amp; maks. %1,5 risk korunur
             </div>
           </div>
 
@@ -561,7 +567,7 @@ export const AutonomousTestView: React.FC = () => {
               {formatTRY(ledger.metrics.activeNotionalVolumeTRY ?? 0)}
             </div>
             <div className="text-[11px] text-zinc-500">
-              Toplam işlem hacmi: {formatTRY(ledger.metrics.totalCumulativeVolumeTRY ?? 0)}
+              Toplam hacim: {formatTRY(ledger.metrics.totalCumulativeVolumeTRY ?? 0)} ({ledger.metrics.portfolioEffectiveLeverage ?? 0}x kasa)
             </div>
           </div>
 
@@ -779,7 +785,7 @@ export const AutonomousTestView: React.FC = () => {
                         </td>
                         <td className="py-3 px-2 font-mono">
                           <div className="text-zinc-300">Giriş: <strong className="text-white">{pos.entryPrice.toFixed(pos.digits)}</strong></div>
-                          <div className="text-zinc-400">Anlık: <strong className="text-white">{pos.currentPrice.toFixed(pos.digits)}</strong></div>
+                          <div className="text-zinc-400">Anlık ({pos.direction === 'AL (LONG)' ? 'Bid' : 'Ask'}): <strong className="text-white">{pos.currentPrice.toFixed(pos.digits)}</strong></div>
                         </td>
                         <td className="py-3 px-2 font-mono">
                           <div className="space-y-1.5">
@@ -802,6 +808,9 @@ export const AutonomousTestView: React.FC = () => {
                         </td>
                         <td className={`py-3 px-2 text-right font-mono font-semibold ${isPosProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
                           <div>{isPosProfit ? '+' : ''}{formatTRY(pos.totalPnL_TRY)}</div>
+                          <div className="text-[10px] font-normal text-zinc-500">
+                            IBKR Kom: -{formatTRY(pos.executionCostTRY ?? 0)}
+                          </div>
                         </td>
                         <td className="py-3 px-2 text-right">
                           <button
@@ -878,9 +887,9 @@ export const AutonomousTestView: React.FC = () => {
             </div>
 
             <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
-              <div className="text-zinc-400 text-[11px]">4. Giriş Fiyatı & Maliyet</div>
+              <div className="text-zinc-400 text-[11px]">4. Giriş Fiyatı &amp; IBKR Maliyeti</div>
               <div className="text-white font-semibold font-mono">{inspectedTrade.entryPrice.toFixed(inspectedTrade.digits)}</div>
-              <div className="text-[10px] text-zinc-500">Spread/Komisyon: {inspectedTrade.forensicXRay.microstructure.executionCostTRY} TL</div>
+              <div className="text-[10px] text-zinc-500">Ödenen Kom/Swap: -{formatTRY(inspectedTrade.executionCostTRY ?? inspectedTrade.forensicXRay.microstructure.executionCostTRY)}</div>
             </div>
 
             <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
