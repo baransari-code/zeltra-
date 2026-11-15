@@ -1728,7 +1728,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v4-hedge-alpha',
+    strategyVersion: 'v4.1-hedge-alpha',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1834,7 +1834,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
         const hasLegacyNonIbkr =
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
-        const isCurrentStrategy = parsed.strategyVersion === 'v4-hedge-alpha';
+        const isCurrentStrategy = parsed.strategyVersion === 'v4.1-hedge-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
@@ -2493,7 +2493,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       // Çift Ufuklu Kantitatif Giriş Kuralları (Yalnızca doğrulanmış yapısal kırılımlarda işlem açılır)
       if (isCrypto) {
         // 1) 1S Yapısal Donchian(36) Kırılımı
-        const hQual = hBars.length >= 40 && hEr >= 0.22 && hAdx.adx >= 20 && hRvol >= 1.1;
+        const hQual = hBars.length >= 40 && hEr >= 0.18 && hAdx.adx >= 20 && hRvol >= 1.1;
         if (
           hQual &&
           midPrice > hDon36.high * 1.0005 &&
@@ -2526,7 +2526,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const mQual =
           !direction &&
           m15Bars.length >= 40 &&
-          m15Er >= 0.22 &&
+          m15Er >= 0.18 &&
           m15Adx.adx >= 20 &&
           m15Rvol >= 1.1 &&
           hRsi >= 32 &&
@@ -2751,9 +2751,37 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           vetoReason = `Kalite Puanı Yetersiz (${candidateScore}/100 < 72): ${rationale}`;
           direction = null;
         }
-      } else if (!vetoReason) {
-        const obNote = isCrypto && obDepth.bidVol + obDepth.askVol > 0 ? ` | Defter B/A: ${obDepth.ratio}x` : '';
-        vetoReason = `Nakit Kalkanı (Sıkışma / Kırılım Yok): 1S ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 15dk ER ${m15Er} / RVOL ${m15Rvol}x${obNote}. Yatay piyasada komisyon yakmamak için Donchian(36) kırılımı bekleniyor.`;
+      } else {
+        // Bekleme / Yatay Sıkışma Halinde Canlı Kırılım Hazırlık Puanı (24 - 70 Arası Dinamik Skor)
+        const erTarget = isCrypto ? 0.18 : 0.22;
+        const bestEr = Math.max(hEr, m15Er);
+        const bestAdx = Math.max(hAdx.adx, m15Adx.adx);
+        const bestRvol = Math.max(hRvol, m15Rvol);
+
+        const activeRefBand = m15Bars.length >= 40 ? m15Don36 : hDon36;
+        const bandWidth = Math.max(1e-9, activeRefBand.high - activeRefBand.low);
+        const distTopPct = Math.max(0, (activeRefBand.high - midPrice) / bandWidth);
+        const distBotPct = Math.max(0, (midPrice - activeRefBand.low) / bandWidth);
+        const nearestEdgeRatio = 1 - Math.min(1, Math.min(distTopPct, distBotPct) * 2);
+
+        const edgePts = Math.round(nearestEdgeRatio * 24);
+        const erProgressPts = Math.round(Math.min(1, bestEr / erTarget) * 22);
+        const adxProgressPts = Math.round(Math.min(1, bestAdx / 25) * 14);
+        const volProgressPts = Math.round(Math.min(1, bestRvol / 1.5) * 10);
+        candidateScore = Math.max(24, Math.min(70, edgePts + erProgressPts + adxProgressPts + volProgressPts));
+
+        if (!vetoReason) {
+          const trigHi = activeRefBand.high.toFixed(candidate.digits);
+          const trigLo = activeRefBand.low.toFixed(candidate.digits);
+          const obNote = isCrypto && obDepth.bidVol + obDepth.askVol > 0 ? ` · Defter B/A: ${obDepth.ratio}x` : '';
+          const erGapNote =
+            bestEr < erTarget
+              ? `Yön Netliği (ER ${bestEr}/${erTarget} — piyasa yatay testerede)`
+              : bestRvol < 1.1
+                ? `Hacim Teyidi Düşük (RVOL ${bestRvol}x/1.10x)`
+                : `Fiyat Henüz Bant İçinde`;
+          vetoReason = `Nakit Kalkanı — Kırılım Bekleniyor (AL > ${trigHi} | SAT < ${trigLo}): ${erGapNote} · 15dk ER ${m15Er} / Hacim ${m15Rvol}x${obNote}. Erken işlemde komisyon yakmamak için tetik bekleniyor.`;
+        }
       }
 
       if (isMarketClosed) {
@@ -3048,7 +3076,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
     let scanStatus: MarketScannerItem['status'] = 'TEKNİK TEYİT BEKLİYOR';
     let scanReason = vetoReason || rationale || 'Sinyal teyidi bekleniyor.';
-    let scanScore = direction ? candidateScore : 58;
+    let scanScore = candidateScore;
 
     if (isMarketClosed) {
       scanStatus = 'PİYASA KAPALI (HAFTA SONU)';
