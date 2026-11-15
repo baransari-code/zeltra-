@@ -162,10 +162,15 @@ export interface HourlyBar {
   high?: number;
   low?: number;
   close: number;
+  volume?: number;
+  vwap?: number;
 }
 
 const hourlyCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
 const inFlightHourly = new Map<string, Promise<HourlyBar[]>>();
+const bars15mCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
+const inFlight15m = new Map<string, Promise<HourlyBar[]>>();
+const depthCache = new Map<string, { timestamp: number; ratio: number; bidVol: number; askVol: number }>();
 
 const KRAKEN_PAIR_MAP: Record<string, string> = {
   'BTC/USD': 'XXBTZUSD',
@@ -413,7 +418,7 @@ export async function fetchReal1YearData(symbol: string) {
   }
 }
 
-// 5 Günlük Saatlik Geçmiş Mum Verisi (Gerçek 1h OHLC + Canlı Kraken Fiyat Bindirmeli)
+// 30 Günlük Saatlik Geçmiş Mum Verisi (Kripto için doğrudan Kraken 60m OHLCV, TradFi için Yahoo 1mo/1h + Canlı Fiyat Bindirmeli)
 export async function fetchRealHourlyHistory(symbol: string): Promise<HourlyBar[]> {
   const now = Date.now();
   const cached = hourlyCache.get(symbol);
@@ -440,43 +445,71 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<HourlyBar[
   }
 
   const fetchPromise = (async () => {
-    const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=5d&interval=1h`;
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 9000);
     try {
-      const resp = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json',
-        },
-      });
+      let list: HourlyBar[] = [];
 
-      if (!resp.ok) return cached?.data || [];
-
-      const data: any = await resp.json();
-      const result = data?.chart?.result?.[0];
-      if (!result || !result.timestamp || !result.indicators?.quote?.[0]) return cached?.data || [];
-
-      const timestamps = result.timestamp;
-      const quote = result.indicators.quote[0];
-      const list: HourlyBar[] = [];
-
-      for (let i = 0; i < timestamps.length; i++) {
-        const c = quote.close[i];
-        if (c !== null && c !== undefined && !isNaN(c)) {
-          const o = quote.open?.[i] ?? c;
-          const h = quote.high?.[i] ?? Math.max(o, c);
-          const l = quote.low?.[i] ?? Math.min(o, c);
-          list.push({
-            timestamp: timestamps[i] * 1000,
-            open: +o,
-            high: +h,
-            low: +l,
-            close: +c,
+      // 1) Kripto enstrümanları için doğrudan Kraken 60dk canlı OHLCV (720 bar = 30 gün, gerçek hacim + VWAP)
+      if (KRAKEN_PAIR_MAP[symbol]) {
+        try {
+          const kPair = KRAKEN_PAIR_MAP[symbol];
+          const kResp = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${kPair}&interval=60`, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
           });
+          if (kResp.ok) {
+            const kJson: any = await kResp.json();
+            const resKey = Object.keys(kJson?.result || {}).find((k) => k !== 'last');
+            const rows: any[] = resKey ? kJson.result[resKey] || [] : [];
+            list = rows.map((r) => ({
+              timestamp: Number(r[0]) * 1000,
+              open: Number(r[1]),
+              high: Number(r[2]),
+              low: Number(r[3]),
+              close: Number(r[4]),
+              vwap: Number(r[5]) || Number(r[4]),
+              volume: Number(r[6]) || 0,
+            }));
+          }
+        } catch {
+          // fallback below
+        }
+      }
+
+      // 2) TradFi veya Kraken fallback için Yahoo 1 aylık 1h OHLCV
+      if (list.length === 0) {
+        const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=1mo&interval=1h`;
+        const resp = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/json',
+          },
+        });
+        if (!resp.ok) return cached?.data || [];
+        const data: any = await resp.json();
+        const result = data?.chart?.result?.[0];
+        if (!result || !result.timestamp || !result.indicators?.quote?.[0]) return cached?.data || [];
+
+        const timestamps = result.timestamp;
+        const quote = result.indicators.quote[0];
+        for (let i = 0; i < timestamps.length; i++) {
+          const c = quote.close[i];
+          if (c !== null && c !== undefined && !isNaN(c)) {
+            const o = quote.open?.[i] ?? c;
+            const h = quote.high?.[i] ?? Math.max(o, c);
+            const l = quote.low?.[i] ?? Math.min(o, c);
+            list.push({
+              timestamp: timestamps[i] * 1000,
+              open: +o,
+              high: +h,
+              low: +l,
+              close: +c,
+              volume: Number(quote.volume?.[i]) || 0,
+            });
+          }
         }
       }
 
@@ -507,6 +540,145 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<HourlyBar[
     return await fetchPromise;
   } finally {
     inFlightHourly.delete(symbol);
+  }
+}
+
+// 15 Dakikalık Yüksek Hassasiyetli Mikro-Zamanlama Verisi (Kripto: Kraken 15m / TradFi: Yahoo 5d 15m)
+export async function fetchReal15mHistory(symbol: string): Promise<HourlyBar[]> {
+  const now = Date.now();
+  const cached = bars15mCache.get(symbol);
+  if (cached && now - cached.timestamp < 15000) {
+    if (KRAKEN_PAIR_MAP[symbol] && cached.data.length > 0) {
+      const liveQuotes = await fetchLiveCryptoQuotes();
+      const q = liveQuotes[symbol];
+      if (q && q.mid > 0) {
+        const copy = cached.data.slice();
+        const last = copy[copy.length - 1];
+        copy[copy.length - 1] = {
+          ...last,
+          close: q.mid,
+          high: Math.max(last.high ?? q.mid, q.mid),
+          low: Math.min(last.low ?? q.mid, q.mid),
+        };
+        return copy;
+      }
+    }
+    return cached.data;
+  }
+  if (inFlight15m.has(symbol)) return inFlight15m.get(symbol)!;
+
+  const p = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    try {
+      let list: HourlyBar[] = [];
+      if (KRAKEN_PAIR_MAP[symbol]) {
+        const kPair = KRAKEN_PAIR_MAP[symbol];
+        const kResp = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${kPair}&interval=15`, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        });
+        if (kResp.ok) {
+          const kJson: any = await kResp.json();
+          const resKey = Object.keys(kJson?.result || {}).find((k) => k !== 'last');
+          const rows: any[] = resKey ? kJson.result[resKey] || [] : [];
+          list = rows.map((r) => ({
+            timestamp: Number(r[0]) * 1000,
+            open: Number(r[1]),
+            high: Number(r[2]),
+            low: Number(r[3]),
+            close: Number(r[4]),
+            vwap: Number(r[5]) || Number(r[4]),
+            volume: Number(r[6]) || 0,
+          }));
+        }
+      } else {
+        const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
+        const resp = await fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=5d&interval=15m`,
+          { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } }
+        );
+        if (resp.ok) {
+          const data: any = await resp.json();
+          const result = data?.chart?.result?.[0];
+          const ts = result?.timestamp || [];
+          const q = result?.indicators?.quote?.[0] || {};
+          for (let i = 0; i < ts.length; i++) {
+            const c = q.close?.[i];
+            if (c !== null && c !== undefined && !isNaN(c)) {
+              const o = q.open?.[i] ?? c;
+              list.push({
+                timestamp: ts[i] * 1000,
+                open: +o,
+                high: +(q.high?.[i] ?? Math.max(o, c)),
+                low: +(q.low?.[i] ?? Math.min(o, c)),
+                close: +c,
+                volume: Number(q.volume?.[i]) || 0,
+              });
+            }
+          }
+        }
+      }
+
+      if (list.length > 0 && KRAKEN_PAIR_MAP[symbol]) {
+        const q = (await fetchLiveCryptoQuotes())[symbol];
+        if (q && q.mid > 0) {
+          const last = list[list.length - 1];
+          last.close = q.mid;
+          last.high = Math.max(last.high ?? q.mid, q.mid);
+          last.low = Math.min(last.low ?? q.mid, q.mid);
+        }
+      }
+      if (list.length > 0) bars15mCache.set(symbol, { timestamp: Date.now(), data: list });
+      return list;
+    } catch {
+      return cached?.data || [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
+
+  inFlight15m.set(symbol, p);
+  try {
+    return await p;
+  } finally {
+    inFlight15m.delete(symbol);
+  }
+}
+
+// Gerçek Kraken Emir Defteri Dengesizliği (Bid/Ask Derinlik Oranı — 5 Sn Cache)
+export async function fetchCryptoOrderbookImbalance(
+  symbol: string
+): Promise<{ ratio: number; bidVol: number; askVol: number }> {
+  const kPair = KRAKEN_PAIR_MAP[symbol];
+  if (!kPair) return { ratio: 1, bidVol: 0, askVol: 0 };
+  const now = Date.now();
+  const cached = depthCache.get(symbol);
+  if (cached && now - cached.timestamp < 5000) {
+    return { ratio: cached.ratio, bidVol: cached.bidVol, askVol: cached.askVol };
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const resp = await fetch(`https://api.kraken.com/0/public/Depth?pair=${kPair}&count=20`, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!resp.ok) return cached || { ratio: 1, bidVol: 0, askVol: 0 };
+    const json: any = await resp.json();
+    const key = Object.keys(json?.result || {})[0];
+    const book = key ? json.result[key] : null;
+    if (!book?.bids || !book?.asks) return cached || { ratio: 1, bidVol: 0, askVol: 0 };
+    const bidVol = (book.bids as any[]).reduce((s, r) => s + Number(r[1] || 0), 0);
+    const askVol = (book.asks as any[]).reduce((s, r) => s + Number(r[1] || 0), 0);
+    const ratio = +(bidVol / (askVol || 1)).toFixed(2);
+    const val = { timestamp: Date.now(), ratio, bidVol, askVol };
+    depthCache.set(symbol, val);
+    return { ratio, bidVol, askVol };
+  } catch {
+    return cached || { ratio: 1, bidVol: 0, askVol: 0 };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
