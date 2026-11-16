@@ -356,8 +356,9 @@ export const AutonomousTestView: React.FC = () => {
   const [scanning, setScanning] = useState<boolean>(false);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
-  const [selectedChartSymbol, setSelectedChartSymbol] = useState<string>('BTC/USD');
+  const [selectedChartSymbol, setSelectedChartSymbol] = useState<string>('NAS100');
   const [chartSymbolManual, setChartSymbolManual] = useState<boolean>(false);
+  const [showPausedAltcoins, setShowPausedAltcoins] = useState<boolean>(false);
   const [subView, setSubView] = useState<'all' | 'xray' | 'logs' | 'scanner' | 'attribution' | 'backtest'>('all');
   const [logFilter, setLogFilter] = useState<'ALL' | 'ENTRY' | 'PROFIT' | 'RISK'>('ALL');
   const [auditWindow, setAuditWindow] = useState<'7d' | '30d'>('7d');
@@ -768,7 +769,7 @@ export const AutonomousTestView: React.FC = () => {
             { key: 'all', label: 'Genel Görünüm' },
             { key: 'xray', label: 'İşlem Detayı (Nasıl & Neden Açıldı?)' },
             { key: 'logs', label: `Tüm İşlem Kayıtları (${ledger.activityLog.length})` },
-            { key: 'scanner', label: '16 Varlık Piyasa Taraması' },
+            { key: 'scanner', label: 'Piyasa Taraması (Borsa + BTC)' },
             { key: 'attribution', label: 'Varlık Bazlı Kazanç Özeti' },
             { key: 'backtest', label: 'Gerçek Veri Testi (7.5G / 30G)' },
           ].map((tab) => (
@@ -1213,45 +1214,72 @@ export const AutonomousTestView: React.FC = () => {
         </div>
       )}
 
-      {/* 5. PROFESYONEL İNDİKATÖR TERMİNALİ & 16-VARLIK PİYASA TARAMA LİSTESİ */}
-      {(subView === 'all' || subView === 'scanner') && (
-        <ProIndicatorTerminal
-          symbol={selectedChartSymbol}
-          availableSymbols={(ledger.marketScanner || []).map((m) => m.symbol)}
-          onSymbolChange={(sym) => {
-            setChartSymbolManual(true);
-            setSelectedChartSymbol(sym);
-          }}
-        />
-      )}
+      {/* 5. PROFESYONEL İNDİKATÖR TERMİNALİ & BORSA + BTC ODak PİYASA TARAMA LİSTESİ */}
+      {(() => {
+        const allScanner = ledger.marketScanner || [];
+        const hiddenAltCount = allScanner.filter((m) => m.status === 'ALTCOİN KAPALI (BORSA+BTC)').length;
+        const baseScanner = showPausedAltcoins
+          ? allScanner
+          : allScanner.filter((m) => m.status !== 'ALTCOİN KAPALI (BORSA+BTC)');
+        const visibleScanner = baseScanner.slice().sort((a, b) => {
+          const rank = (x: MarketScannerItem) =>
+            x.status === 'POZİSYONDA (AÇIK)' ? 0 :
+            x.status === 'YENİ GİRİŞ' ? 1 :
+            x.status === 'PİYASA KAPALI (HAFTA SONU)' ? 4 :
+            x.symbol === 'BTC/USD' ? 3 :
+            x.status === 'ALTCOİN KAPALI (BORSA+BTC)' ? 5 : 2;
+          return rank(a) - rank(b);
+        });
+        return (
+          <>
+            {(subView === 'all' || subView === 'scanner') && (
+              <ProIndicatorTerminal
+                symbol={selectedChartSymbol}
+                availableSymbols={visibleScanner.map((m) => m.symbol)}
+                onSymbolChange={(sym) => {
+                  setChartSymbolManual(true);
+                  setSelectedChartSymbol(sym);
+                }}
+              />
+            )}
 
-      {(subView === 'all' || subView === 'scanner') && ledger.marketScanner && ledger.marketScanner.length > 0 && (
-        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-          <div className="border-b border-zinc-800 pb-3">
-            <h2 className="text-sm font-semibold text-white">
-              {ledger.marketScanner.length} Varlık Canlı Piyasa & Tahmin Tarama Listesi (8 Kripto 7/24 + 8 Küresel Forex/Endeks)
-            </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Herhangi bir varlığa tıklayarak üstteki kurumsal mum & tahmin indikatörünü o varlığa odaklayabilirsiniz.
-            </p>
-          </div>
+            {(subView === 'all' || subView === 'scanner') && visibleScanner.length > 0 && (
+              <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-white">
+                      {visibleScanner.length} Varlık Canlı Piyasa &amp; Tahmin Tarama Listesi ({showPausedAltcoins ? 'Tüm 16 Varlık' : 'Küresel Borsa + BTC Odak'})
+                    </h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Hafta içi Küresel Borsa + Yüksek İnançlı BTC; hafta sonu yalnızca BTC taranır ve altcoin gürültüsü gizlenir.
+                    </p>
+                  </div>
+                  {hiddenAltCount > 0 && (
+                    <button
+                      onClick={() => setShowPausedAltcoins((v) => !v)}
+                      className="shrink-0 px-2.5 py-1 rounded border border-zinc-700 bg-zinc-950 text-[11px] text-zinc-300 hover:text-white transition-colors"
+                    >
+                      {showPausedAltcoins ? 'Altcoinleri Gizle' : `Pasif Altcoinleri Göster (${hiddenAltCount})`}
+                    </button>
+                  )}
+                </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-zinc-800 text-zinc-400">
-                  <th className="py-2 px-2 font-medium">Varlık</th>
-                  <th className="py-2 px-2 font-medium text-right">Fiyat</th>
-                  <th className="py-2 px-2 font-medium">Trend Yönü</th>
-                  <th className="py-2 px-2 font-medium">+4S İleri Tahmin & TP1 İhtimali</th>
-                  <th className="py-2 px-2 font-medium text-right">RSI Gücü</th>
-                  <th className="py-2 px-2 font-medium text-center">Sinyal Puanı</th>
-                  <th className="py-2 px-2 font-medium">Mevcut Durum</th>
-                  <th className="py-2 px-2 font-medium">Açıklama</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/70">
-                {ledger.marketScanner.map((item) => {
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-zinc-800 text-zinc-400">
+                        <th className="py-2 px-2 font-medium">Varlık</th>
+                        <th className="py-2 px-2 font-medium text-right">Fiyat</th>
+                        <th className="py-2 px-2 font-medium">Trend Yönü</th>
+                        <th className="py-2 px-2 font-medium">+4S İleri Tahmin &amp; TP1 İhtimali</th>
+                        <th className="py-2 px-2 font-medium text-right">RSI Gücü</th>
+                        <th className="py-2 px-2 font-medium text-center">Sinyal Puanı</th>
+                        <th className="py-2 px-2 font-medium">Mevcut Durum</th>
+                        <th className="py-2 px-2 font-medium">Açıklama</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/70">
+                      {visibleScanner.map((item) => {
                   const isChartActive = item.symbol === selectedChartSymbol;
                   const fcDir = item.forecastDirection || 'YATAY';
                   const fcColor =
@@ -1324,6 +1352,9 @@ export const AutonomousTestView: React.FC = () => {
           </div>
         </div>
       )}
+          </>
+        );
+      })()}
 
       {/* 6. VARLIK BAZLI KAZANÇ ÖZETİ */}
       {(subView === 'all' || subView === 'attribution') && ledger.attribution && (
