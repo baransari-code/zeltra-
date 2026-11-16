@@ -978,14 +978,19 @@ export async function runForecastLab3mTick(forceGenerateNow = false): Promise<Fo
     store.macroPulse = macro;
     store.lastTickIso = new Date(now).toISOString();
 
+    // Ağ hatasından kaynaklanan geçersiz 9999sn boş-bar başlangıç kayıtlarını temizle
+    const beforeLen = store.records.length;
+    store.records = store.records.filter((r) => r.dataDelaySec < 5000);
+    let dirty = store.records.length !== beforeLen;
     const byId = new Set(store.records.map((r) => r.id));
-    let dirty = false;
 
     // 1. Öncelikle bekleyen (vadesi dolmuş) tüm tahminleri gerçekleşen 1m verisiyle puanla
     for (let i = 0; i < LAB_TRACKED_ASSETS.length; i++) {
       const spec = LAB_TRACKED_ASSETS[i];
       const bundle = bundles[i];
-      latestFeedHealth.set(spec.symbol, { liveSource: bundle.liveSource, delaySec: bundle.dataDelaySec });
+      if (bundle.bars1m.length > 0) {
+        latestFeedHealth.set(spec.symbol, { liveSource: bundle.liveSource, delaySec: bundle.dataDelaySec });
+      }
 
       for (const rec of store.records) {
         if (rec.symbol === spec.symbol && (rec.status3m === 'BEKLIYOR' || rec.status15m === 'BEKLIYOR')) {
@@ -996,12 +1001,8 @@ export async function runForecastLab3mTick(forceGenerateNow = false): Promise<Fo
       }
     }
 
-    // 2. Render uyku/restart arası kaçan 3dk pencereleri geçmiş 1m barlardan sıfır-sızıntılı telafi et (son 30 tur = 90dk kadar)
-    const startReplayBucket =
-      store.lastBucketTs > 0
-        ? Math.max(store.lastBucketTs + BUCKET_MS, currentBucket - 30 * BUCKET_MS)
-        : currentBucket - 25 * BUCKET_MS;
-
+    // 2. Render uyku / başlangıç zaman aşımı kaynaklı eksik 3dk pencereleri sembol bazında son 25 tur (~75dk) 1m barlardan sıfır-sızıntılı telafi et
+    const startReplayBucket = currentBucket - 25 * BUCKET_MS;
     const replayBuckets: number[] = [];
     for (let bTs = startReplayBucket; bTs < currentBucket; bTs += BUCKET_MS) {
       replayBuckets.push(bTs);
@@ -1046,15 +1047,19 @@ export async function runForecastLab3mTick(forceGenerateNow = false): Promise<Fo
       }
     }
 
-    // 3. Şu anki canlı 3 dakikalık pencere için tüm 9 varlığa ileri tahmin üret
+    // 3. Şu anki canlı 3 dakikalık pencere için geçerli 1m barı olan tüm varlıklara ileri tahmin üret
     if (forceGenerateNow || store.lastBucketTs < currentBucket) {
+      let generatedAnyHealthy = false;
       for (let i = 0; i < LAB_TRACKED_ASSETS.length; i++) {
         const spec = LAB_TRACKED_ASSETS[i];
         const id = `${spec.symbol}-${currentBucket}`;
-        if (byId.has(id)) continue;
+        if (byId.has(id)) {
+          generatedAnyHealthy = true;
+          continue;
+        }
         const bundle = bundles[i];
         const entryPx = bundle.livePrice;
-        if (!(entryPx > 0)) continue;
+        if (!(entryPx > 0) || bundle.bars1m.length < 15 || bundle.dataDelaySec >= 5000) continue;
 
         const rec = predictNext3Minutes({
           spec,
@@ -1073,9 +1078,12 @@ export async function runForecastLab3mTick(forceGenerateNow = false): Promise<Fo
         store.records.push(rec);
         byId.add(id);
         dirty = true;
+        generatedAnyHealthy = true;
       }
-      store.lastBucketTs = currentBucket;
-      dirty = true;
+      if (generatedAnyHealthy) {
+        store.lastBucketTs = currentBucket;
+        dirty = true;
+      }
     }
 
     if (dirty) {

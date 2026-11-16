@@ -753,46 +753,49 @@ function aggregateBarsTo3m(bars1m: HourlyBar[]): HourlyBar[] {
 }
 
 async function fetchYahoo1mBarsRaw(yahooTicker: string, range = '2d'): Promise<{ bars: HourlyBar[]; metaPrice: number }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
-  try {
-    const resp = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=${range}&interval=1m&includePrePost=true`,
-      {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          Accept: 'application/json',
-        },
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9500);
+    try {
+      const resp = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=${range}&interval=1m&includePrePost=true`,
+        {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/json',
+          },
+        }
+      );
+      if (!resp.ok) continue;
+      const data: any = await resp.json();
+      const result = data?.chart?.result?.[0];
+      const ts: number[] = result?.timestamp || [];
+      const q = result?.indicators?.quote?.[0] || {};
+      const bars: HourlyBar[] = [];
+      for (let i = 0; i < ts.length; i++) {
+        const c = q.close?.[i];
+        if (c !== null && c !== undefined && Number.isFinite(c)) {
+          const o = Number.isFinite(q.open?.[i]) ? Number(q.open[i]) : Number(c);
+          bars.push({
+            timestamp: ts[i] * 1000,
+            open: o,
+            high: Number.isFinite(q.high?.[i]) ? Number(q.high[i]) : Math.max(o, Number(c)),
+            low: Number.isFinite(q.low?.[i]) ? Number(q.low[i]) : Math.min(o, Number(c)),
+            close: Number(c),
+            volume: Number(q.volume?.[i]) || 0,
+          });
+        }
       }
-    );
-    if (!resp.ok) return { bars: [], metaPrice: 0 };
-    const data: any = await resp.json();
-    const result = data?.chart?.result?.[0];
-    const ts: number[] = result?.timestamp || [];
-    const q = result?.indicators?.quote?.[0] || {};
-    const bars: HourlyBar[] = [];
-    for (let i = 0; i < ts.length; i++) {
-      const c = q.close?.[i];
-      if (c !== null && c !== undefined && Number.isFinite(c)) {
-        const o = Number.isFinite(q.open?.[i]) ? Number(q.open[i]) : Number(c);
-        bars.push({
-          timestamp: ts[i] * 1000,
-          open: o,
-          high: Number.isFinite(q.high?.[i]) ? Number(q.high[i]) : Math.max(o, Number(c)),
-          low: Number.isFinite(q.low?.[i]) ? Number(q.low[i]) : Math.min(o, Number(c)),
-          close: Number(c),
-          volume: Number(q.volume?.[i]) || 0,
-        });
-      }
+      const metaPrice = Number(result?.meta?.regularMarketPrice) || (bars.length ? bars[bars.length - 1].close : 0);
+      if (bars.length > 0 || attempt === 1) return { bars, metaPrice };
+    } catch {
+      if (attempt === 1) return { bars: [], metaPrice: 0 };
+    } finally {
+      clearTimeout(timeout);
     }
-    const metaPrice = Number(result?.meta?.regularMarketPrice) || (bars.length ? bars[bars.length - 1].close : 0);
-    return { bars, metaPrice };
-  } catch {
-    return { bars: [], metaPrice: 0 };
-  } finally {
-    clearTimeout(timeout);
   }
+  return { bars: [], metaPrice: 0 };
 }
 
 async function fetchKraken1mBarsRaw(pair: string): Promise<HourlyBar[]> {

@@ -446,17 +446,19 @@ server.listen(PORT, () => {
   console.log(`[ZELTRA 7/24 Sunucu] Port ${PORT} üzerinde aktif.`);
   console.log(`[ZELTRA 7/24 Sunucu] 4 Günlük Doğrulama Testi ve 250.000 TL Otonom İşlem Motoru arka plan döngüsü başlatıldı.`);
 
-  // İlk tetikleme ve periyodik otomatik kontrol
+  // İlk tetikleme ve periyodik otomatik kontrol (açılışta ağ yığılmasını önlemek için 3dk Lab 8sn sonra başlar)
   let lastDispatched3mBucket = 0;
   setTimeout(() => {
     executeValidationCycle().catch(console.error);
     loadOrInitAutonomousLedger().then(() => executeAutonomousTradingTick(false)).catch(console.error);
+  }, 2000);
+  setTimeout(() => {
     runForecastLab3mTick(true)
       .then(() => {
         lastDispatched3mBucket = Math.floor(Date.now() / 180_000) * 180_000;
       })
       .catch(console.error);
-  }, 2000);
+  }, 8500);
   setInterval(() => {
     executeValidationCycle().catch(console.error);
   }, 30 * 60 * 1000);
