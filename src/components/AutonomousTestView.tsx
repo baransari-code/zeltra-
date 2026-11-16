@@ -5,6 +5,7 @@ import {
   Pause,
   RotateCcw,
 } from 'lucide-react';
+import { ProIndicatorTerminal } from './ProIndicatorTerminal';
 
 interface GateCheckItem {
   step: number;
@@ -129,6 +130,16 @@ interface AutonomousTrade {
   confluenceScore?: number;
   rationale: string;
   exitReason?: string;
+  forecastSnapshot?: {
+    horizonDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+    pred4hPrice: number;
+    pred4hPct: number;
+    pred12hPrice: number;
+    pred12hPct: number;
+    tp1Probability: number;
+    forecastConviction: number;
+    regimePhase: string;
+  };
   forensicXRay?: TradeForensicXRay;
 }
 
@@ -210,7 +221,16 @@ interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
+  forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+  forecastTarget4h?: number;
+  forecastTarget12h?: number;
+  forecastMove4hPct?: number;
+  forecastMove12hPct?: number;
+  forecastConviction?: number;
+  tp1Probability?: number;
+  squeezeOn?: boolean;
+  regimePhase?: string;
   decisionReason: string;
   scannedAt: string;
 }
@@ -284,6 +304,8 @@ export const AutonomousTestView: React.FC = () => {
   const [scanning, setScanning] = useState<boolean>(false);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
+  const [selectedChartSymbol, setSelectedChartSymbol] = useState<string>('BTC/USD');
+  const [chartSymbolManual, setChartSymbolManual] = useState<boolean>(false);
   const [subView, setSubView] = useState<'all' | 'xray' | 'logs' | 'scanner' | 'attribution'>('all');
   const [logFilter, setLogFilter] = useState<'ALL' | 'ENTRY' | 'PROFIT' | 'RISK'>('ALL');
 
@@ -300,6 +322,9 @@ export const AutonomousTestView: React.FC = () => {
           }
           return data.openPositions[0]?.id || data.closedTrades[0]?.id || null;
         });
+        if (!chartSymbolManual && data.openPositions[0]?.symbol) {
+          setSelectedChartSymbol(data.openPositions[0].symbol);
+        }
       }
     } catch (err) {
       console.error('Otonom portföy verisi alınamadı:', err);
@@ -832,7 +857,11 @@ export const AutonomousTestView: React.FC = () => {
                     return (
                       <tr
                         key={pos.id}
-                        onClick={() => setSelectedTradeId(pos.id)}
+                        onClick={() => {
+                          setSelectedTradeId(pos.id);
+                          setChartSymbolManual(true);
+                          setSelectedChartSymbol(pos.symbol);
+                        }}
                         className={`cursor-pointer transition-colors ${
                           isSelected ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/30'
                         }`}
@@ -994,7 +1023,7 @@ export const AutonomousTestView: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
             <div className="lg:col-span-7 space-y-2.5">
               <div className="text-xs font-semibold text-white">
-                İşleme Girmeden Önce Kontrol Edilen 6 Kriter
+                İşleme Girmeden Önce Kontrol Edilen Kurumsal &amp; Tahmin Kriterleri
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {inspectedTrade.forensicXRay.gates.map((gate) => (
@@ -1048,15 +1077,26 @@ export const AutonomousTestView: React.FC = () => {
         </div>
       )}
 
-      {/* 5. 16-VARLIK PİYASA TARAMA LİSTESİ */}
+      {/* 5. PROFESYONEL İNDİKATÖR TERMİNALİ & 16-VARLIK PİYASA TARAMA LİSTESİ */}
+      {(subView === 'all' || subView === 'scanner') && (
+        <ProIndicatorTerminal
+          symbol={selectedChartSymbol}
+          availableSymbols={(ledger.marketScanner || []).map((m) => m.symbol)}
+          onSymbolChange={(sym) => {
+            setChartSymbolManual(true);
+            setSelectedChartSymbol(sym);
+          }}
+        />
+      )}
+
       {(subView === 'all' || subView === 'scanner') && ledger.marketScanner && ledger.marketScanner.length > 0 && (
         <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
           <div className="border-b border-zinc-800 pb-3">
             <h2 className="text-sm font-semibold text-white">
-              {ledger.marketScanner.length} Varlık Canlı Piyasa Tarama Listesi (8 Kripto 7/24 + 8 Küresel Forex/Endeks)
+              {ledger.marketScanner.length} Varlık Canlı Piyasa & Tahmin Tarama Listesi (8 Kripto 7/24 + 8 Küresel Forex/Endeks)
             </h2>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Sistemin 4 saniyede bir taradığı varlıklarda anlık fiyat, trend yönü ve neden işleme girildiği veya beklendiği.
+              Herhangi bir varlığa tıklayarak üstteki kurumsal mum & tahmin indikatörünü o varlığa odaklayabilirsiniz.
             </p>
           </div>
 
@@ -1067,6 +1107,7 @@ export const AutonomousTestView: React.FC = () => {
                   <th className="py-2 px-2 font-medium">Varlık</th>
                   <th className="py-2 px-2 font-medium text-right">Fiyat</th>
                   <th className="py-2 px-2 font-medium">Trend Yönü</th>
+                  <th className="py-2 px-2 font-medium">+4S İleri Tahmin & TP1 İhtimali</th>
                   <th className="py-2 px-2 font-medium text-right">RSI Gücü</th>
                   <th className="py-2 px-2 font-medium text-center">Sinyal Puanı</th>
                   <th className="py-2 px-2 font-medium">Mevcut Durum</th>
@@ -1074,34 +1115,71 @@ export const AutonomousTestView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/70">
-                {ledger.marketScanner.map((item) => (
-                  <tr key={item.symbol} className="hover:bg-zinc-800/30">
-                    <td className="py-2.5 px-2">
-                      <div className="font-semibold text-white">{item.symbol}</div>
-                      <div className="text-[11px] text-zinc-500">{item.name}</div>
-                    </td>
-                    <td className="py-2.5 px-2 text-right font-mono font-semibold text-white">
-                      {item.price.toFixed(item.digits)}
-                    </td>
-                    <td className="py-2.5 px-2">
-                      <span className={item.trendRegime === 'BOĞA (BULL)' ? 'text-emerald-400 font-medium' : item.trendRegime === 'AYI (BEAR)' ? 'text-rose-400 font-medium' : 'text-zinc-300'}>
-                        {item.trendRegime === 'BOĞA (BULL)' ? 'Yükseliş Trendi' : item.trendRegime === 'AYI (BEAR)' ? 'Düşüş Trendi' : 'Yatay'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-2 text-right font-mono text-zinc-200">
-                      {item.rsi14.toFixed(1)}
-                    </td>
-                    <td className="py-2.5 px-2 text-center font-mono text-zinc-200">
-                      {item.confluenceScore}/100
-                    </td>
-                    <td className="py-2.5 px-2 font-medium text-zinc-200">
-                      {item.status}
-                    </td>
-                    <td className="py-2.5 px-2 text-zinc-400 leading-relaxed max-w-md">
-                      {item.decisionReason}
-                    </td>
-                  </tr>
-                ))}
+                {ledger.marketScanner.map((item) => {
+                  const isChartActive = item.symbol === selectedChartSymbol;
+                  const fcDir = item.forecastDirection || 'YATAY';
+                  const fcColor =
+                    fcDir === 'YÜKSELİŞ' ? 'text-emerald-400' : fcDir === 'DÜŞÜŞ' ? 'text-rose-400' : 'text-zinc-400';
+                  return (
+                    <tr
+                      key={item.symbol}
+                      onClick={() => {
+                        setChartSymbolManual(true);
+                        setSelectedChartSymbol(item.symbol);
+                      }}
+                      className={`cursor-pointer transition-colors ${
+                        isChartActive ? 'bg-sky-950/30' : 'hover:bg-zinc-800/30'
+                      }`}
+                    >
+                      <td className="py-2.5 px-2">
+                        <div className="font-semibold text-white flex items-center gap-1.5">
+                          <span>{item.symbol}</span>
+                          {item.squeezeOn && (
+                            <span className="text-[9px] font-mono px-1 rounded bg-amber-950/70 text-amber-300 border border-amber-800/60">
+                              SQZ
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-zinc-500">{item.name}</div>
+                      </td>
+                      <td className="py-2.5 px-2 text-right font-mono font-semibold text-white">
+                        {item.price.toFixed(item.digits)}
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className={item.trendRegime === 'BOĞA (BULL)' ? 'text-emerald-400 font-medium' : item.trendRegime === 'AYI (BEAR)' ? 'text-rose-400 font-medium' : 'text-zinc-300'}>
+                          {item.trendRegime === 'BOĞA (BULL)' ? 'Yükseliş Trendi' : item.trendRegime === 'AYI (BEAR)' ? 'Düşüş Trendi' : 'Yatay'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2 font-mono text-[11px]">
+                        {item.forecastTarget4h ? (
+                          <div>
+                            <div className={fcColor}>
+                              {fcDir}: <strong>{item.forecastTarget4h.toFixed(item.digits)}</strong>{' '}
+                              <span>({(item.forecastMove4hPct ?? 0) >= 0 ? '+' : ''}{item.forecastMove4hPct ?? 0}%)</span>
+                            </div>
+                            <div className="text-[10px] text-zinc-500">
+                              TP1 Olasılığı: %{item.tp1Probability ?? 50} • Güven %{item.forecastConviction ?? 60}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-zinc-500">-</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-2 text-right font-mono text-zinc-200">
+                        {item.rsi14.toFixed(1)}
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-mono text-zinc-200">
+                        {item.confluenceScore}/100
+                      </td>
+                      <td className="py-2.5 px-2 font-medium text-zinc-200">
+                        {item.status}
+                      </td>
+                      <td className="py-2.5 px-2 text-zinc-400 leading-relaxed max-w-md">
+                        {item.decisionReason}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

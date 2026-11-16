@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Navbar, AppTab } from './components/Navbar';
 import { SignalCard } from './components/SignalCard';
-import { PriceChart } from './components/PriceChart';
+import { ProIndicatorTerminal } from './components/ProIndicatorTerminal';
 import { TechnicalMatrix } from './components/TechnicalMatrix';
 import { InstitutionTracker } from './components/InstitutionTracker';
 import { RiskCalculator } from './components/RiskCalculator';
@@ -237,12 +237,10 @@ export const App: React.FC = () => {
                   currentPrice={selectedAsset.price}
                   digits={selectedAsset.digits}
                 />
-                <PriceChart
-                  candles={candles}
-                  signal={currentSignal}
-                  technicals={technicals}
+                <ProIndicatorTerminal
                   symbol={selectedAsset.symbol}
-                  digits={selectedAsset.digits}
+                  availableSymbols={assets.map((a) => a.symbol)}
+                  onSymbolChange={setSelectedSymbol}
                 />
                 <TechnicalMatrix technicals={technicals} asset={selectedAsset} candles={candles} />
               </div>

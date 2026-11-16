@@ -1,6 +1,7 @@
 // Real Financial Market Data & Multi-Source News Engine with Dynamic News-Sentiment Adaptation
 // Connects directly to Yahoo Finance and Real Multi-Source Financial RSS Feeds
 import { analyzeArticleWithAI, synthesizeAssetNewsAI } from './newsAiEngine';
+import { computeMultiHorizonForecast } from './quantForecastEngine';
 
 export const SYMBOL_MAP: Record<string, string> = {
   // Majör
@@ -1279,161 +1280,31 @@ export function generate24HourPredictions(
   candles: any[],
   digits: number = 4,
   totalHours: number = 24,
-  newsContext?: NewsContext
+  newsContext?: NewsContext,
+  hourlyBars?: HourlyBar[],
+  microBars?: HourlyBar[]
 ): HourlyPrediction[] {
-  const now = Date.now();
-  const predictions: HourlyPrediction[] = [];
+  const primaryBars =
+    hourlyBars && hourlyBars.length >= 30
+      ? hourlyBars
+      : (candles || []).map((c: any) => ({
+          timestamp: c.timestamp || Date.now(),
+          open: c.open ?? c.close,
+          high: c.high ?? c.close,
+          low: c.low ?? c.close,
+          close: c.close,
+          volume: c.volume ?? 0,
+        }));
 
-  // 1. Wilder's RMA tabanlı gerçek Günlük ATR & Saatlik Volatilite
-  const atrPeriod = 14;
-  let dailyATR = currentPrice * 0.006;
-  if (candles.length > 2) {
-    const trList: number[] = [];
-    for (let i = 1; i < candles.length; i++) {
-      const cur = candles[i];
-      const prev = candles[i - 1];
-      trList.push(Math.max(cur.high - cur.low, Math.abs(cur.high - prev.close), Math.abs(cur.low - prev.close)));
-    }
-    let rma = trList.slice(0, Math.min(atrPeriod, trList.length)).reduce((a, b) => a + b, 0) / Math.min(atrPeriod, trList.length);
-    for (let i = atrPeriod; i < trList.length; i++) {
-      rma = (rma * (atrPeriod - 1) + trList[i]) / atrPeriod;
-    }
-    dailyATR = rma || (currentPrice * 0.006);
-  }
-  const hourlyATR = dailyATR / Math.sqrt(24);
+  const forecast = computeMultiHorizonForecast(
+    primaryBars,
+    microBars && microBars.length >= 25 ? microBars : null,
+    currentPrice,
+    digits,
+    newsContext,
+    1.0,
+    totalHours
+  );
 
-  // 2. Çok Faktörlü Kantitatif Yön & Momentum Motoru (EMA8/EMA21 + 3-Bar ROC + Wilder RSI-14 Esnekliği)
-  const closes = candles.map((c: any) => c.close);
-  const calcEMAVal = (arr: number[], period: number): number => {
-    if (arr.length === 0) return currentPrice;
-    const k = 2 / (period + 1);
-    let ema = arr.slice(0, Math.min(period, arr.length)).reduce((a, b) => a + b, 0) / Math.min(period, arr.length);
-    for (let i = period; i < arr.length; i++) {
-      ema = arr[i] * k + ema * (1 - k);
-    }
-    return ema;
-  };
-
-  const ema8 = calcEMAVal(closes, 8);
-  const ema21 = calcEMAVal(closes, 21);
-  const ema50 = calcEMAVal(closes, 50);
-  const ema12 = calcEMAVal(closes, 12);
-  const ema26 = calcEMAVal(closes, 26);
-  const macdLine = ema12 - ema26;
-  const macdNorm = (macdLine / (dailyATR || 1)) * 0.25;
-
-  // Wilder's RSI-14 Hesabı
-  let rsi14 = 50;
-  if (closes.length > 15) {
-    let avgGain = 0;
-    let avgLoss = 0;
-    for (let i = 1; i <= 14; i++) {
-      const diff = closes[i] - closes[i - 1];
-      if (diff >= 0) avgGain += diff;
-      else avgLoss -= diff;
-    }
-    avgGain /= 14;
-    avgLoss /= 14;
-    for (let i = 15; i < closes.length; i++) {
-      const diff = closes[i] - closes[i - 1];
-      avgGain = (avgGain * 13 + (diff > 0 ? diff : 0)) / 14;
-      avgLoss = (avgLoss * 13 + (diff < 0 ? -diff : 0)) / 14;
-    }
-    rsi14 = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
-  }
-
-  // Kısa vadeli 3 günlük ivme, MACD ve orta vadeli EMA uyumu
-  const cLen = closes.length;
-  const shortImpulse = cLen >= 4 ? (currentPrice - closes[cLen - 4]) / (dailyATR * 3 || 1) : 0;
-  const emaSpread = (ema8 - ema21) / (dailyATR || 1);
-  const macroBias = currentPrice >= ema50 ? 0.25 : -0.25;
-
-  // RSI Aşırı Alım (>68) / Aşırı Satım (<32) Ortalamaya Dönüş (Mean-Reversion) Düzeltmesi
-  let rsiReversionForce = 0;
-  if (rsi14 > 68) {
-    rsiReversionForce = -((rsi14 - 68) / 32) * 0.65;
-  } else if (rsi14 < 32) {
-    rsiReversionForce = ((32 - rsi14) / 32) * 0.65;
-  }
-
-  // Birleşik Kantitatif Drift Katsayısı (-1.2 ile +1.2 arası normalize güç)
-  const rawCompositeSignal = (shortImpulse * 0.38) + (emaSpread * 0.32) + macdNorm + macroBias + rsiReversionForce;
-  const compositeDriftScore = Math.max(-1.1, Math.min(1.1, rawCompositeSignal));
-
-  // CANLI HABER ŞOKU VE DUYARLILIK UYARLAMASI
-  const newsSentiment = newsContext?.sentimentScore || 0;
-  const newsShock = newsContext?.shockLevel || 0;
-  const isNewsActive = Math.abs(newsSentiment) > 0.15 || newsShock > 0.3;
-
-  for (let h = 1; h <= totalHours; h++) {
-    const targetTimestamp = now + h * 3600 * 1000;
-    const targetDate = new Date(targetTimestamp);
-    const hoursNum = targetDate.getHours();
-    const targetTime = `${hoursNum.toString().padStart(2, '0')}:${targetDate.getMinutes().toString().padStart(2, '0')}`;
-
-    // Piyasa seans sınıflandırması
-    let session = 'Avrupa / Londra Seansı';
-    let sessionVolFactor = 1.0;
-    if (hoursNum >= 0 && hoursNum < 8) {
-      session = 'Asya / Pasifik Seansı';
-      sessionVolFactor = 0.75;
-    } else if (hoursNum >= 8 && hoursNum < 15) {
-      session = 'Avrupa / Londra Seansı';
-      sessionVolFactor = 1.15;
-    } else if (hoursNum >= 15 && hoursNum < 22) {
-      session = 'ABD / New York Seansı';
-      sessionVolFactor = 1.25;
-    } else {
-      session = 'New York Kapanış / Geç Seans';
-      sessionVolFactor = 0.85;
-    }
-
-    const timeFactor = Math.sqrt(h);
-
-    // Çok faktörlü teknik sapma (EMA8/21 + Kısa İvme + RSI Ortalamaya Dönüş)
-    const technicalDrift = compositeDriftScore * (0.26 * timeFactor * hourlyATR * sessionVolFactor);
-    // Canlı Haber Şoku: İlk 8 saatte en yüksek ağırlıkla fiyata yansır
-    const newsDecay = Math.exp(-h / 10);
-    const newsDrift = (newsSentiment * 0.45 * newsDecay * timeFactor * hourlyATR);
-
-    const totalDrift = technicalDrift + newsDrift;
-    const predictedPrice = +(currentPrice + totalDrift).toFixed(digits);
-
-    // %98 Gauss Güven Koridoru (Z = 2.42 sigma) ve Canlı Haber Volatilite Genişlemesi
-    const newsVolatilityExpansion = 1 + (newsShock * 0.35 * newsDecay);
-    const zMultiplier = 2.42; // %98 Normal / Gauss güven aralığı
-    const bandWidth = zMultiplier * hourlyATR * (0.55 * timeFactor) * sessionVolFactor * newsVolatilityExpansion;
-    const upperBound = +(predictedPrice + bandWidth).toFixed(digits);
-    const lowerBound = +(predictedPrice - bandWidth).toFixed(digits);
-    const expectedMovePercent = +(((predictedPrice - currentPrice) / currentPrice) * 100).toFixed(3);
-
-    const expectedDirection = Math.abs(expectedMovePercent) < 0.005 ? 'YATAY' : totalDrift >= 0 ? 'YÜKSELİŞ' : 'DÜŞÜŞ';
-    const confidenceScore = Math.max(72, Math.floor(95 - h * 0.82 - (newsShock * 3.5)));
-
-    let rationale = '';
-    if (isNewsActive && h <= 6) {
-      rationale = `Canlı Haber Uyarlaması: "${newsContext?.impactingHeadline?.slice(0, 52)}..." sebebiyle fiyat projeksiyonu anlık revize edildi.`;
-    } else if (h <= 12) {
-      rationale = `${session}: EMA8/21 akışı (RSI: ${rsi14.toFixed(1)}) ve seans likidite dengesi.`;
-    } else {
-      rationale = `${session}: 24 saatlik tam döngü ve günlük Wilder ATR kapanış hedefi.`;
-    }
-
-    predictions.push({
-      hour: h,
-      targetTime,
-      targetTimestamp,
-      predictedPrice,
-      expectedDirection,
-      upperBound,
-      lowerBound,
-      expectedMovePercent,
-      confidenceScore,
-      session,
-      newsAdjusted: isNewsActive,
-      rationale,
-    });
-  }
-
-  return predictions;
+  return forecast.hourlyPath;
 }

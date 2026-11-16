@@ -12,6 +12,7 @@ import {
   HourlyBar,
 } from './marketService';
 import { synthesizeAssetNewsAI } from './newsAiEngine';
+import { computeMultiHorizonForecast, MultiHorizonForecast } from './quantForecastEngine';
 
 export interface GateCheckItem {
   step: number;
@@ -139,6 +140,16 @@ export interface AutonomousTrade {
   entryTimeframe?: '1H' | '15M';
   rationale: string;
   exitReason?: string;
+  forecastSnapshot?: {
+    horizonDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+    pred4hPrice: number;
+    pred4hPct: number;
+    pred12hPrice: number;
+    pred12hPct: number;
+    tp1Probability: number;
+    forecastConviction: number;
+    regimePhase: string;
+  };
   forensicXRay?: TradeForensicXRay;
 }
 
@@ -220,7 +231,16 @@ export interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
+  forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+  forecastTarget4h?: number;
+  forecastTarget12h?: number;
+  forecastMove4hPct?: number;
+  forecastMove12hPct?: number;
+  forecastConviction?: number;
+  tp1Probability?: number;
+  squeezeOn?: boolean;
+  regimePhase?: string;
   decisionReason: string;
   scannedAt: string;
 }
@@ -617,6 +637,7 @@ function buildForensicXRayForTrade(params: {
   fixedExecutionCostTRY?: number;
   fixedRiskAmountTRY?: number;
   fixedConfluenceScore?: number;
+  forecastSnapshot?: AutonomousTrade['forecastSnapshot'];
 }): {
   xray: TradeForensicXRay;
   lotSize: number;
@@ -775,6 +796,21 @@ function buildForensicXRayForTrade(params: {
       passed: true,
       note: `Basılan Ana Para: ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL -> ${effectiveLeverage}x kaldıraç ile ${notionalValueTRY.toLocaleString('tr-TR')} TL (${positionSizeUnits} ${spec.unitLabel} / ${lotSize} Lot) pozisyon açıldı. IBKR Komisyon + Spread Maliyeti: ${executionCostTRY.toLocaleString('tr-TR')} TL.`,
     },
+    ...(params.forecastSnapshot
+      ? [
+          {
+            step: 7,
+            title: 'Kapı 7: İleriye Dönük Kantitatif Tahmin Onayı (+4S / +12S)',
+            metricLabel: 'Projeksiyon Hedefleri & Olasılık',
+            metricValue: `+4S: ${params.forecastSnapshot.pred4hPrice} (${params.forecastSnapshot.pred4hPct >= 0 ? '+' : ''}${params.forecastSnapshot.pred4hPct}%) | +12S: ${params.forecastSnapshot.pred12hPrice} | TP1 İhtimali: %${params.forecastSnapshot.tp1Probability}`,
+            threshold: 'Tahmin Yönü Hizalı & Climax Aşırı Uzama Yok',
+            score: Math.round((params.forecastSnapshot.forecastConviction / 100) * 15),
+            maxScore: 15,
+            passed: true,
+            note: `İki zaman ölçekli tahmin motoru (${params.forecastSnapshot.regimePhase}) %${params.forecastSnapshot.forecastConviction} güvenle ${params.forecastSnapshot.horizonDirection} projeksiyonu vererek işlemi onayladı.`,
+          },
+        ]
+      : []),
   ];
 
   const sizingFormulaText = `Basılan Ana Para (Teminat): ${params.allocatedCapitalTRY.toLocaleString('tr-TR')} TL × ${effectiveLeverage}x Kaldıraç = ${notionalValueTRY.toLocaleString('tr-TR')} TL Toplam İşlem Hacmi (Kasa Kaldıracı: ${accountLeverage}x) | Birim = Risk (${params.riskAmountTRY.toLocaleString('tr-TR')} TL) ÷ [SL Mesafesi (${slDist.toFixed(params.digits)}) × Kur (${params.usdTry.toFixed(2)} TL)] = ${positionSizeUnits} ${spec.unitLabel} (${lotSize} Standart Lot)`;
@@ -1752,7 +1788,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v5.3-quant-alpha',
+    strategyVersion: 'v6.0-forecast-alpha',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1859,12 +1895,13 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v6.0-forecast-alpha' ||
           parsed.strategyVersion === 'v5.3-quant-alpha' ||
           parsed.strategyVersion === 'v5.2-quant-alpha' ||
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v5.3-quant-alpha';
+          parsed.strategyVersion = 'v6.0-forecast-alpha';
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -2389,7 +2426,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     riskScale: number;
     vetoReason: string;
     isNewsVeto: boolean;
+    isForecastVeto: boolean;
     candidateScore: number;
+    forecast: MultiHorizonForecast;
     executedTrade?: AutonomousTrade;
     blockedStatus?: MarketScannerItem['status'];
     blockedReason?: string;
@@ -2473,6 +2512,15 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         newsScore = +(macroCryptoSentiment * 0.45).toFixed(2);
       }
 
+      const forecast = computeMultiHorizonForecast(
+        hBars.length >= 25 ? hBars : candles,
+        m15Bars.length >= 25 ? m15Bars : null,
+        midPrice,
+        candidate.digits,
+        newsCtx,
+        obDepth.ratio
+      );
+
       const trendRegime: MarketScannerItem['trendRegime'] =
         midPrice >= ema50 * 1.0005 ? 'BOĞA (BULL)' : midPrice <= ema50 * 0.9995 ? 'AYI (BEAR)' : 'YATAY';
 
@@ -2504,7 +2552,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           riskScale: 1,
           vetoReason: '',
           isNewsVeto: false,
+          isForecastVeto: false,
           candidateScore: existingOpen.confluenceScore || 88,
+          forecast,
         });
         continue;
       }
@@ -2515,6 +2565,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const riskScale = 1.0;
       let vetoReason = '';
       let isNewsVeto = false;
+      let isForecastVeto = false;
       let candidateScore = 52;
 
       // 2.5 Saatlik Stop / Time-Stop Soğuma Kalkanı (Testere yeniden girişlerini keser)
@@ -2780,7 +2831,25 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const feePts = tp1RatioPct >= minViableTpPct * 1.4 ? 8 : 5;
         candidateScore = Math.max(0, Math.min(98, erPts + adxPts + rvolPts + rsiCenterPts + macroObPts + feePts));
 
-        if (candidateScore < 68) {
+        // v6.0 İleriye Dönük Tahmin Doğrulama Kapısı (Tepe/Dip Climax Tuzaklarını Engeller & Güçlü Tahminleri Ödüllendirir)
+        const dirTp1Prob = direction === 'AL (LONG)' ? forecast.tp1HitProbLong : forecast.tp1HitProbShort;
+        if (direction === 'AL (LONG)' && forecast.gateBias < -0.05) {
+          isForecastVeto = true;
+          vetoReason = `Tahmin Kalkanı Vetosu (AL): Kısa vadeli aşırı uzama sonrası ileriye dönük +4S/+12S projeksiyon düşüş riski gösteriyor (Hedef ${forecast.pred4hPrice}, Bias ${forecast.gateBias}); tepe tuzağı engellendi.`;
+          direction = null;
+        } else if (direction === 'SAT (SHORT)' && forecast.gateBias > 0.05) {
+          isForecastVeto = true;
+          vetoReason = `Tahmin Kalkanı Vetosu (SAT): Dip uzaması sonrası ileriye dönük +4S/+12S projeksiyon yukarı tepki riski gösteriyor (Hedef ${forecast.pred4hPrice}, Bias ${forecast.gateBias}); dip tuzağı engellendi.`;
+          direction = null;
+        } else {
+          if (dirTp1Prob >= 47 && Math.abs(forecast.gateBias) >= 0.22) {
+            candidateScore = Math.min(98, candidateScore + 5);
+          }
+          const fcPctStr = forecast.pred4hPct >= 0 ? `+${forecast.pred4hPct}%` : `${forecast.pred4hPct}%`;
+          rationale = `${rationale} | +4S Tahmin: ${forecast.pred4hPrice} (${fcPctStr}, TP1 İhtimali %${dirTp1Prob})`;
+        }
+
+        if (direction && candidateScore < 68) {
           vetoReason = `Kalite Puanı Yetersiz (${candidateScore}/100 < 68): ${rationale}`;
           direction = null;
         }
@@ -2865,7 +2934,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         riskScale,
         vetoReason,
         isNewsVeto,
+        isForecastVeto,
         candidateScore,
+        forecast,
       });
     } catch {
       // Ignore individual fetch error
@@ -3019,6 +3090,17 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         fixedExecutionCostTRY: entryCommissionTRY,
         fixedRiskAmountTRY: actualRiskTRY,
         fixedConfluenceScore: item.candidateScore,
+        forecastSnapshot: {
+          horizonDirection: item.forecast.horizonDirection,
+          pred4hPrice: item.forecast.pred4hPrice,
+          pred4hPct: item.forecast.pred4hPct,
+          pred12hPrice: item.forecast.pred12hPrice,
+          pred12hPct: item.forecast.pred12hPct,
+          tp1Probability:
+            direction === 'AL (LONG)' ? item.forecast.tp1HitProbLong : item.forecast.tp1HitProbShort,
+          forecastConviction: item.forecast.forecastConviction,
+          regimePhase: item.forecast.regimePhase,
+        },
       });
 
       const newTrade: AutonomousTrade = {
@@ -3074,6 +3156,17 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         confluenceScore: item.candidateScore,
         entryTimeframe: item.entryTimeframe,
         rationale,
+        forecastSnapshot: {
+          horizonDirection: item.forecast.horizonDirection,
+          pred4hPrice: item.forecast.pred4hPrice,
+          pred4hPct: item.forecast.pred4hPct,
+          pred12hPrice: item.forecast.pred12hPrice,
+          pred12hPct: item.forecast.pred12hPct,
+          tp1Probability:
+            direction === 'AL (LONG)' ? item.forecast.tp1HitProbLong : item.forecast.tp1HitProbShort,
+          forecastConviction: item.forecast.forecastConviction,
+          regimePhase: item.forecast.regimePhase,
+        },
         forensicXRay: built.xray,
       };
 
@@ -3093,7 +3186,25 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
   // Pass 3: Tarama Tablosunu Orijinal Enstrüman Sırasıyla Derle
   const scannerResults: MarketScannerItem[] = evaluatedList.map((e) => {
-    const { candidate, midPrice, ema8, ema21, ema50, trendRegime, rsi, dailyAtr, newsScore, newsCtx, existingOpen, isMarketClosed, marketSession, direction, rationale, vetoReason, isNewsVeto, candidateScore, executedTrade, blockedStatus, blockedReason } = e;
+    const { candidate, midPrice, ema8, ema21, ema50, trendRegime, rsi, dailyAtr, newsScore, newsCtx, existingOpen, isMarketClosed, marketSession, direction, rationale, vetoReason, isNewsVeto, isForecastVeto, candidateScore, forecast, executedTrade, blockedStatus, blockedReason } = e;
+    const activeProb =
+      (existingOpen?.direction || executedTrade?.direction || direction) === 'AL (LONG)'
+        ? forecast.tp1HitProbLong
+        : (existingOpen?.direction || executedTrade?.direction || direction) === 'SAT (SHORT)'
+        ? forecast.tp1HitProbShort
+        : Math.max(forecast.tp1HitProbLong, forecast.tp1HitProbShort);
+    const fcFields = {
+      forecastDirection: forecast.horizonDirection,
+      forecastTarget4h: forecast.pred4hPrice,
+      forecastTarget12h: forecast.pred12hPrice,
+      forecastMove4hPct: forecast.pred4hPct,
+      forecastMove12hPct: forecast.pred12hPct,
+      forecastConviction: forecast.forecastConviction,
+      tp1Probability: activeProb,
+      squeezeOn: forecast.indicators.squeezeOn,
+      regimePhase: forecast.regimePhase,
+    };
+
     if (existingOpen) {
       return {
         symbol: candidate.symbol,
@@ -3111,7 +3222,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         confluenceScore: existingOpen.confluenceScore || 88,
         candidateDirection: existingOpen.direction,
         status: 'POZİSYONDA (AÇIK)',
-        decisionReason: `Aktif ${existingOpen.direction} [${existingOpen.entryTimeframe || '1H'}] (${existingOpen.positionSizeUnits} ${candidate.unitLabel}) yönetiliyor (${existingOpen.trailingStopActive ? `Chandelier 1.6x Stop Aktif: ${existingOpen.stopLoss}` : existingOpen.tp1Hit ? `TP1 Alındı, Başabaş Stop: ${existingOpen.stopLoss}` : `SL: ${existingOpen.stopLoss} | TP1: ${existingOpen.takeProfit1}`}).`,
+        ...fcFields,
+        decisionReason: `Aktif ${existingOpen.direction} [${existingOpen.entryTimeframe || '1H'}] (${existingOpen.positionSizeUnits} ${candidate.unitLabel}) yönetiliyor (${existingOpen.trailingStopActive ? `Chandelier İz Stop Aktif: ${existingOpen.stopLoss}` : existingOpen.tp1Hit ? `TP1 Alındı, Başabaş Stop: ${existingOpen.stopLoss}` : `SL: ${existingOpen.stopLoss} | TP1: ${existingOpen.takeProfit1}`}).`,
         scannedAt: nowIso,
       };
     }
@@ -3132,7 +3244,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         confluenceScore: candidateScore,
         candidateDirection: executedTrade.direction,
         status: 'YENİ GİRİŞ',
-        decisionReason: `MTF & Komisyon Kapısı Onaylandı (${candidateScore}/100): ${executedTrade.positionSizeUnits} ${candidate.unitLabel} ${executedTrade.direction} @ ${executedTrade.entryPrice} icra edildi.`,
+        ...fcFields,
+        decisionReason: `Tahmin & Teknik Çift Onay (${candidateScore}/100): ${executedTrade.positionSizeUnits} ${candidate.unitLabel} ${executedTrade.direction} @ ${executedTrade.entryPrice} (+4S Hedef ${forecast.pred4hPrice}, TP1 İhtimali %${activeProb}).`,
         scannedAt: nowIso,
       };
     }
@@ -3148,6 +3261,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     } else if (isNewsVeto) {
       scanStatus = 'HABER VETOSU';
       scanScore = 44;
+    } else if (isForecastVeto) {
+      scanStatus = 'TAHMİN VETOSU';
+      scanScore = 46;
     } else if (blockedStatus) {
       scanStatus = blockedStatus;
       scanReason = blockedReason || scanReason;
@@ -3169,6 +3285,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       confluenceScore: scanScore,
       candidateDirection: direction || 'BEKLE',
       status: scanStatus,
+      ...fcFields,
       decisionReason: scanReason,
       scannedAt: nowIso,
     };

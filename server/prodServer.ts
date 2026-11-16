@@ -4,11 +4,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import {
   fetchReal1YearData,
+  fetchRealHourlyHistory,
+  fetchReal15mHistory,
   fetchRealFinancialNews,
   generate24HourPredictions,
   extractNewsSentimentForAsset,
   fetchLiveUsdTryRate,
 } from './marketService';
+import {
+  computeMultiHorizonForecast,
+  computeProChartSeries,
+} from './quantForecastEngine';
 import {
   loadTestState,
   executeValidationCycle,
@@ -125,9 +131,11 @@ const server = http.createServer(async (req, res) => {
       const hours = parseInt(urlObj.searchParams.get('hours') || '24', 10);
       const digitsParam = urlObj.searchParams.get('digits');
 
-      const [marketData, newsList] = await Promise.all([
+      const [marketData, newsList, hourlyBars, bars15m] = await Promise.all([
         fetchReal1YearData(symbol),
         fetchRealFinancialNews(),
+        fetchRealHourlyHistory(symbol).catch(() => []),
+        fetchReal15mHistory(symbol).catch(() => []),
       ]);
 
       const newsContext = extractNewsSentimentForAsset(symbol, newsList);
@@ -149,7 +157,15 @@ const server = http.createServer(async (req, res) => {
         digits = 2;
       }
 
-      const predictions = generate24HourPredictions(marketData.price, marketData.candles, digits, hours, newsContext);
+      const predictions = generate24HourPredictions(
+        marketData.price,
+        marketData.candles,
+        digits,
+        hours,
+        newsContext,
+        hourlyBars,
+        bars15m
+      );
 
       res.setHeader('Content-Type', 'application/json');
       res.end(
@@ -167,6 +183,115 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: err?.message || 'Tahmin üretilemedi' }));
+    }
+    return;
+  }
+
+  // 2b. API: Profesyonel Mum Grafik, Çok-Katmanlı İndikatörler & Tahmin Konisi (/api/pro-chart)
+  if (pathname === '/api/pro-chart') {
+    try {
+      const symbol = urlObj.searchParams.get('symbol') || 'BTC/USD';
+      const tfParam = urlObj.searchParams.get('tf') || '1h';
+      const tf = tfParam === '15m' || tfParam === '1d' ? tfParam : '1h';
+      const digitsParam = urlObj.searchParams.get('digits');
+
+      const [marketData, newsList, hourlyBars, bars15m, ledgerState] = await Promise.all([
+        fetchReal1YearData(symbol),
+        fetchRealFinancialNews().catch(() => []),
+        fetchRealHourlyHistory(symbol).catch(() => []),
+        fetchReal15mHistory(symbol).catch(() => []),
+        loadOrInitAutonomousLedger().catch(() => null),
+      ]);
+
+      const newsContext = extractNewsSentimentForAsset(symbol, newsList);
+      const price = marketData.price;
+
+      let digits = 4;
+      if (digitsParam !== null && !isNaN(parseInt(digitsParam, 10))) {
+        digits = parseInt(digitsParam, 10);
+      } else if (
+        price < 0.2
+      ) {
+        digits = 5;
+      } else if (price < 5 && (symbol.includes('XRP') || symbol.includes('ADA') || symbol.includes('DOGE'))) {
+        digits = 4;
+      } else if (
+        price >= 20 ||
+        symbol.includes('JPY') ||
+        symbol.includes('TRY') ||
+        symbol.includes('XAU') ||
+        symbol.includes('XAG') ||
+        symbol.includes('NAS') ||
+        symbol.includes('SPX') ||
+        symbol.includes('WTI') ||
+        symbol.includes('BRENT')
+      ) {
+        digits = 2;
+      }
+
+      const rawDaily = (marketData.candles || []).map((c: any) => ({
+        timestamp: c.timestamp || Date.now(),
+        open: c.open ?? c.close,
+        high: c.high ?? c.close,
+        low: c.low ?? c.close,
+        close: c.close,
+        volume: c.volume ?? 0,
+      }));
+
+      const chartSource =
+        tf === '15m' && bars15m.length >= 25
+          ? bars15m
+          : tf === '1d'
+          ? rawDaily
+          : hourlyBars.length >= 25
+          ? hourlyBars
+          : rawDaily;
+
+      const candles = computeProChartSeries(chartSource, digits, 80, tf !== '1d');
+      const forecast = computeMultiHorizonForecast(
+        hourlyBars.length >= 25 ? hourlyBars : rawDaily,
+        bars15m.length >= 25 ? bars15m : null,
+        price,
+        digits,
+        newsContext,
+        1.0,
+        24
+      );
+
+      const activeTrade = ledgerState?.openPositions?.find((p) => p.symbol === symbol);
+      const scannerRow = ledgerState?.marketScanner?.find((s) => s.symbol === symbol);
+
+      res.setHeader('Content-Type', 'application/json');
+      res.end(
+        JSON.stringify({
+          symbol,
+          tf,
+          digits,
+          currentPrice: price,
+          change24h: marketData.change24h,
+          changePercent24h: marketData.changePercent24h,
+          candles,
+          forecast,
+          newsContext,
+          activeTrade: activeTrade
+            ? {
+                direction: activeTrade.direction,
+                entryPrice: activeTrade.entryPrice,
+                stopLoss: activeTrade.stopLoss,
+                takeProfit1: activeTrade.takeProfit1,
+                takeProfit2: activeTrade.takeProfit2,
+                totalPnL_TRY: activeTrade.totalPnL_TRY,
+                entryTimeframe: activeTrade.entryTimeframe || '1H',
+              }
+            : null,
+          scannerRow: scannerRow || null,
+          generatedAt: new Date().toISOString(),
+        })
+      );
+    } catch (err: any) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: err?.message || 'Pro grafik verisi üretilemedi' }));
     }
     return;
   }
