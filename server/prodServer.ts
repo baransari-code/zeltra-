@@ -165,7 +165,8 @@ const server = http.createServer(async (req, res) => {
         hours,
         newsContext,
         hourlyBars,
-        bars15m
+        bars15m,
+        marketData.symbol
       );
 
       res.setHeader('Content-Type', 'application/json');
@@ -256,7 +257,8 @@ const server = http.createServer(async (req, res) => {
         digits,
         newsContext,
         1.0,
-        24
+        24,
+        symbol
       );
 
       const activeTrade = ledgerState?.openPositions?.find((p) => p.symbol === symbol);

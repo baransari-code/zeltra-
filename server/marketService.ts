@@ -1282,7 +1282,8 @@ export function generate24HourPredictions(
   totalHours: number = 24,
   newsContext?: NewsContext,
   hourlyBars?: HourlyBar[],
-  microBars?: HourlyBar[]
+  microBars?: HourlyBar[],
+  symbol?: string
 ): HourlyPrediction[] {
   const primaryBars =
     hourlyBars && hourlyBars.length >= 30
@@ -1303,7 +1304,8 @@ export function generate24HourPredictions(
     digits,
     newsContext,
     1.0,
-    totalHours
+    totalHours,
+    symbol
   );
 
   return forecast.hourlyPath;

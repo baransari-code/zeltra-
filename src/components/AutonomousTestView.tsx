@@ -1410,7 +1410,7 @@ export const AutonomousTestView: React.FC = () => {
                 Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Canlı Kraken 60dk/15dk ve CME Vadeli/Yahoo barları üzerinde birebir IBKR komisyon, spread, slippage, Tahmin Vetosu ve Kesirli Kelly ({auditData?.strategyVersion || 'v7.0-kelly-forecast'}) uygulanarak hesaplanır.
+                Canlı Kraken 60dk/15dk ve CME Vadeli/Yahoo barları üzerinde birebir IBKR komisyon, spread, slippage, Saatlik Bar Kapanış Teyidi, Tahmin Vetosu ve Kesirli Kelly ({auditData?.strategyVersion || 'v8.0-regime-forecast'}) uygulanarak hesaplanır.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">

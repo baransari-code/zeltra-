@@ -1802,7 +1802,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v7.0-kelly-forecast',
+    strategyVersion: 'v8.0-regime-forecast',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1909,6 +1909,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v8.0-regime-forecast' ||
           parsed.strategyVersion === 'v7.0-kelly-forecast' ||
           parsed.strategyVersion === 'v6.0-forecast-alpha' ||
           parsed.strategyVersion === 'v5.3-quant-alpha' ||
@@ -1916,7 +1917,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v7.0-kelly-forecast';
+          parsed.strategyVersion = 'v8.0-regime-forecast';
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -2813,6 +2814,13 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         lastH.low = Math.min(lastH.low ?? midPrice, midPrice);
       }
 
+      // v8.0 Stop-Hunt Kalkanı: Giriş kırılımları yalnızca tamamlanmış (kapanmış) 1S mumlarla teyit edilir!
+      const closedHBars = hBarsRaw.filter((b) => b.timestamp + 3540 * 1000 <= now);
+      const hasClosed1H = closedHBars.length >= 40;
+      const sigHBars = hasClosed1H ? closedHBars : hBars;
+      const sigPx = hasClosed1H ? closedHBars[closedHBars.length - 1].close : midPrice;
+      const sigNow = hasClosed1H ? closedHBars[closedHBars.length - 1].timestamp + 3600 * 1000 : now;
+
       const m15BarsRaw = bars15mMap.get(candidate.symbol) || [];
       const m15Bars = m15BarsRaw.length >= 25 ? m15BarsRaw.map((b) => ({ ...b })) : [];
       if (m15Bars.length > 0) {
@@ -2824,13 +2832,13 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
       const evalRes = evaluateTechnicalBreakoutSetup({
         candidate,
-        midPrice,
-        now,
+        midPrice: sigPx,
+        now: sigNow,
         dailyCloses: closes,
         dailyEma21: ema21,
         dailyRsi: rsi,
         dailyAtr,
-        hBars,
+        hBars: sigHBars,
         m15Bars,
         btcBullMacro,
         btcBearMacro,
@@ -2872,7 +2880,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         midPrice,
         candidate.digits,
         newsCtx,
-        obDepth.ratio
+        obDepth.ratio,
+        24,
+        candidate.symbol
       );
 
       const trendRegime: MarketScannerItem['trendRegime'] =
@@ -2921,6 +2931,34 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       let isNewsVeto = false;
       let isForecastVeto = false;
       let candidateScore = 52;
+
+      // v8.0 Canlı Fiyat Teyidi: Kapanan 1S bar teyidi üzerinden <=45dk pencere ve kırılımın hala korunuyor olması şarttır
+      if (direction && hasClosed1H) {
+        const refHi = isCrypto ? hDon20.high : hDon16.high;
+        const refLo = isCrypto ? hDon20.low : hDon16.low;
+        const staleClosedBar = now - sigNow > 45 * 60 * 1000;
+        const snappedBackInside =
+          (direction === 'AL (LONG)' && midPrice <= refHi) ||
+          (direction === 'SAT (SHORT)' && midPrice >= refLo);
+        const chasedTooFar =
+          (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * 0.85) ||
+          (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * 0.85);
+        if (staleClosedBar) {
+          vetoReason = `Saatlik Kapanış Bekleniyor: Son 1S kırılım sinyali 45 dakikayı aştığı için taze bar kapanışı bekleniyor.`;
+          direction = null;
+        } else if (snappedBackInside) {
+          vetoReason = `Sahte Kırılım Koruması: Önceki 1S mum kırılım yaptı ancak anlık fiyat (${midPrice.toFixed(candidate.digits)}) tekrar kanal içine döndü; işlem açılmadı.`;
+          direction = null;
+        } else if (chasedTooFar) {
+          vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+0.85 ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
+          direction = null;
+        }
+      } else if (!direction) {
+        const liveDonRef = computeDonchianChannel(hBars, isCrypto ? 20 : 16);
+        if (midPrice > liveDonRef.high * 1.0003 || midPrice < liveDonRef.low * 0.9997) {
+          vetoReason = `Saatlik Kapanış Onayı Bekleniyor (Anlık fiyat ${midPrice.toFixed(candidate.digits)} kırılım seviyesini test ediyor — bar içi stop-hunt fitil tuzağına karşı saat kapanışı bekleniyor).`;
+        }
+      }
 
       // 2.5 Saatlik Stop / Time-Stop Soğuma Kalkanı (Testere yeniden girişlerini keser)
       const recentStopSameSymbol = state.closedTrades.find(
@@ -3604,8 +3642,18 @@ export async function runLiveWalkForwardAudit(
         events.push({ ts: closeTs, symbol: spec.symbol, tf: '1h', idx: i, bar: hBars[i] });
       }
     }
+    if (window === '7d') {
+      const mBars = m15Map.get(spec.symbol) || [];
+      for (let i = 20; i < mBars.length; i++) {
+        const closeTs = mBars[i].timestamp + 900 * 1000;
+        if (closeTs >= cutoffMs && closeTs <= nowMs) {
+          events.push({ ts: closeTs, symbol: spec.symbol, tf: '15m', idx: i, bar: mBars[i] });
+        }
+      }
+    }
   }
-  events.sort((a, b) => a.ts - b.ts);
+  // Aynı timestamp'te önce 15m barının çıkışlarını yönet, ardından 1h kapanışı ile yeni giriş fırsatını değerlendir
+  events.sort((a, b) => a.ts - b.ts || (a.tf === '15m' && b.tf === '1h' ? -1 : a.tf === '1h' && b.tf === '15m' ? 1 : 0));
 
   // Kronolojik BTC son bar imleci (look-ahead yok)
   const btcHBars = hourlyMap.get('BTC/USD') || [];
@@ -3701,7 +3749,9 @@ export async function runLiveWalkForwardAudit(
     const midPrice = +bar.close.toFixed(spec.digits);
     lastPriceBySym.set(ev.symbol, midPrice);
 
-    seenHIdx.set(ev.symbol, ev.idx);
+    if (ev.tf === '1h') {
+      seenHIdx.set(ev.symbol, ev.idx);
+    }
 
     while (btcIdx + 1 < btcHBars.length && btcHBars[btcIdx + 1].timestamp + 3600 * 1000 <= ev.ts) {
       btcIdx++;
@@ -3829,8 +3879,8 @@ export async function runLiveWalkForwardAudit(
     }
     openPositions = nextOpen;
 
-    // 2. Yeni Giriş Taraması (Sadece aktif varlık için pozisyon yoksa & limitler uygunsa)
-    if (openPositions.length >= 5 || openPositions.some((p) => p.spec.symbol === ev.symbol)) {
+    // 2. Yeni Giriş Taraması (Yalnızca 1S bar kapanışlarında yeni giriş açılır; 15m olayları Stop/TP yönetimi içindir)
+    if (ev.tf !== '1h' || openPositions.length >= 5 || openPositions.some((p) => p.spec.symbol === ev.symbol)) {
       markEquity(ev.ts, false);
       continue;
     }
@@ -3927,7 +3977,9 @@ export async function runLiveWalkForwardAudit(
       midPrice,
       spec.digits,
       neutralNews,
-      1.0
+      1.0,
+      24,
+      spec.symbol
     );
 
     const isLongSig = evalRes.direction === 'AL (LONG)';
@@ -4055,7 +4107,7 @@ export async function runLiveWalkForwardAudit(
 
   const result: WalkForwardAuditResult = {
     window,
-    strategyVersion: 'v7.0-kelly-forecast',
+    strategyVersion: 'v8.0-regime-forecast',
     generatedAt: new Date(nowMs).toISOString(),
     liveUsdTry: usdTry,
     initialCapitalTRY: initCap,
