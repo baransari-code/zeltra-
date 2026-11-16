@@ -1441,7 +1441,7 @@ export const AutonomousTestView: React.FC = () => {
                 Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v9.0-borsa-btc-alpha'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
+                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v9.1-strict-forecast'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">

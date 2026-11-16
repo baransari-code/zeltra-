@@ -1833,7 +1833,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v9.0-borsa-btc-alpha',
+    strategyVersion: 'v9.1-strict-forecast',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1940,6 +1940,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v9.1-strict-forecast' ||
           parsed.strategyVersion === 'v9.0-borsa-btc-alpha' ||
           parsed.strategyVersion === 'v8.0-regime-forecast' ||
           parsed.strategyVersion === 'v7.0-kelly-forecast' ||
@@ -1949,7 +1950,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v9.0-borsa-btc-alpha';
+          parsed.strategyVersion = 'v9.1-strict-forecast';
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -2975,28 +2976,28 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       let candidateScore = 52;
 
       const execPolicy = isAutonomousExecutionAllowed(candidate.symbol, new Date(now));
-      // v8.0 Canlı Fiyat Teyidi: Kapanan 1S bar teyidi üzerinden <=45dk pencere ve kırılımın hala korunuyor olması şarttır
+      // v9.1 Canlı Fiyat Teyidi: Kapanan 1S bar teyidi üzerinden <=20dk pencere, kanal dışı tazelik ve <=0.75 ATR anti-chase koruması
       if (!execPolicy.allowed) {
         direction = null;
         vetoReason = execPolicy.modeLabel;
       } else if (direction && hasClosed1H) {
         const refHi = isCrypto ? hDon20.high : hDon16.high;
         const refLo = isCrypto ? hDon20.low : hDon16.low;
-        const staleClosedBar = now - sigNow > 45 * 60 * 1000;
+        const staleClosedBar = now - sigNow > 20 * 60 * 1000;
         const snappedBackInside =
           (direction === 'AL (LONG)' && midPrice <= refHi) ||
           (direction === 'SAT (SHORT)' && midPrice >= refLo);
         const chasedTooFar =
-          (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * 1.25) ||
-          (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * 1.25);
+          (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * 0.75) ||
+          (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * 0.75);
         if (staleClosedBar) {
-          vetoReason = `Saatlik Kapanış Bekleniyor: Son 1S kırılım sinyali 45 dakikayı aştığı için taze bar kapanışı bekleniyor.`;
+          vetoReason = `Saatlik Kapanış Bekleniyor: Son 1S kırılım sinyali 20 dakikayı aştığı için taze bar kapanışı bekleniyor.`;
           direction = null;
         } else if (snappedBackInside) {
           vetoReason = `Sahte Kırılım Koruması: Önceki 1S mum kırılım yaptı ancak anlık fiyat (${midPrice.toFixed(candidate.digits)}) tekrar kanal içine döndü; işlem açılmadı.`;
           direction = null;
         } else if (chasedTooFar) {
-          vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+1.25 ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
+          vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+0.75 ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
           direction = null;
         }
       } else if (!direction) {
@@ -3066,15 +3067,21 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           minViableTpPct,
         });
 
-        // v6.0 İleriye Dönük Tahmin Doğrulama Kapısı (Tepe/Dip Climax Tuzaklarını Engeller & Güçlü Tahminleri Ödüllendirir)
+        // v9.1 İleriye Dönük Kesin Tahmin Doğrulama Kapısı (Tepe/Dip Tuzakları + YATAY Düşük İnançlı Kırılımları Engeller)
         const dirTp1Prob = direction === 'AL (LONG)' ? forecast.tp1HitProbLong : forecast.tp1HitProbShort;
-        if (direction === 'AL (LONG)' && forecast.gateBias < -0.05) {
+        if (direction === 'AL (LONG)' && (forecast.gateBias < -0.05 || forecast.horizonDirection !== 'YÜKSELİŞ')) {
           isForecastVeto = true;
-          vetoReason = `Tahmin Kalkanı Vetosu (AL): Kısa vadeli aşırı uzama sonrası ileriye dönük +4S/+12S projeksiyon düşüş riski gösteriyor (Hedef ${forecast.pred4hPrice}, Bias ${forecast.gateBias}); tepe tuzağı engellendi.`;
+          vetoReason =
+            forecast.gateBias < -0.05
+              ? `Tahmin Kalkanı Vetosu (AL): Kısa vadeli aşırı uzama sonrası ileriye dönük +4S/+12S projeksiyon düşüş riski gösteriyor (Hedef ${forecast.pred4hPrice}, Bias ${forecast.gateBias}); tepe tuzağı engellendi.`
+              : `Tahmin Kalkanı Vetosu (AL): +4S/+12S kantitatif tahmin yönü ${forecast.horizonDirection} (%${dirTp1Prob} TP1) — aktif YÜKSELİŞ teyidi olmadığı için düşük inançlı giriş engellendi.`;
           direction = null;
-        } else if (direction === 'SAT (SHORT)' && forecast.gateBias > 0.05) {
+        } else if (direction === 'SAT (SHORT)' && (forecast.gateBias > 0.05 || forecast.horizonDirection !== 'DÜŞÜŞ')) {
           isForecastVeto = true;
-          vetoReason = `Tahmin Kalkanı Vetosu (SAT): Dip uzaması sonrası ileriye dönük +4S/+12S projeksiyon yukarı tepki riski gösteriyor (Hedef ${forecast.pred4hPrice}, Bias ${forecast.gateBias}); dip tuzağı engellendi.`;
+          vetoReason =
+            forecast.gateBias > 0.05
+              ? `Tahmin Kalkanı Vetosu (SAT): Dip uzaması sonrası ileriye dönük +4S/+12S projeksiyon yukarı tepki riski gösteriyor (Hedef ${forecast.pred4hPrice}, Bias ${forecast.gateBias}); dip tuzağı engellendi.`
+              : `Tahmin Kalkanı Vetosu (SAT): +4S/+12S kantitatif tahmin yönü ${forecast.horizonDirection} (%${dirTp1Prob} TP1) — aktif DÜŞÜŞ teyidi olmadığı için dip kovalamaca engellendi.`;
           direction = null;
         } else {
           if (dirTp1Prob >= 47 && Math.abs(forecast.gateBias) >= 0.22) {
@@ -4037,7 +4044,10 @@ export async function runLiveWalkForwardAudit(
     );
 
     const isLongSig = evalRes.direction === 'AL (LONG)';
-    if ((isLongSig && forecast.gateBias < -0.05) || (!isLongSig && forecast.gateBias > 0.05)) {
+    if (
+      (isLongSig && (forecast.gateBias < -0.05 || forecast.horizonDirection !== 'YÜKSELİŞ')) ||
+      (!isLongSig && (forecast.gateBias > 0.05 || forecast.horizonDirection !== 'DÜŞÜŞ'))
+    ) {
       markEquity(ev.ts, false);
       continue;
     }
@@ -4161,7 +4171,7 @@ export async function runLiveWalkForwardAudit(
 
   const result: WalkForwardAuditResult = {
     window,
-    strategyVersion: 'v9.0-borsa-btc-alpha',
+    strategyVersion: 'v9.1-strict-forecast',
     generatedAt: new Date(nowMs).toISOString(),
     liveUsdTry: usdTry,
     initialCapitalTRY: initCap,
