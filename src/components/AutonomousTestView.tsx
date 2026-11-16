@@ -222,7 +222,7 @@ interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'TAHMİN & GÖZLEM (09:00)' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
   forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   forecastTarget4h?: number;
   forecastTarget12h?: number;
@@ -233,8 +233,109 @@ interface MarketScannerItem {
   kellyMultiplier?: number;
   squeezeOn?: boolean;
   regimePhase?: string;
+  dataDelaySec?: number;
+  liveDataSource?: string;
   decisionReason: string;
   scannedAt: string;
+}
+
+interface PredictionRecord3m {
+  id: string;
+  symbol: string;
+  name: string;
+  digits: number;
+  bucketTs: number;
+  target3mTs: number;
+  createdAtIso: string;
+  target3mIso: string;
+  sourceMode: 'CANLI_TICK' | 'REPLAY_1M';
+  liveSource: string;
+  dataDelaySec: number;
+  isMarketClosed: boolean;
+  sessionLabel: string;
+  entryPrice: number;
+  predictedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+  predictedPrice3m: number;
+  predictedMove3mPct: number;
+  predictedPrice15m: number;
+  predictedMove15mPct: number;
+  confidencePct: number;
+  rawEdgeScore: number;
+  drivers: string[];
+  features: {
+    ret3mPct: number;
+    ret15mPct: number;
+    rsi7_3m: number;
+    er3m: number;
+    vwapZScore: number;
+    volRatio3m: number;
+    h1TrendBias: number;
+    dxyChg3mPct: number;
+    vixPrice: number;
+    takerBuyRatio: number;
+  };
+  status3m: 'BEKLIYOR' | 'DOGRU' | 'YANLIS' | 'PİYASA_KAPALI';
+  actualPrice3m?: number;
+  actualMove3mPct?: number;
+  errorCategory: string;
+  errorExplanation: string;
+  status15m: 'BEKLIYOR' | 'DOGRU' | 'YANLIS' | 'PİYASA_KAPALI';
+  actualPrice15m?: number;
+  actualMove15mPct?: number;
+}
+
+interface Symbol3mStats {
+  symbol: string;
+  name: string;
+  digits: number;
+  totalPredictions: number;
+  evaluated3m: number;
+  directionalCount3m: number;
+  directionalCorrect3m: number;
+  directionalAccuracy3m: number;
+  overallCorrect3m: number;
+  overallAccuracy3m: number;
+  evaluated15m: number;
+  directionalAccuracy15m: number;
+  avgAbsErrorPct3m: number;
+  topErrorCategory: string;
+  lastPrediction?: PredictionRecord3m;
+  recommendedAction: string;
+  liveDataSource: string;
+  liveDataDelaySec: number;
+}
+
+interface ForecastLab3mState {
+  labId: string;
+  version: string;
+  startedAtIso: string;
+  calibrationDeadlineIso: string;
+  continuousLearningActive: boolean;
+  lastTickIso: string;
+  lastBucketTs: number;
+  totalGeneratedCount: number;
+  totalEvaluated3m: number;
+  liveTickEvaluated3m: number;
+  liveTickAccuracy3m: number;
+  directionalEvaluated3m: number;
+  directionalCorrect3m: number;
+  directionalAccuracy3m: number;
+  flatEvaluated3m: number;
+  flatCorrect3m: number;
+  evaluated15m: number;
+  directionalAccuracy15m: number;
+  macroPulse: {
+    dxyPrice: number;
+    dxyChg3mPct: number;
+    vixPrice: number;
+    vixChg5mPct: number;
+    us10yYield: number;
+  };
+  symbolStats: Symbol3mStats[];
+  errorBreakdown: { category: string; label: string; count: number; sharePct: number; fixHint: string }[];
+  hourlyHeatmap: { trHour: number; label: string; evaluated: number; correct: number; accuracyPct: number }[];
+  learningInsights: string[];
+  recentRecords: PredictionRecord3m[];
 }
 
 interface WalkForwardAuditTrade {
@@ -289,6 +390,10 @@ interface WalkForwardAuditResult {
 
 interface AutonomousLedgerState {
   botId: string;
+  strategyVersion?: string;
+  observationModeActive?: boolean;
+  observationDeadlineIso?: string;
+  observationManualOverride?: 'AUTO' | 'FORCE_OBSERVE' | 'FORCE_TRADE';
   isRunning: boolean;
   startedAt: string;
   lastTickAt: string;
@@ -359,11 +464,30 @@ export const AutonomousTestView: React.FC = () => {
   const [selectedChartSymbol, setSelectedChartSymbol] = useState<string>('NAS100');
   const [chartSymbolManual, setChartSymbolManual] = useState<boolean>(false);
   const [showPausedAltcoins, setShowPausedAltcoins] = useState<boolean>(false);
-  const [subView, setSubView] = useState<'all' | 'xray' | 'logs' | 'scanner' | 'attribution' | 'backtest'>('all');
+  const [subView, setSubView] = useState<'all' | 'lab3m' | 'xray' | 'logs' | 'scanner' | 'attribution' | 'backtest'>('all');
   const [logFilter, setLogFilter] = useState<'ALL' | 'ENTRY' | 'PROFIT' | 'RISK'>('ALL');
   const [auditWindow, setAuditWindow] = useState<'7d' | '30d'>('7d');
   const [auditData, setAuditData] = useState<WalkForwardAuditResult | null>(null);
   const [auditLoading, setAuditLoading] = useState<boolean>(false);
+  const [lab3mData, setLab3mData] = useState<ForecastLab3mState | null>(null);
+  const [lab3mLoading, setLab3mLoading] = useState<boolean>(false);
+  const [labStatusFilter, setLabStatusFilter] = useState<'ALL' | 'YANLIS' | 'DOGRU' | 'BEKLIYOR'>('ALL');
+  const [labSymbolFilter, setLabSymbolFilter] = useState<string>('ALL');
+
+  const fetchLab3m = useCallback(async (forceTick = false) => {
+    if (forceTick) setLab3mLoading(true);
+    try {
+      const res = await fetch(`/api/forecast-lab${forceTick ? '?action=tick' : ''}`);
+      if (res.ok) {
+        const json: ForecastLab3mState = await res.json();
+        setLab3mData(json);
+      }
+    } catch (err) {
+      console.error('3dk tahmin laboratuvarı verisi alınamadı:', err);
+    } finally {
+      setLab3mLoading(false);
+    }
+  }, []);
 
   const fetchWalkForwardAudit = useCallback(async (win: '7d' | '30d', refresh = false) => {
     setAuditLoading(true);
@@ -413,11 +537,31 @@ export const AutonomousTestView: React.FC = () => {
 
   useEffect(() => {
     fetchLedgerStatus('status');
+    fetchLab3m(false);
     const timer = setInterval(() => {
       fetchLedgerStatus('status');
     }, 4000);
-    return () => clearInterval(timer);
-  }, [fetchLedgerStatus]);
+    const labTimer = setInterval(() => {
+      fetchLab3m(true);
+    }, 45000);
+    return () => {
+      clearInterval(timer);
+      clearInterval(labTimer);
+    };
+  }, [fetchLedgerStatus, fetchLab3m]);
+
+  const handleSetObservationMode = async (mode: 'AUTO' | 'FORCE_OBSERVE' | 'FORCE_TRADE') => {
+    setScanning(true);
+    try {
+      const res = await fetch(`/api/autonomous-test?action=set-observation&mode=${mode}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLedger(data);
+      }
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const handleToggleRunning = async () => {
     if (!ledger) return;
@@ -574,6 +718,19 @@ export const AutonomousTestView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={() => handleSetObservationMode(ledger.observationModeActive ? 'FORCE_TRADE' : 'FORCE_OBSERVE')}
+              disabled={scanning}
+              className={`inline-flex items-center space-x-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${
+                ledger.observationModeActive
+                  ? 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-200 border-amber-700/70'
+                  : 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-200 border-emerald-700/70'
+              }`}
+              title="17.11.2026 09:00 TR kalibrasyon penceresi ile Canlı İşlem Açılışı arasında geçiş yap"
+            >
+              <span>{ledger.observationModeActive ? 'Gözlem Modu Aktif (İşlemi Aç)' : 'Canlı İşlem Açık (Gözleme Geç)'}</span>
+            </button>
+
             <button
               onClick={() => fetchLedgerStatus('scan')}
               disabled={scanning}
@@ -764,9 +921,37 @@ export const AutonomousTestView: React.FC = () => {
         </div>
 
         {/* SADE SEKME SEÇİCİSİ */}
+        {ledger.observationModeActive && (
+          <div className="rounded border border-sky-800/70 bg-sky-950/35 px-3.5 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-2 text-xs">
+            <div className="space-y-0.5">
+              <div className="font-semibold text-sky-200 flex flex-wrap items-center gap-2">
+                <span>17.11.2026 09:00 TR Kalibrasyon &amp; Sadece Tahmin Modu Aktif (İşlem Açılışı Kilitli · 0 TL Risk)</span>
+                {lab3mData && (
+                  <span className="px-2 py-0.5 rounded bg-sky-900/70 text-sky-100 font-mono text-[11px]">
+                    3dk Yön Doğruluğu: %{lab3mData.directionalAccuracy3m} ({lab3mData.directionalCorrect3m}/{lab3mData.directionalEvaluated3m}) • Toplam Kayıt: {lab3mData.totalGeneratedCount}
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-zinc-400">
+                Sistem şu an 9 varlıkta her 3 dakikada bir kesintisiz tahmin üretip 3dk &amp; 15dk sonuçlarını hata kök-nedeniyle kaydeder ve 09:00 sonrası da öğrenmeye devam eder. Harici keep-alive (uyku önleme) cron URL: <code className="text-sky-300 select-all">https://zeltra-ru7m.onrender.com/api/forecast-lab?action=tick</code>
+              </div>
+            </div>
+            <button
+              onClick={() => setSubView('lab3m')}
+              className="shrink-0 px-3 py-1.5 rounded bg-sky-700 hover:bg-sky-600 text-white font-medium transition-colors"
+            >
+              3dk Tahmin &amp; Hata Teşhisini Gör →
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-zinc-800 text-xs">
           {[
             { key: 'all', label: 'Genel Görünüm' },
+            {
+              key: 'lab3m',
+              label: `3dk Tahmin Lab & Hata Teşhisi${lab3mData ? ` (%${lab3mData.directionalAccuracy3m} · ${lab3mData.totalGeneratedCount})` : ''}`,
+            },
             { key: 'xray', label: 'İşlem Detayı (Nasıl & Neden Açıldı?)' },
             { key: 'logs', label: `Tüm İşlem Kayıtları (${ledger.activityLog.length})` },
             { key: 'scanner', label: 'Piyasa Taraması (Borsa + BTC)' },
@@ -1271,7 +1456,7 @@ export const AutonomousTestView: React.FC = () => {
                         <th className="py-2 px-2 font-medium">Varlık</th>
                         <th className="py-2 px-2 font-medium text-right">Fiyat</th>
                         <th className="py-2 px-2 font-medium">Trend Yönü</th>
-                        <th className="py-2 px-2 font-medium">+4S İleri Tahmin &amp; TP1 İhtimali</th>
+                        <th className="py-2 px-2 font-medium">+4S &amp; Canlı +3dk Tahmin</th>
                         <th className="py-2 px-2 font-medium text-right">RSI Gücü</th>
                         <th className="py-2 px-2 font-medium text-center">Sinyal Puanı</th>
                         <th className="py-2 px-2 font-medium">Mevcut Durum</th>
@@ -1284,6 +1469,9 @@ export const AutonomousTestView: React.FC = () => {
                   const fcDir = item.forecastDirection || 'YATAY';
                   const fcColor =
                     fcDir === 'YÜKSELİŞ' ? 'text-emerald-400' : fcDir === 'DÜŞÜŞ' ? 'text-rose-400' : 'text-zinc-400';
+                  const symLab = lab3mData?.symbolStats?.find((s) => s.symbol === item.symbol);
+                  const last3m = symLab?.lastPrediction;
+                  const delaySec = item.dataDelaySec ?? symLab?.liveDataDelaySec;
                   return (
                     <tr
                       key={item.symbol}
@@ -1303,6 +1491,18 @@ export const AutonomousTestView: React.FC = () => {
                               SQZ
                             </span>
                           )}
+                          {delaySec !== undefined && (
+                            <span
+                              className={`text-[9px] font-mono px-1 rounded border ${
+                                delaySec <= 90
+                                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                                  : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
+                              }`}
+                              title={item.liveDataSource || symLab?.liveDataSource || ''}
+                            >
+                              {delaySec <= 90 ? '0sn' : `${delaySec}sn`}
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-zinc-500">{item.name}</div>
                       </td>
@@ -1314,11 +1514,11 @@ export const AutonomousTestView: React.FC = () => {
                           {item.trendRegime === 'BOĞA (BULL)' ? 'Yükseliş Trendi' : item.trendRegime === 'AYI (BEAR)' ? 'Düşüş Trendi' : 'Yatay'}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 font-mono text-[11px]">
+                      <td className="py-2.5 px-2 font-mono text-[11px] space-y-1">
                         {item.forecastTarget4h ? (
                           <div>
                             <div className={fcColor}>
-                              {fcDir}: <strong>{item.forecastTarget4h.toFixed(item.digits)}</strong>{' '}
+                              +4S {fcDir}: <strong>{item.forecastTarget4h.toFixed(item.digits)}</strong>{' '}
                               <span>({(item.forecastMove4hPct ?? 0) >= 0 ? '+' : ''}{item.forecastMove4hPct ?? 0}%)</span>
                             </div>
                             <div className="text-[10px] text-zinc-500">
@@ -1330,6 +1530,26 @@ export const AutonomousTestView: React.FC = () => {
                           </div>
                         ) : (
                           <span className="text-zinc-500">-</span>
+                        )}
+                        {last3m && (
+                          <div className="pt-0.5 border-t border-zinc-800/70 text-[10px]">
+                            <span
+                              className={
+                                last3m.predictedDirection === 'YÜKSELİŞ'
+                                  ? 'text-emerald-300 font-semibold'
+                                  : last3m.predictedDirection === 'DÜŞÜŞ'
+                                  ? 'text-rose-300 font-semibold'
+                                  : 'text-zinc-400'
+                              }
+                            >
+                              +3dk {last3m.predictedDirection} → {last3m.predictedPrice3m.toFixed(item.digits)} (%{last3m.confidencePct})
+                            </span>
+                            {symLab && symLab.directionalCount3m > 0 && (
+                              <span className="ml-1.5 text-sky-300">
+                                • Başarı: %{symLab.directionalAccuracy3m} ({symLab.directionalCorrect3m}/{symLab.directionalCount3m})
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="py-2.5 px-2 text-right font-mono text-zinc-200">
@@ -1441,7 +1661,7 @@ export const AutonomousTestView: React.FC = () => {
                 Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v9.1-strict-forecast'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
+                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v10.0-3m-calibration-live'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">
@@ -1628,6 +1848,360 @@ export const AutonomousTestView: React.FC = () => {
               </div>
             </div>
           ) : null}
+        </div>
+      )}
+
+      {/* 6c. 9-VARLIK 3 DAKİKALIK TAHMİN LABORATUVARI & HATA TEŞHİSİ (SÜREKLİ ÖĞRENME) */}
+      {subView === 'lab3m' && (
+        <div className="space-y-4">
+          <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-white flex flex-wrap items-center gap-2">
+                  <span>3 Dakikalık Kalibrasyon &amp; Sürekli Öğrenme Laboratuvarı (9 Varlık)</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[10px]">
+                    7/24 SÜREKLİ ÖĞRENME AKTİF
+                  </span>
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Her 3 dakikada tüm 9 varlık için ileri tahmin üretir, 3 dakika ve 15 dakika sonra gerçekleşen fiyata göre puanlar; her hatanın kök nedenini sınıflandırarak kalibrasyon verisi sunar.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <button
+                  onClick={() => fetchLab3m(true)}
+                  disabled={lab3mLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-sky-900/60 hover:bg-sky-800/70 text-sky-100 border border-sky-700/70 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${lab3mLoading ? 'animate-spin' : ''}`} />
+                  <span>{lab3mLoading ? 'Analiz Ediliyor...' : 'Şimdi +3dk Turu Üret'}</span>
+                </button>
+                <a
+                  href="/api/forecast-lab/export?format=csv"
+                  download="zeltra_3m_forecast_lab.csv"
+                  className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition-colors"
+                >
+                  CSV İndir
+                </a>
+                <a
+                  href="/api/forecast-lab/export?format=json"
+                  download="zeltra_3m_forecast_lab.json"
+                  className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition-colors"
+                >
+                  JSON İndir
+                </a>
+              </div>
+            </div>
+
+            {lab3mData ? (
+              <>
+                {/* ÜST ÖZET KARTLARI & MAKRO NABIZ */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                    <div className="text-zinc-400">3dk Yön Tahmin Doğruluğu</div>
+                    <div className={`text-lg font-mono font-semibold ${lab3mData.directionalAccuracy3m >= 58 ? 'text-emerald-400' : lab3mData.directionalAccuracy3m >= 50 ? 'text-sky-300' : 'text-rose-400'}`}>
+                      %{lab3mData.directionalAccuracy3m}{' '}
+                      <span className="text-xs font-normal text-zinc-400">
+                        ({lab3mData.directionalCorrect3m}/{lab3mData.directionalEvaluated3m})
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Yatay uyum: {lab3mData.flatCorrect3m}/{lab3mData.flatEvaluated3m} • +15dk devam: %{lab3mData.directionalAccuracy15m}
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                    <div className="text-zinc-400">Canlı Tick vs Toplam Kayıt</div>
+                    <div className="text-lg font-mono font-semibold text-white">
+                      {lab3mData.totalGeneratedCount} Kayıt
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Canlı akış başarısı: %{lab3mData.liveTickAccuracy3m} ({lab3mData.liveTickEvaluated3m} sonuç)
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                    <div className="text-zinc-400">Canlı Makro Öncü Akış</div>
+                    <div className="text-sm font-mono font-semibold text-zinc-100">
+                      DXY: {lab3mData.macroPulse.dxyPrice.toFixed(2)} ({lab3mData.macroPulse.dxyChg3mPct >= 0 ? '+' : ''}{lab3mData.macroPulse.dxyChg3mPct}%)
+                    </div>
+                    <div className="text-[11px] text-zinc-500 font-mono">
+                      VIX: {lab3mData.macroPulse.vixPrice.toFixed(2)} • US10Y: %{lab3mData.macroPulse.us10yYield.toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                    <div className="text-zinc-400">Kalibrasyon Penceresi &amp; Durum</div>
+                    <div className="text-sm font-mono font-semibold text-sky-300">
+                      17.11.2026 09:00 TR+
+                    </div>
+                    <div className="text-[11px] text-zinc-500">
+                      Son güncelleme: {new Date(lab3mData.lastTickIso).toLocaleTimeString('tr-TR')} (Durmaz)
+                    </div>
+                  </div>
+                </div>
+
+                {/* SİSTEMİN ÖĞRENME ÇIKARIMLARI */}
+                {lab3mData.learningInsights.length > 0 && (
+                  <div className="bg-zinc-950/70 border border-zinc-800 rounded p-3.5 space-y-1.5 text-xs">
+                    <div className="font-semibold text-zinc-200">Otomatik Kalibrasyon ve Hata Öğrenme Notları:</div>
+                    <ul className="space-y-1 text-zinc-400 list-disc list-inside">
+                      {lab3mData.learningInsights.map((ins, i) => (
+                        <li key={i}>{ins}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 9 VARLIK CANLI +3dk TAHMİN VE DOĞRULUK KARNESİ */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-zinc-800 text-zinc-400">
+                        <th className="py-2 px-2 font-medium">Varlık &amp; Akış</th>
+                        <th className="py-2 px-2 font-medium">Son +3dk Tahmini</th>
+                        <th className="py-2 px-2 font-medium text-center">Yön Doğruluğu (3dk)</th>
+                        <th className="py-2 px-2 font-medium text-center">+15dk Uyum</th>
+                        <th className="py-2 px-2 font-medium">En Sık Hata Kök-Nedeni</th>
+                        <th className="py-2 px-2 font-medium">Sistem Tavsiyesi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/70">
+                      {lab3mData.symbolStats.map((st) => {
+                        const lp = st.lastPrediction;
+                        return (
+                          <tr key={st.symbol} className="hover:bg-zinc-800/30">
+                            <td className="py-2.5 px-2">
+                              <div className="font-semibold text-white flex items-center gap-1.5">
+                                <span>{st.symbol}</span>
+                                <span
+                                  className={`text-[9px] font-mono px-1 rounded border ${
+                                    st.liveDataDelaySec <= 90
+                                      ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                                      : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
+                                  }`}
+                                >
+                                  {st.liveDataDelaySec <= 90 ? '0sn CANLI' : `${st.liveDataDelaySec}sn`}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-zinc-500">{st.liveDataSource}</div>
+                            </td>
+                            <td className="py-2.5 px-2 font-mono text-[11px]">
+                              {lp ? (
+                                <div>
+                                  <div
+                                    className={
+                                      lp.predictedDirection === 'YÜKSELİŞ'
+                                        ? 'text-emerald-400 font-semibold'
+                                        : lp.predictedDirection === 'DÜŞÜŞ'
+                                        ? 'text-rose-400 font-semibold'
+                                        : 'text-zinc-400'
+                                    }
+                                  >
+                                    {lp.predictedDirection} → {lp.predictedPrice3m.toFixed(st.digits)} (%{lp.confidencePct})
+                                  </div>
+                                  <div className="text-[10px] text-zinc-500">
+                                    Giriş: {lp.entryPrice.toFixed(st.digits)} •{' '}
+                                    {lp.status3m === 'BEKLIYOR'
+                                      ? `⏳ ${new Date(lp.target3mTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} bekleniyor`
+                                      : lp.status3m === 'DOGRU'
+                                      ? `✓ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
+                                      : lp.status3m === 'YANLIS'
+                                      ? `✗ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
+                                      : 'Piyasa Kapalı'}
+                                  </div>
+                                </div>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                            <td className="py-2.5 px-2 text-center font-mono">
+                              <span className={st.directionalAccuracy3m >= 58 ? 'text-emerald-400 font-semibold' : st.directionalAccuracy3m >= 50 ? 'text-sky-300' : 'text-rose-400'}>
+                                %{st.directionalAccuracy3m}
+                              </span>{' '}
+                              <span className="text-zinc-500 text-[11px]">
+                                ({st.directionalCorrect3m}/{st.directionalCount3m})
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2 text-center font-mono text-zinc-300">
+                              %{st.directionalAccuracy15m}
+                            </td>
+                            <td className="py-2.5 px-2 text-[11px] font-mono text-amber-300">
+                              {st.topErrorCategory}
+                            </td>
+                            <td className="py-2.5 px-2 text-[11px] text-zinc-400 max-w-xs">
+                              {st.recommendedAction}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* HATA KÖK-NEDEN DAĞILIMI VE SAATLİK BAŞARI HARİTASI */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-2">
+                  <div className="lg:col-span-7 bg-zinc-950 border border-zinc-800 rounded p-4 space-y-2.5">
+                    <h3 className="text-xs font-semibold text-white">Yanlış Tahminlerin Kök Nedenleri &amp; Çözüm Kuralları</h3>
+                    {lab3mData.errorBreakdown.length === 0 ? (
+                      <div className="text-xs text-zinc-500">Henüz sonuçlanan hatalı tahmin bulunmuyor.</div>
+                    ) : (
+                      <div className="space-y-2 text-xs">
+                        {lab3mData.errorBreakdown.map((errItem) => (
+                          <div key={errItem.category} className="p-2.5 rounded bg-zinc-900 border border-zinc-800/80 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-amber-300">{errItem.label}</span>
+                              <span className="font-mono text-zinc-200">{errItem.count} Hata (%{errItem.sharePct})</span>
+                            </div>
+                            <div className="text-[11px] text-zinc-400">{errItem.fixHint}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="lg:col-span-5 bg-zinc-950 border border-zinc-800 rounded p-4 space-y-2.5">
+                    <h3 className="text-xs font-semibold text-white">Saatlik Doğruluk Haritası (TR Saati)</h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs font-mono">
+                      {lab3mData.hourlyHeatmap.map((h) => (
+                        <div
+                          key={h.trHour}
+                          className={`p-2 rounded border text-center ${
+                            h.accuracyPct >= 60
+                              ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                              : h.accuracyPct >= 48
+                              ? 'bg-zinc-900 border-zinc-800 text-zinc-200'
+                              : 'bg-rose-950/40 border-rose-800/60 text-rose-300'
+                          }`}
+                        >
+                          <div className="text-[10px] text-zinc-400">{h.label}</div>
+                          <div className="font-semibold">%{h.accuracyPct}</div>
+                          <div className="text-[9px] text-zinc-500">
+                            {h.correct}/{h.evaluated}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* FİLTRELENEBİLİR CANLI 3DK TAHMİN & POST-MORTEM KAYIT DEFTERİ */}
+                <div className="bg-zinc-950 border border-zinc-800 rounded p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
+                    <h3 className="text-xs font-semibold text-white">
+                      Canlı 3 Dakikalık Tahmin &amp; Sonuç Defteri (Son {lab3mData.recentRecords.length} Kayıt)
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {(['ALL', 'YANLIS', 'DOGRU', 'BEKLIYOR'] as const).map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => setLabStatusFilter(st)}
+                          className={`px-2 py-1 rounded border transition-colors ${
+                            labStatusFilter === st
+                              ? 'bg-zinc-800 border-zinc-600 text-white'
+                              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          {st === 'ALL' ? 'Tümü' : st === 'YANLIS' ? 'Sadece Hatalılar' : st === 'DOGRU' ? 'Doğrular' : 'Bekleyenler'}
+                        </button>
+                      ))}
+                      <select
+                        value={labSymbolFilter}
+                        onChange={(e) => setLabSymbolFilter(e.target.value)}
+                        className="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-200"
+                      >
+                        <option value="ALL">Tüm Varlıklar (9)</option>
+                        {lab3mData.symbolStats.map((s) => (
+                          <option key={s.symbol} value={s.symbol}>
+                            {s.symbol}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="sticky top-0 bg-zinc-950 border-b border-zinc-800 text-zinc-400">
+                        <tr>
+                          <th className="py-2 px-2 font-medium">Zaman → +3dk</th>
+                          <th className="py-2 px-2 font-medium">Varlık</th>
+                          <th className="py-2 px-2 font-medium">Tahmin</th>
+                          <th className="py-2 px-2 font-medium text-right">Giriş → Gerçek (+3dk)</th>
+                          <th className="py-2 px-2 font-medium text-center">Sonuç</th>
+                          <th className="py-2 px-2 font-medium">Özellikler &amp; Teşhis Nedeni</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/60">
+                        {lab3mData.recentRecords
+                          .filter((r) => (labStatusFilter === 'ALL' ? true : r.status3m === labStatusFilter))
+                          .filter((r) => (labSymbolFilter === 'ALL' ? true : r.symbol === labSymbolFilter))
+                          .slice(0, 120)
+                          .map((r) => (
+                            <tr key={r.id} className="hover:bg-zinc-900/50">
+                              <td className="py-2 px-2 font-mono text-[10px] text-zinc-400 whitespace-nowrap">
+                                <div>
+                                  {new Date(r.bucketTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                  {' → '}
+                                  {new Date(r.target3mTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <div className="text-[9px] text-zinc-600">{r.sourceMode === 'CANLI_TICK' ? 'CANLI' : '1M TELAFİ'} · {r.sessionLabel}</div>
+                              </td>
+                              <td className="py-2 px-2 font-semibold text-white whitespace-nowrap">{r.symbol}</td>
+                              <td className="py-2 px-2 font-mono text-[11px] whitespace-nowrap">
+                                <span
+                                  className={
+                                    r.predictedDirection === 'YÜKSELİŞ'
+                                      ? 'text-emerald-400'
+                                      : r.predictedDirection === 'DÜŞÜŞ'
+                                      ? 'text-rose-400'
+                                      : 'text-zinc-400'
+                                  }
+                                >
+                                  {r.predictedDirection}
+                                </span>{' '}
+                                <span className="text-zinc-500">(%{r.confidencePct})</span>
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono text-[11px] text-zinc-200 whitespace-nowrap">
+                                {r.entryPrice.toFixed(r.digits)} →{' '}
+                                <strong>{r.actualPrice3m ? r.actualPrice3m.toFixed(r.digits) : r.predictedPrice3m.toFixed(r.digits)}</strong>{' '}
+                                {r.actualMove3mPct !== undefined && (
+                                  <span className={r.actualMove3mPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                                    ({r.actualMove3mPct >= 0 ? '+' : ''}{r.actualMove3mPct}%)
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2 px-2 text-center font-mono text-[11px] whitespace-nowrap">
+                                {r.status3m === 'DOGRU' ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/60">DOĞRU</span>
+                                ) : r.status3m === 'YANLIS' ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800/60">YANLIŞ</span>
+                                ) : r.status3m === 'BEKLIYOR' ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/60">BEKLİYOR</span>
+                                ) : (
+                                  <span className="text-zinc-500">KAPALI</span>
+                                )}
+                              </td>
+                              <td className="py-2 px-2 text-[11px] text-zinc-400 max-w-md">
+                                <div className="font-mono text-[10px] text-zinc-500">
+                                  RSI7:{r.features.rsi7_3m} · ER:{r.features.er3m} · VWAPz:{r.features.vwapZScore} · 1H:{r.features.h1TrendBias} · DXY3m:{r.features.dxyChg3mPct}%
+                                </div>
+                                <div className={r.status3m === 'YANLIS' ? 'text-amber-200' : 'text-zinc-300'}>
+                                  {r.errorCategory !== 'YOK' && <strong className="text-amber-400">[{r.errorCategory}] </strong>}
+                                  {r.errorExplanation}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-xs text-zinc-400 py-8 text-center">3 dakikalık tahmin verisi yükleniyor...</div>
+            )}
+          </div>
         </div>
       )}
 

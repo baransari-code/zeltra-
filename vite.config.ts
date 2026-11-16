@@ -13,9 +13,15 @@ import {
   executeValidationCycle,
 } from './server/forecastValidator'
 import {
+  runForecastLab3mTick,
+  getForecastLab3mState,
+  exportForecastLabCsv,
+} from './server/forecastLab3m'
+import {
   loadOrInitAutonomousLedger,
   executeAutonomousTradingTick,
   toggleAutonomousBot,
+  setObservationMode,
   resetAutonomousBot,
   resetAutonomousBotCleanZero,
 } from './server/autonomousTrader'
@@ -127,6 +133,10 @@ export default defineConfig({
             } else if (action === 'toggle') {
               const running = urlObj.searchParams.get('running') === 'true' || urlObj.searchParams.get('state') === 'start';
               state = await toggleAutonomousBot(running);
+            } else if (action === 'set-observation') {
+              const m = urlObj.searchParams.get('mode') || 'AUTO';
+              const mode = m === 'FORCE_TRADE' || m === 'FORCE_OBSERVE' ? m : 'AUTO';
+              state = await setObservationMode(mode);
             } else if (action === 'reset') {
               state = await resetAutonomousBot(250000);
             } else if (action === 'reset-zero') {
@@ -146,6 +156,41 @@ export default defineConfig({
         // Canlı USD/TRY Kur Uç Noktası
         server.middlewares.use('/api/manual-test', async (req, res) => {
           await handleManualTestHttpRequest(req, res);
+        });
+
+        server.middlewares.use('/api/forecast-lab/export', async (req, res) => {
+          try {
+            const urlObj = new URL(req.url || '', `http://${req.headers.host}`);
+            const format = (urlObj.searchParams.get('format') || 'csv').toLowerCase();
+            if (format === 'json') {
+              const st = await getForecastLab3mState();
+              res.setHeader('Content-Type', 'application/json; charset=utf-8');
+              res.end(JSON.stringify(st, null, 2));
+            } else {
+              const csv = await exportForecastLabCsv();
+              res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+              res.end('\uFEFF' + csv);
+            }
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err?.message || 'Export hatası' }));
+          }
+        });
+
+        server.middlewares.use('/api/forecast-lab', async (req, res) => {
+          try {
+            const urlObj = new URL(req.url || '', `http://${req.headers.host}`);
+            const action = urlObj.searchParams.get('action') || 'status';
+            let labState = action === 'tick' ? await runForecastLab3mTick(true) : await getForecastLab3mState();
+            if (labState.totalGeneratedCount === 0) labState = await runForecastLab3mTick(true);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(labState));
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err?.message || '3dk tahmin laboratuvarı hatası' }));
+          }
         });
 
         server.middlewares.use('/api/live-fx-rate', async (_req, res) => {

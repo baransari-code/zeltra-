@@ -20,9 +20,15 @@ import {
   executeValidationCycle,
 } from './forecastValidator';
 import {
+  runForecastLab3mTick,
+  getForecastLab3mState,
+  exportForecastLabCsv,
+} from './forecastLab3m';
+import {
   loadOrInitAutonomousLedger,
   executeAutonomousTradingTick,
   toggleAutonomousBot,
+  setObservationMode,
   resetAutonomousBot,
   resetAutonomousBotCleanZero,
   runLiveWalkForwardAudit,
@@ -324,6 +330,10 @@ const server = http.createServer(async (req, res) => {
       } else if (action === 'toggle') {
         const running = urlObj.searchParams.get('running') === 'true' || urlObj.searchParams.get('state') === 'start';
         state = await toggleAutonomousBot(running);
+      } else if (action === 'set-observation') {
+        const modeParam = urlObj.searchParams.get('mode') || 'AUTO';
+        const mode = modeParam === 'FORCE_TRADE' || modeParam === 'FORCE_OBSERVE' ? modeParam : 'AUTO';
+        state = await setObservationMode(mode);
       } else if (action === 'reset') {
         state = await resetAutonomousBot(250000);
       } else if (action === 'reset-zero') {
@@ -364,6 +374,50 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 3d. API: 9-Varlık 3 Dakikalık Kalibrasyon & Sürekli Öğrenme Laboratuvarı (/api/forecast-lab)
+  if (pathname === '/api/forecast-lab') {
+    try {
+      const action = urlObj.searchParams.get('action') || 'status';
+      let labState =
+        action === 'tick'
+          ? await runForecastLab3mTick(true)
+          : await getForecastLab3mState();
+      if (labState.totalGeneratedCount === 0) {
+        labState = await runForecastLab3mTick(true);
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(labState));
+    } catch (err: any) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: err?.message || '3dk tahmin laboratuvarı hatası' }));
+    }
+    return;
+  }
+
+  // 3e. API: 3 Dakikalık Tahmin & Hata Teşhisi Ham Veri İndirme (/api/forecast-lab/export?format=csv|json)
+  if (pathname === '/api/forecast-lab/export') {
+    try {
+      const format = (urlObj.searchParams.get('format') || 'csv').toLowerCase();
+      if (format === 'json') {
+        const state = await getForecastLab3mState();
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="zeltra_3m_forecast_lab.json"');
+        res.end(JSON.stringify(state, null, 2));
+      } else {
+        const csv = await exportForecastLabCsv();
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="zeltra_3m_forecast_lab.csv"');
+        res.end('\uFEFF' + csv);
+      }
+    } catch (err: any) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: err?.message || 'Dışa aktarım hatası' }));
+    }
+    return;
+  }
+
   // 4. STATİK DOSYA SUNUMU (SPA - React Frontend; /test dahil tüm rotaları index.html'e yönlendir + Path Traversal Koruması)
   const safeRelPath = pathname.replace(/^\/+/, '');
   let filePath = path.resolve(DIST_DIR, safeRelPath);
@@ -393,9 +447,15 @@ server.listen(PORT, () => {
   console.log(`[ZELTRA 7/24 Sunucu] 4 Günlük Doğrulama Testi ve 250.000 TL Otonom İşlem Motoru arka plan döngüsü başlatıldı.`);
 
   // İlk tetikleme ve periyodik otomatik kontrol
+  let lastDispatched3mBucket = 0;
   setTimeout(() => {
     executeValidationCycle().catch(console.error);
     loadOrInitAutonomousLedger().then(() => executeAutonomousTradingTick(false)).catch(console.error);
+    runForecastLab3mTick(true)
+      .then(() => {
+        lastDispatched3mBucket = Math.floor(Date.now() / 180_000) * 180_000;
+      })
+      .catch(console.error);
   }, 2000);
   setInterval(() => {
     executeValidationCycle().catch(console.error);
@@ -404,4 +464,12 @@ server.listen(PORT, () => {
     executeAutonomousTradingTick(false).catch(console.error);
     executeManualTradingTick(false).catch(console.error);
   }, 10 * 1000);
+  // Her 20 saniyede 3 dakikalık pencere geçişini kontrol ederek :00/:03/:06 sınırlarında kesintisiz tahmin & değerlendirme üret
+  setInterval(() => {
+    const curBucket = Math.floor(Date.now() / 180_000) * 180_000;
+    if (curBucket > lastDispatched3mBucket) {
+      lastDispatched3mBucket = curBucket;
+      runForecastLab3mTick(false).catch(console.error);
+    }
+  }, 20 * 1000);
 });

@@ -5,14 +5,17 @@ import {
   fetchReal1YearData,
   fetchRealHourlyHistory,
   fetchReal15mHistory,
+  fetchReal1mAnd3mHistory,
   fetchCryptoOrderbookImbalance,
   fetchLiveUsdTryRate,
   fetchRealFinancialNews,
   extractNewsSentimentForAsset,
   HourlyBar,
+  type MicroBarBundle,
 } from './marketService';
 import { synthesizeAssetNewsAI } from './newsAiEngine';
 import { computeMultiHorizonForecast, MultiHorizonForecast } from './quantForecastEngine';
+import { CALIBRATION_DEADLINE_ISO, LAB_TRACKED_ASSETS } from './forecastLab3m';
 
 export interface GateCheckItem {
   step: number;
@@ -232,7 +235,7 @@ export interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'TAHMİN & GÖZLEM (09:00)' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
   forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   forecastTarget4h?: number;
   forecastTarget12h?: number;
@@ -243,6 +246,8 @@ export interface MarketScannerItem {
   kellyMultiplier?: number;
   squeezeOn?: boolean;
   regimePhase?: string;
+  dataDelaySec?: number;
+  liveDataSource?: string;
   decisionReason: string;
   scannedAt: string;
 }
@@ -250,6 +255,9 @@ export interface MarketScannerItem {
 export interface AutonomousLedgerState {
   botId: string;
   strategyVersion?: string;
+  observationModeActive?: boolean;
+  observationDeadlineIso?: string;
+  observationManualOverride?: 'AUTO' | 'FORCE_OBSERVE' | 'FORCE_TRADE';
   isRunning: boolean;
   startedAt: string;
   lastTickAt: string;
@@ -1828,12 +1836,23 @@ export async function bootstrapHistoricalRealTrades(initialCapital = 250000): Pr
 // 15.11.2026 07:30 TSİ (04:30 UTC) öncesi geçmiş simülasyon kayıtlarının geri dönmesini kesin olarak engelleyen zaman kilidi
 const CLEAN_START_CUTOFF_TS = 1794717000000;
 
+export function isObservationModeLocked(state: Pick<AutonomousLedgerState, 'observationManualOverride'>, nowMs = Date.now()): boolean {
+  if (state.observationManualOverride === 'FORCE_TRADE') return false;
+  if (state.observationManualOverride === 'FORCE_OBSERVE') return true;
+  const deadline = new Date(CALIBRATION_DEADLINE_ISO).getTime();
+  return nowMs < deadline;
+}
+
 function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): AutonomousLedgerState {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
+  const obsActive = now < new Date(CALIBRATION_DEADLINE_ISO).getTime();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v9.1-strict-forecast',
+    strategyVersion: 'v10.0-3m-calibration-live',
+    observationModeActive: obsActive,
+    observationDeadlineIso: CALIBRATION_DEADLINE_ISO,
+    observationManualOverride: 'AUTO',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1940,6 +1959,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v10.0-3m-calibration-live' ||
           parsed.strategyVersion === 'v9.1-strict-forecast' ||
           parsed.strategyVersion === 'v9.0-borsa-btc-alpha' ||
           parsed.strategyVersion === 'v8.0-regime-forecast' ||
@@ -1950,7 +1970,10 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v9.1-strict-forecast';
+          parsed.strategyVersion = 'v10.0-3m-calibration-live';
+          parsed.observationDeadlineIso = CALIBRATION_DEADLINE_ISO;
+          parsed.observationManualOverride = parsed.observationManualOverride || 'AUTO';
+          parsed.observationModeActive = isObservationModeLocked(parsed);
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -2332,9 +2355,14 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   state.lastTickAt = nowIso;
+  const isObserving = isObservationModeLocked(state, now);
+  state.observationDeadlineIso = CALIBRATION_DEADLINE_ISO;
+  state.observationManualOverride = state.observationManualOverride || 'AUTO';
+  state.observationModeActive = isObserving;
 
-  // Tüm 16 varlığın günlük + 1 saatlik + 15 dakikalık verisini, Kraken emir defteri derinliğini, Dolar kurunu ve haberleri paralel çek
-  const [usdTry, liveNews, marketEntries, hourlyEntries, bars15mEntries, orderbookEntries] = await Promise.all([
+  // Tüm 16 varlığın günlük + 1 saatlik + 15 dakikalık verisini + aktif 9 varlığın 0sn 1dk akışını, Kraken derinliğini ve haberleri paralel çek
+  const labSymbolSet = new Set(LAB_TRACKED_ASSETS.map((a) => a.symbol));
+  const [usdTry, liveNews, marketEntries, hourlyEntries, bars15mEntries, orderbookEntries, microEntries] = await Promise.all([
     fetchLiveUsdTryRate(),
     fetchRealFinancialNews().catch(() => []),
     Promise.all(
@@ -2377,11 +2405,36 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         }
       })
     ),
+    Promise.all(
+      CORE_UNIVERSE.filter((c) => labSymbolSet.has(c.symbol)).map(async (c) => {
+        try {
+          const m = await fetchReal1mAnd3mHistory(c.symbol);
+          return [c.symbol, m] as const;
+        } catch {
+          return [c.symbol, null] as const;
+        }
+      })
+    ),
   ]);
   const marketMap = new Map<string, any>(marketEntries);
   const hourlyMap = new Map<string, HourlyBar[]>(hourlyEntries);
   const bars15mMap = new Map<string, HourlyBar[]>(bars15mEntries);
   const orderbookMap = new Map<string, { ratio: number; bidVol: number; askVol: number }>(orderbookEntries);
+  const microMap = new Map<string, MicroBarBundle | null>(microEntries);
+
+  // Sıfır Gecikme Bindirmesi: CME vadeli kontratlar (NAS100, SPX500, XAU/USD, WTI) gecikmeli geldiğinde anlık spot/ETF fiyatını canlıya taşı
+  for (const [sym, mb] of microMap.entries()) {
+    const mkt = marketMap.get(sym);
+    if (mkt && mb && mb.livePrice > 0 && !mb.isDelayed) {
+      mkt.price = mb.livePrice;
+      if (Array.isArray(mkt.candles) && mkt.candles.length > 0) {
+        const lastC = mkt.candles[mkt.candles.length - 1];
+        lastC.close = mb.livePrice;
+        lastC.high = Math.max(lastC.high ?? mb.livePrice, mb.livePrice);
+        lastC.low = Math.min(lastC.low ?? mb.livePrice, mb.livePrice);
+      }
+    }
+  }
   state.liveUsdTry = usdTry;
 
   // 1. AÇIK POZİSYONLARI CANLI BORSA FİYATLARI, MFE/MAE VE CANLI HABER ŞOKLARIYLA DENETLE
@@ -3185,8 +3238,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     }
   }
 
-  // Pass 2: v5.3 Konviksiyon Ağırlıklı Sermaye Dağıtımı (A+ kurulumlar %30 daha güçlü boyutlanır; TradFi + Kripto 5/3/2 portföy sınırı)
-  if (state.isRunning) {
+  // Pass 2: v5.3 Konviksiyon Ağırlıklı Sermaye Dağıtımı (Kalibrasyon Gözlem Modunda yeni işlem açılmaz)
+  if (state.isRunning && !isObserving) {
     const qualified = evaluatedList
       .filter((e) => e.direction && !e.existingOpen && !e.isMarketClosed)
       .sort((a, b) => {
@@ -3440,6 +3493,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         ? forecast.tp1HitProbShort
         : Math.max(forecast.tp1HitProbLong, forecast.tp1HitProbShort);
     const activeKelly = computeFractionalKellyMultiplier(activeProb, candidate.cluster.startsWith('CRYPTO'));
+    const microBundle = microMap.get(candidate.symbol);
     const fcFields = {
       forecastDirection: forecast.horizonDirection,
       forecastTarget4h: forecast.pred4hPrice,
@@ -3451,6 +3505,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       kellyMultiplier: activeKelly,
       squeezeOn: forecast.indicators.squeezeOn,
       regimePhase: forecast.regimePhase,
+      dataDelaySec: microBundle?.dataDelaySec,
+      liveDataSource: microBundle?.liveSource,
     };
 
     if (existingOpen) {
@@ -3510,6 +3566,11 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       scanStatus = 'ALTCOİN KAPALI (BORSA+BTC)';
       scanReason = 'Yüksek Doğruluk Modu: Yalnızca hafta içi Küresel Borsa + yüksek inançlı BTC ve hafta sonu BTC işlem açar; altcoin gürültüsü kapalı.';
       scanScore = Math.min(scanScore, 48);
+    } else if (isObserving) {
+      scanStatus = 'TAHMİN & GÖZLEM (09:00)';
+      scanReason = direction
+        ? `Gözlem Modu Aktif (17.11 09:00'a kadar işlem açılmaz): ${direction} kurulumu hazır (${candidateScore}/100) — Sadece 3dk canlı tahmin kaydediliyor.`
+        : `Gözlem & 3dk Kalibrasyon Aktif (17.11 09:00'a kadar işlem açılmaz): ${scanReason}`;
     } else if (isNewsVeto) {
       scanStatus = 'HABER VETOSU';
       scanScore = 44;
@@ -3585,6 +3646,31 @@ export async function toggleAutonomousBot(isRunning: boolean): Promise<Autonomou
   });
   saveLedger(state);
   return state;
+}
+
+export async function setObservationMode(
+  override: 'AUTO' | 'FORCE_OBSERVE' | 'FORCE_TRADE'
+): Promise<AutonomousLedgerState> {
+  const state = await loadOrInitAutonomousLedger();
+  state.observationManualOverride = override;
+  const obsNow = isObservationModeLocked(state);
+  state.observationModeActive = obsNow;
+  state.activityLog.unshift({
+    id: `ACT-OBS-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    type: 'SYSTEM',
+    symbol: 'SİSTEM',
+    message:
+      override === 'FORCE_TRADE'
+        ? 'Kalibrasyon Gözlem Kilidi manuel olarak kaldırıldı: Canlı otonom işlem açılışı AKTİF.'
+        : override === 'FORCE_OBSERVE'
+          ? 'Sadece Tahmin & Gözlem Modu manuel olarak açıldı: Yeni işlem açılmadan 3dk tahmin doğrulaması sürüyor.'
+          : obsNow
+            ? 'Otomatik Gözlem Modu aktif (17.11.2026 09:00 TR sonuna kadar sadece 3dk tahmin ve hata öğrenmesi yapılır).'
+            : '17.11.2026 09:00 TR kalibrasyon penceresi tamamlandı: Canlı işlem açılışı otomatik açıldı.',
+  });
+  saveLedger(state);
+  return await executeAutonomousTradingTick(true);
 }
 
 export async function resetAutonomousBot(newCapitalTRY = 250000): Promise<AutonomousLedgerState> {
@@ -4171,7 +4257,7 @@ export async function runLiveWalkForwardAudit(
 
   const result: WalkForwardAuditResult = {
     window,
-    strategyVersion: 'v9.1-strict-forecast',
+    strategyVersion: 'v10.0-3m-calibration-live',
     generatedAt: new Date(nowMs).toISOString(),
     liveUsdTry: usdTry,
     initialCapitalTRY: initCap,

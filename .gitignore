@@ -3,3 +3,4 @@ dist
 .env
 .DS_Store
 *.log
+data/forecast_lab_3m.json
