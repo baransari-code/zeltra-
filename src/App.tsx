@@ -135,7 +135,14 @@ export const App: React.FC = () => {
       loadRealNews();
       loadLiveFxRate();
     }, 120000);
-    return () => clearInterval(newsTimer);
+    // Herhangi bir Zeltra sekmesi açıkken Render ücretsiz konteynerinin uyumasını ve geçici disk belleğini sıfırlamasını önler
+    const keepAliveTimer = setInterval(() => {
+      fetch('/api/health').catch(() => {});
+    }, 25000);
+    return () => {
+      clearInterval(newsTimer);
+      clearInterval(keepAliveTimer);
+    };
   }, [loadRealNews, loadLiveFxRate]);
 
   const technicals = useMemo(() => {

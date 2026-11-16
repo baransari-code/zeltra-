@@ -139,6 +139,7 @@ interface AutonomousTrade {
     tp1Probability: number;
     forecastConviction: number;
     regimePhase: string;
+    kellyMultiplier?: number;
   };
   forensicXRay?: TradeForensicXRay;
 }
@@ -229,10 +230,61 @@ interface MarketScannerItem {
   forecastMove12hPct?: number;
   forecastConviction?: number;
   tp1Probability?: number;
+  kellyMultiplier?: number;
   squeezeOn?: boolean;
   regimePhase?: string;
   decisionReason: string;
   scannedAt: string;
+}
+
+interface WalkForwardAuditTrade {
+  symbol: string;
+  name: string;
+  digits: number;
+  direction: 'AL (LONG)' | 'SAT (SHORT)';
+  timeframe: '1H' | '15M';
+  entryTime: string;
+  closeTime: string;
+  entryPrice: number;
+  closePrice: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2: number;
+  status: AutonomousTrade['status'];
+  netPnL_TRY: number;
+  commissionTRY: number;
+  kellyMultiplier: number;
+  confluenceScore: number;
+  tp1Prob: number;
+  pred4hPct: number;
+  rationale: string;
+}
+
+interface WalkForwardAuditResult {
+  window: '7d' | '30d';
+  strategyVersion: string;
+  generatedAt: string;
+  liveUsdTry: number;
+  initialCapitalTRY: number;
+  finalEquityTRY: number;
+  netProfitTRY: number;
+  netProfitPercent: number;
+  totalClosedTrades: number;
+  openTradesAtEnd: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRatePercent: number;
+  profitFactor: number;
+  maxDrawdownPercent: number;
+  totalCommissionTRY: number;
+  engineBreakdown: {
+    engine: string;
+    tradesCount: number;
+    winRatePercent: number;
+    netPnL_TRY: number;
+  }[];
+  equityCurve: { timeStr: string; equityTRY: number; drawdownPercent: number }[];
+  closedTrades: WalkForwardAuditTrade[];
 }
 
 interface AutonomousLedgerState {
@@ -306,8 +358,32 @@ export const AutonomousTestView: React.FC = () => {
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
   const [selectedChartSymbol, setSelectedChartSymbol] = useState<string>('BTC/USD');
   const [chartSymbolManual, setChartSymbolManual] = useState<boolean>(false);
-  const [subView, setSubView] = useState<'all' | 'xray' | 'logs' | 'scanner' | 'attribution'>('all');
+  const [subView, setSubView] = useState<'all' | 'xray' | 'logs' | 'scanner' | 'attribution' | 'backtest'>('all');
   const [logFilter, setLogFilter] = useState<'ALL' | 'ENTRY' | 'PROFIT' | 'RISK'>('ALL');
+  const [auditWindow, setAuditWindow] = useState<'7d' | '30d'>('7d');
+  const [auditData, setAuditData] = useState<WalkForwardAuditResult | null>(null);
+  const [auditLoading, setAuditLoading] = useState<boolean>(false);
+
+  const fetchWalkForwardAudit = useCallback(async (win: '7d' | '30d', refresh = false) => {
+    setAuditLoading(true);
+    try {
+      const res = await fetch(`/api/autonomous-backtest?window=${win}${refresh ? '&refresh=true' : ''}`);
+      if (res.ok) {
+        const json: WalkForwardAuditResult = await res.json();
+        setAuditData(json);
+      }
+    } catch (err) {
+      console.error('Walk-forward doğrulama verisi alınamadı:', err);
+    } finally {
+      setAuditLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (subView === 'backtest' && (!auditData || auditData.window !== auditWindow)) {
+      fetchWalkForwardAudit(auditWindow);
+    }
+  }, [subView, auditWindow, auditData, fetchWalkForwardAudit]);
 
   const fetchLedgerStatus = useCallback(async (action = 'status') => {
     if (action === 'scan') setScanning(true);
@@ -694,6 +770,7 @@ export const AutonomousTestView: React.FC = () => {
             { key: 'logs', label: `Tüm İşlem Kayıtları (${ledger.activityLog.length})` },
             { key: 'scanner', label: '16 Varlık Piyasa Taraması' },
             { key: 'attribution', label: 'Varlık Bazlı Kazanç Özeti' },
+            { key: 'backtest', label: 'Gerçek Veri Testi (7.5G / 30G)' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -828,8 +905,67 @@ export const AutonomousTestView: React.FC = () => {
           </div>
 
           {ledger.openPositions.length === 0 ? (
-            <div className="p-6 text-center text-xs text-zinc-400 bg-zinc-950 rounded border border-zinc-800">
-              Şu anda açık işlem bulunmuyor.
+            <div className="p-4 bg-zinc-950 rounded border border-zinc-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="text-xs text-zinc-300 leading-relaxed">
+                  <strong className="text-white">Nakit Kalkanı Aktif (250.000 TL Nakitte Bekliyor):</strong>{' '}
+                  Mevcut piyasa dar yatay/sıkışma fazında olduğu için komisyon yakmamak adına teyitsiz giriş engelleniyor; en yakın kırılım &amp; Kelly adayları aşağıdadır.
+                </div>
+                <button
+                  onClick={() => setSubView('backtest')}
+                  className="shrink-0 px-3 py-1.5 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-700/60 text-sky-300 text-xs font-medium transition-colors"
+                >
+                  7.5G / 30G Gerçek Veri Testini Gör →
+                </button>
+              </div>
+
+              {ledger.marketScanner && ledger.marketScanner.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  {ledger.marketScanner
+                    .filter((m) => m.status !== 'PİYASA KAPALI (HAFTA SONU)')
+                    .slice()
+                    .sort((a, b) => b.confluenceScore - a.confluenceScore)
+                    .slice(0, 3)
+                    .map((cand) => (
+                      <div
+                        key={cand.symbol}
+                        onClick={() => {
+                          setChartSymbolManual(true);
+                          setSelectedChartSymbol(cand.symbol);
+                        }}
+                        className="p-2.5 rounded bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 cursor-pointer transition-colors space-y-1 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-white font-mono">
+                            {cand.symbol}{' '}
+                            <span className="text-zinc-400 font-normal">({cand.price.toFixed(cand.digits)})</span>
+                          </span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-zinc-200">
+                            Skor {cand.confluenceScore}/100
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-mono text-zinc-300 flex items-center justify-between">
+                          <span>
+                            +4S:{' '}
+                            <strong className={(cand.forecastMove4hPct ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                              {(cand.forecastTarget4h ?? cand.price).toFixed(cand.digits)} (
+                              {(cand.forecastMove4hPct ?? 0) >= 0 ? '+' : ''}
+                              {cand.forecastMove4hPct ?? 0}%)
+                            </strong>
+                          </span>
+                          <span className="text-sky-400">Kelly {cand.kellyMultiplier ?? 1.0}x</span>
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate" title={cand.decisionReason}>
+                          {cand.decisionReason}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              <div className="text-[11px] text-zinc-500 border-t border-zinc-800/70 pt-2">
+                Sunucu Notu: Render ücretsiz planda trafik kesilince (~15 dk) sunucu uykuya geçip diski sıfırlayabilir; açık sekmede her 25 saniyede otomatik canlı tutma sinyali gönderilir.
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1158,7 +1294,10 @@ export const AutonomousTestView: React.FC = () => {
                               <span>({(item.forecastMove4hPct ?? 0) >= 0 ? '+' : ''}{item.forecastMove4hPct ?? 0}%)</span>
                             </div>
                             <div className="text-[10px] text-zinc-500">
-                              TP1 Olasılığı: %{item.tp1Probability ?? 50} • Güven %{item.forecastConviction ?? 60}
+                              TP1 İhtimali: %{item.tp1Probability ?? 50} • Güven %{item.forecastConviction ?? 60}
+                              {item.kellyMultiplier !== undefined && (
+                                <span className="ml-1.5 text-sky-400">• Kelly {item.kellyMultiplier}x</span>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -1259,6 +1398,205 @@ export const AutonomousTestView: React.FC = () => {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 6b. GERÇEK VERİ WALK-FORWARD PERFORMANS DOĞRULAMASI (7.5G / 30G) */}
+      {subView === 'backtest' && (
+        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-white">
+                Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Canlı Kraken 60dk/15dk ve CME Vadeli/Yahoo barları üzerinde birebir IBKR komisyon, spread, slippage, Tahmin Vetosu ve Kesirli Kelly ({auditData?.strategyVersion || 'v7.0-kelly-forecast'}) uygulanarak hesaplanır.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                onClick={() => setAuditWindow('7d')}
+                className={`px-3 py-1.5 rounded border transition-colors ${
+                  auditWindow === '7d'
+                    ? 'bg-sky-950/70 border-sky-700 text-sky-300 font-medium'
+                    : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
+                }`}
+              >
+                7.5 Gün (1S + 15dk Tahmin)
+              </button>
+              <button
+                onClick={() => setAuditWindow('30d')}
+                className={`px-3 py-1.5 rounded border transition-colors ${
+                  auditWindow === '30d'
+                    ? 'bg-sky-950/70 border-sky-700 text-sky-300 font-medium'
+                    : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
+                }`}
+              >
+                30 Gün (1S Makro)
+              </button>
+              <button
+                onClick={() => fetchWalkForwardAudit(auditWindow, true)}
+                disabled={auditLoading}
+                className="px-2.5 py-1.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white flex items-center gap-1 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
+                <span>Yenile</span>
+              </button>
+            </div>
+          </div>
+
+          {auditLoading && !auditData ? (
+            <div className="p-8 text-center text-xs text-zinc-400 font-mono">
+              16 varlık için gerçek borsa geçmişi çekiliyor ve bar bar Walk-Forward testi çalıştırılıyor...
+            </div>
+          ) : auditData ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                  <div className="text-zinc-400">Simüle Final Kasa</div>
+                  <div className={`text-lg font-bold font-mono ${auditData.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {formatTRY(auditData.finalEquityTRY)}
+                  </div>
+                  <div className="text-[11px] font-mono text-zinc-400">
+                    Net: <span className={auditData.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                      {auditData.netProfitTRY >= 0 ? '+' : ''}{formatTRY(auditData.netProfitTRY)} ({auditData.netProfitPercent >= 0 ? '+' : ''}%{auditData.netProfitPercent})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                  <div className="text-zinc-400">İşlem &amp; Başarı Oranı</div>
+                  <div className="text-lg font-bold font-mono text-white">
+                    %{auditData.winRatePercent} <span className="text-xs font-normal text-zinc-400">({auditData.winningTrades}K / {auditData.losingTrades}Z)</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    Kapanan: {auditData.totalClosedTrades} • Pencere Sonu Açık: {auditData.openTradesAtEnd}
+                  </div>
+                </div>
+
+                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                  <div className="text-zinc-400">Profit Factor &amp; Max DD</div>
+                  <div className="text-lg font-bold font-mono text-white">
+                    {auditData.profitFactor}x Çarpan
+                  </div>
+                  <div className="text-[11px] text-zinc-400 font-mono">
+                    Maksimum Geri Çekilme: <span className="text-amber-300">%{auditData.maxDrawdownPercent}</span>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
+                  <div className="text-zinc-400">Kesilen Gerçek IBKR Komisyonu</div>
+                  <div className="text-lg font-bold font-mono text-rose-400">
+                    -{formatTRY(auditData.totalCommissionTRY)}
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    USD/TRY: {auditData.liveUsdTry.toFixed(2)} TL bazlı net sonuç
+                  </div>
+                </div>
+              </div>
+
+              {/* Motor Katkı Dağılımı */}
+              {auditData.engineBreakdown.length > 0 && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {auditData.engineBreakdown.map((eng) => (
+                    <div key={eng.engine} className="bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 font-mono flex items-center gap-2">
+                      <span className="text-zinc-300 font-semibold">{eng.engine}</span>
+                      <span className="text-zinc-500">{eng.tradesCount} İşlem • %{eng.winRatePercent} WR</span>
+                      <span className={eng.netPnL_TRY >= 0 ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                        {eng.netPnL_TRY >= 0 ? '+' : ''}{formatTRY(eng.netPnL_TRY)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Walk-Forward Kasa Eğrisi (SVG) */}
+              {auditData.equityCurve.length > 1 && (() => {
+                const ac = auditData.equityCurve;
+                const aVals = ac.map((p) => p.equityTRY);
+                const aMin = Math.min(250000 * 0.96, ...aVals);
+                const aMax = Math.max(250000 * 1.03, ...aVals);
+                const aSpan = Math.max(1, aMax - aMin);
+                const w = 860;
+                const h = 190;
+                const pL = 78;
+                const pR = 20;
+                const pT = 16;
+                const pB = 22;
+                const pw = w - pL - pR;
+                const ph = h - pT - pB;
+                const gx = (i: number) => pL + (i / (ac.length - 1)) * pw;
+                const gy = (v: number) => pT + ph - ((v - aMin) / aSpan) * ph;
+                const pts = ac.map((p, i) => `${gx(i).toFixed(1)},${gy(p.equityTRY).toFixed(1)}`).join(' ');
+                const aColor = auditData.netProfitTRY >= 0 ? '#10b981' : '#f43f5e';
+                return (
+                  <div className="w-full overflow-x-auto bg-zinc-950 border border-zinc-800 rounded p-2">
+                    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-44 select-none">
+                      {[0, 0.5, 1].map((r, i) => {
+                        const y = pT + r * ph;
+                        const val = aMax - r * aSpan;
+                        return (
+                          <g key={i}>
+                            <line x1={pL} y1={y} x2={w - pR} y2={y} stroke="#27272a" strokeDasharray="3 3" strokeWidth="1" />
+                            <text x={pL - 6} y={y + 3} textAnchor="end" fill="#a1a1aa" fontSize="10" fontFamily="monospace">
+                              {Math.round(val).toLocaleString('tr-TR')} ₺
+                            </text>
+                          </g>
+                        );
+                      })}
+                      <line x1={pL} y1={gy(250000)} x2={w - pR} y2={gy(250000)} stroke="#52525b" strokeDasharray="4 4" strokeWidth="1" />
+                      <polyline fill="none" stroke={aColor} strokeWidth="2.2" points={pts} />
+                    </svg>
+                  </div>
+                );
+              })()}
+
+              {/* Walk-Forward Kapanan İşlemler Tablosu */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-zinc-400">
+                      <th className="py-2 px-2 font-medium">Tarih (Giriş → Çıkış)</th>
+                      <th className="py-2 px-2 font-medium">Varlık &amp; Yön</th>
+                      <th className="py-2 px-2 font-medium">Motor &amp; Kelly</th>
+                      <th className="py-2 px-2 font-medium text-right">Giriş → Çıkış</th>
+                      <th className="py-2 px-2 font-medium">Durum &amp; +4S Tahmin</th>
+                      <th className="py-2 px-2 font-medium text-right">Net Kâr / Zarar</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/60">
+                    {auditData.closedTrades.slice(0, 45).map((ct, idx) => (
+                      <tr key={`${ct.symbol}-${idx}`} className="hover:bg-zinc-800/30">
+                        <td className="py-2 px-2 font-mono text-[11px] text-zinc-400 whitespace-nowrap">
+                          {new Date(ct.entryTime).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          {' → '}
+                          {new Date(ct.closeTime).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="py-2 px-2">
+                          <span className="font-semibold text-white">{ct.symbol}</span>{' '}
+                          <span className={`text-[11px] font-mono ${ct.direction === 'AL (LONG)' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {ct.direction}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 font-mono text-[11px] text-zinc-300">
+                          {ct.timeframe} • <span className="text-sky-400">Kelly {ct.kellyMultiplier}x</span> ({ct.confluenceScore}/100)
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-zinc-200 whitespace-nowrap">
+                          {ct.entryPrice.toFixed(ct.digits)} → {ct.closePrice.toFixed(ct.digits)}
+                        </td>
+                        <td className="py-2 px-2 text-[11px] text-zinc-400">
+                          {formatStatusText(ct.status)} • +4S: {ct.pred4hPct >= 0 ? '+' : ''}{ct.pred4hPct}% (TP1 %{ct.tp1Prob})
+                        </td>
+                        <td className={`py-2 px-2 text-right font-mono font-semibold whitespace-nowrap ${ct.netPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {ct.netPnL_TRY >= 0 ? '+' : ''}{formatTRY(ct.netPnL_TRY)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
 

@@ -25,6 +25,7 @@ import {
   toggleAutonomousBot,
   resetAutonomousBot,
   resetAutonomousBotCleanZero,
+  runLiveWalkForwardAudit,
 } from './autonomousTrader';
 import {
   executeManualTradingTick,
@@ -334,6 +335,23 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: err?.message || 'Otonom işlem motoru hatası' }));
+    }
+    return;
+  }
+
+  // 3b2. API: Gerçek Geçmiş Borsa Verisiyle Walk-Forward Sistem Doğrulaması (/api/autonomous-backtest)
+  if (pathname === '/api/autonomous-backtest') {
+    try {
+      const winParam = urlObj.searchParams.get('window');
+      const win = winParam === '30d' ? '30d' : '7d';
+      const refresh = urlObj.searchParams.get('refresh') === 'true';
+      const result = await runLiveWalkForwardAudit(win, refresh);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(result));
+    } catch (err: any) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: err?.message || 'Walk-forward doğrulama hatası' }));
     }
     return;
   }

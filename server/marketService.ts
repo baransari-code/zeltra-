@@ -77,11 +77,11 @@ export const SYMBOL_MAP: Record<string, string> = {
   'HEATING_OIL': 'HO=F',
   'COAL': 'NCF=F',
 
-  // Endeksler
-  'NAS100': '^IXIC',
-  'SPX500': '^GSPC',
-  'US30': '^DJI',
-  'RUSSELL2000': '^RUT',
+  // Endeksler (Canlı Vadeli Kontratlar — 23/5 Küresel Akış)
+  'NAS100': 'NQ=F',
+  'SPX500': 'ES=F',
+  'US30': 'YM=F',
+  'RUSSELL2000': 'RTY=F',
   'VIX': '^VIX',
   'GER40': '^GDAXI',
   'UK100': '^FTSE',

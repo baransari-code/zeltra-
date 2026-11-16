@@ -140,6 +140,9 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
     if (activeTrade) {
       lo = Math.min(lo, activeTrade.entryPrice, activeTrade.stopLoss, activeTrade.takeProfit1);
       hi = Math.max(hi, activeTrade.entryPrice, activeTrade.stopLoss, activeTrade.takeProfit1);
+    } else if (showBands && forecast?.indicators) {
+      lo = Math.min(lo, forecast.indicators.donchianLow);
+      hi = Math.max(hi, forecast.indicators.donchianHigh);
     }
     const rawSpan = Math.max(1e-9, hi - lo);
     const margin = rawSpan * 0.06;
@@ -148,7 +151,7 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
       maxPrice: hi + margin,
       priceRange: rawSpan + margin * 2,
     };
-  }, [candles, hourlyPath, showBands, showEma, showForecastCone, activeTrade]);
+  }, [candles, hourlyPath, showBands, showEma, showForecastCone, activeTrade, forecast]);
 
   const getPriceY = useCallback(
     (px: number) => padT + priceH - ((px - minPrice) / (priceRange || 1)) * priceH,
@@ -222,6 +225,17 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
   const fcBull = forecast?.horizonDirection === 'YÜKSELİŞ';
   const fcBear = forecast?.horizonDirection === 'DÜŞÜŞ';
   const coneStroke = fcBull ? '#10b981' : fcBear ? '#f43f5e' : '#38bdf8';
+
+  const isCryptoSym = ['BTC/', 'ETH/', 'SOL/', 'BNB/', 'XRP/', 'AVAX/', 'LINK/', 'DOGE/'].some((p) =>
+    symbol.startsWith(p)
+  );
+  const maxDirTp1Prob = forecast ? Math.max(forecast.tp1HitProbLong, forecast.tp1HitProbShort) : 50;
+  const kellyPWin = Math.max(0.4, Math.min(0.7, maxDirTp1Prob / 100 + 0.08));
+  const kellyPayoff = isCryptoSym ? 2.2 : 2.5;
+  const kellyOpt = +Math.max(
+    0.85,
+    Math.min(1.38, ((kellyPWin - (1 - kellyPWin) / kellyPayoff) / 0.32) * 1.12)
+  ).toFixed(2);
 
   const anchorIdx = Math.max(0, candles.length - 1);
   const anchorX = getSlotX(anchorIdx);
@@ -388,10 +402,15 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
 
           <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-[11px]">Otonom Bot & Tetikleyici</span>
-              <span className="text-[10px] font-mono text-zinc-400">
-                {activeTrade ? `AÇIK (${activeTrade.entryTimeframe})` : data?.scannerRow?.status || 'TARANIYOR'}
-              </span>
+              <span className="text-zinc-400 text-[11px]">Otonom Bot &amp; Tetikleyici</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-950/60 border border-sky-800/60 text-sky-300">
+                  Kelly {kellyOpt}x
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400">
+                  {activeTrade ? `AÇIK (${activeTrade.entryTimeframe})` : data?.scannerRow?.status || 'TARANIYOR'}
+                </span>
+              </div>
             </div>
             {activeTrade ? (
               <div className="font-mono text-[11px] space-y-0.5">
@@ -405,7 +424,9 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
             ) : (
               <div className="font-mono text-[11px] text-zinc-300 leading-snug">
                 AL &gt; {forecast.indicators.donchianHigh.toFixed(digits)} | SAT &lt; {forecast.indicators.donchianLow.toFixed(digits)}
-                <div className="text-[10px] text-zinc-500 mt-0.5 truncate">{forecast.summaryReason}</div>
+                <div className="text-[10px] text-zinc-500 mt-0.5 truncate" title={data?.scannerRow?.decisionReason || forecast.summaryReason}>
+                  {data?.scannerRow?.decisionReason || forecast.summaryReason}
+                </div>
               </div>
             )}
           </div>
@@ -523,6 +544,50 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                 <polyline fill="none" stroke="#64748b" strokeOpacity="0.45" strokeWidth="1" points={polylineFor((c) => c.bbLower)} />
                 <polyline fill="none" stroke="#38bdf8" strokeOpacity="0.35" strokeWidth="1" strokeDasharray="3 3" points={polylineFor((c) => c.donHigh)} />
                 <polyline fill="none" stroke="#f43f5e" strokeOpacity="0.35" strokeWidth="1" strokeDasharray="3 3" points={polylineFor((c) => c.donLow)} />
+              </>
+            )}
+
+            {/* Yatay Donchian Kırılım Tetikleyicileri (Aktif İşlem Yoksa Bot Giriş Rayları) */}
+            {!activeTrade && showBands && forecast?.indicators && (
+              <>
+                <line
+                  x1={padL}
+                  y1={getPriceY(forecast.indicators.donchianHigh)}
+                  x2={svgW - padR}
+                  y2={getPriceY(forecast.indicators.donchianHigh)}
+                  stroke="#10b981"
+                  strokeOpacity="0.48"
+                  strokeWidth="1"
+                  strokeDasharray="4 4"
+                />
+                <text
+                  x={padL + 6}
+                  y={getPriceY(forecast.indicators.donchianHigh) - 4}
+                  fill="#10b981"
+                  fontSize="8.5"
+                  fontFamily="monospace"
+                >
+                  AL TETİK &gt; {forecast.indicators.donchianHigh.toFixed(digits)}
+                </text>
+                <line
+                  x1={padL}
+                  y1={getPriceY(forecast.indicators.donchianLow)}
+                  x2={svgW - padR}
+                  y2={getPriceY(forecast.indicators.donchianLow)}
+                  stroke="#f43f5e"
+                  strokeOpacity="0.48"
+                  strokeWidth="1"
+                  strokeDasharray="4 4"
+                />
+                <text
+                  x={padL + 6}
+                  y={getPriceY(forecast.indicators.donchianLow) + 10}
+                  fill="#f43f5e"
+                  fontSize="8.5"
+                  fontFamily="monospace"
+                >
+                  SAT TETİK &lt; {forecast.indicators.donchianLow.toFixed(digits)}
+                </text>
               </>
             )}
 
