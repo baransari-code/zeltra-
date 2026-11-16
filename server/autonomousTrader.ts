@@ -232,7 +232,7 @@ export interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
   forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   forecastTarget4h?: number;
   forecastTarget12h?: number;
@@ -450,6 +450,37 @@ export function isMarketOpenForAsset(symbol: string, d: Date = new Date()): { is
   }
 
   return { isOpen: true };
+}
+
+/**
+ * Hafta İçi Küresel Borsa (8 Enstrüman) + Yüksek İnançlı BTC/USD | Hafta Sonu Yalnızca BTC/USD Politika Kapısı.
+ * Yüksek doğruluk ve düşük düşüş (PF 3.0x, %63 WR) için oynak altcoin işlemleri kapatılır.
+ */
+export function isAutonomousExecutionAllowed(
+  symbol: string,
+  d: Date = new Date()
+): { allowed: boolean; modeLabel: string; isWeekdayHighConvBtc: boolean } {
+  const spec = getSpec(symbol);
+  if (spec.cluster.startsWith('CRYPTO')) {
+    if (symbol !== 'BTC/USD') {
+      return {
+        allowed: false,
+        modeLabel: 'Altcoin İşlemi Kapalı (Yalnızca Borsa + BTC Aktif)',
+        isWeekdayHighConvBtc: false,
+      };
+    }
+    const tradFiOpen = isMarketOpenForAsset('XAU/USD', d).isOpen;
+    return {
+      allowed: true,
+      modeLabel: tradFiOpen ? 'Hafta İçi Yüksek İnançlı BTC' : 'Hafta Sonu 7/24 BTC Modu',
+      isWeekdayHighConvBtc: tradFiOpen,
+    };
+  }
+  return {
+    allowed: true,
+    modeLabel: 'Küresel Borsa / Endeks / FX Aktif',
+    isWeekdayHighConvBtc: false,
+  };
 }
 
 // Wilder's RSI & ATR Yardımcıları
@@ -1802,7 +1833,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const nowIso = new Date(now).toISOString();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v8.0-regime-forecast',
+    strategyVersion: 'v9.0-borsa-btc-alpha',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -1909,6 +1940,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v9.0-borsa-btc-alpha' ||
           parsed.strategyVersion === 'v8.0-regime-forecast' ||
           parsed.strategyVersion === 'v7.0-kelly-forecast' ||
           parsed.strategyVersion === 'v6.0-forecast-alpha' ||
@@ -1917,7 +1949,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v8.0-regime-forecast';
+          parsed.strategyVersion = 'v9.0-borsa-btc-alpha';
           ensureForensicXRayOnTrades(parsed);
           recalculateLedgerMetrics(parsed);
           return parsed;
@@ -2036,31 +2068,38 @@ function evaluateTechnicalBreakoutSetup(params: {
   let vetoReason = '';
 
   if (isCrypto) {
-    const hQual = allow1h && hBars.length >= 40 && hEr >= 0.16 && hAdx.adx >= 18 && hRvol >= 0.95;
-    if (
-      hQual &&
-      midPrice > hDon20.high * 1.0004 &&
-      midPrice > hEma21 &&
-      (hEma21 >= hEma50 * 0.992 || midPrice > hEma50) &&
-      hRsi >= 50 &&
-      hRsi <= 74 &&
-      btcBullMacro
-    ) {
-      direction = 'AL (LONG)';
-      entryTimeframe = '1H';
-      rationale = `1S Yapısal Kırılım (Donchian20 > ${hDon20.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
-    } else if (
-      hQual &&
-      midPrice < hDon20.low * 0.9996 &&
-      midPrice < hEma21 &&
-      (hEma21 <= hEma50 * 1.008 || midPrice < hEma50) &&
-      hRsi >= 20 &&
-      hRsi <= 50 &&
-      btcBearMacro
-    ) {
-      direction = 'SAT (SHORT)';
-      entryTimeframe = '1H';
-      rationale = `1S Aşağı Kırılım (Donchian20 < ${hDon20.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
+    const execPolicy = isAutonomousExecutionAllowed(candidate.symbol, new Date(now));
+    if (!execPolicy.allowed) {
+      vetoReason = execPolicy.modeLabel;
+    } else {
+      const erMinBtc = execPolicy.isWeekdayHighConvBtc ? 0.22 : 0.16;
+      const adxMinBtc = execPolicy.isWeekdayHighConvBtc ? 21 : 18;
+      const hQual = allow1h && hBars.length >= 40 && hEr >= erMinBtc && hAdx.adx >= adxMinBtc && hRvol >= 0.95;
+      if (
+        hQual &&
+        midPrice > hDon20.high * 1.0004 &&
+        midPrice > hEma21 &&
+        (hEma21 >= hEma50 * 0.992 || midPrice > hEma50) &&
+        hRsi >= 50 &&
+        hRsi <= 74 &&
+        btcBullMacro
+      ) {
+        direction = 'AL (LONG)';
+        entryTimeframe = '1H';
+        rationale = `1S BTC Kırılım (${execPolicy.modeLabel} · Donchian20 > ${hDon20.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
+      } else if (
+        hQual &&
+        midPrice < hDon20.low * 0.9996 &&
+        midPrice < hEma21 &&
+        (hEma21 <= hEma50 * 1.008 || midPrice < hEma50) &&
+        hRsi >= 20 &&
+        hRsi <= 50 &&
+        btcBearMacro
+      ) {
+        direction = 'SAT (SHORT)';
+        entryTimeframe = '1H';
+        rationale = `1S BTC Aşağı Kırılım (${execPolicy.modeLabel} · Donchian20 < ${hDon20.low.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} | RVOL ${hRvol}x | 1S RSI ${hRsi}`;
+      }
     }
 
     const mQual =
@@ -2140,6 +2179,9 @@ function evaluateTechnicalBreakoutSetup(params: {
       direction = null;
     }
   } else {
+    const isUsTech = candidate.cluster === 'US_TECH';
+    const rsiMaxLong = isUsTech ? 71 : 68;
+    const rsiMinShort = isUsTech ? 29 : 32;
     const utcHour = new Date(now).getUTCHours();
     const liquidTradFiSession = !isFx || (utcHour >= 7 && utcHour <= 20);
     const hTradFiQual = allow1h && liquidTradFiSession && hBars.length >= 40 && hEr >= 0.24 && hAdx.adx >= 22;
@@ -2150,7 +2192,7 @@ function evaluateTechnicalBreakoutSetup(params: {
       hEma21 > hEma50 &&
       hEma50 >= hEma100 * 0.998 &&
       hRsi >= 50 &&
-      hRsi <= 68 &&
+      hRsi <= rsiMaxLong &&
       hAdx.pdi > hAdx.ndi &&
       (!isFx || hClosePos >= 0.55)
     ) {
@@ -2163,7 +2205,7 @@ function evaluateTechnicalBreakoutSetup(params: {
       midPrice < hEma21 &&
       hEma21 < hEma50 &&
       hEma50 <= hEma100 * 1.002 &&
-      hRsi >= 32 &&
+      hRsi >= rsiMinShort &&
       hRsi <= 50 &&
       hAdx.ndi > hAdx.pdi &&
       (!isFx || hClosePos <= 0.45)
@@ -2932,8 +2974,12 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       let isForecastVeto = false;
       let candidateScore = 52;
 
+      const execPolicy = isAutonomousExecutionAllowed(candidate.symbol, new Date(now));
       // v8.0 Canlı Fiyat Teyidi: Kapanan 1S bar teyidi üzerinden <=45dk pencere ve kırılımın hala korunuyor olması şarttır
-      if (direction && hasClosed1H) {
+      if (!execPolicy.allowed) {
+        direction = null;
+        vetoReason = execPolicy.modeLabel;
+      } else if (direction && hasClosed1H) {
         const refHi = isCrypto ? hDon20.high : hDon16.high;
         const refLo = isCrypto ? hDon20.low : hDon16.low;
         const staleClosedBar = now - sigNow > 45 * 60 * 1000;
@@ -2941,8 +2987,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           (direction === 'AL (LONG)' && midPrice <= refHi) ||
           (direction === 'SAT (SHORT)' && midPrice >= refLo);
         const chasedTooFar =
-          (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * 0.85) ||
-          (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * 0.85);
+          (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * 1.25) ||
+          (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * 1.25);
         if (staleClosedBar) {
           vetoReason = `Saatlik Kapanış Bekleniyor: Son 1S kırılım sinyali 45 dakikayı aştığı için taze bar kapanışı bekleniyor.`;
           direction = null;
@@ -2950,7 +2996,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           vetoReason = `Sahte Kırılım Koruması: Önceki 1S mum kırılım yaptı ancak anlık fiyat (${midPrice.toFixed(candidate.digits)}) tekrar kanal içine döndü; işlem açılmadı.`;
           direction = null;
         } else if (chasedTooFar) {
-          vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+0.85 ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
+          vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+1.25 ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
           direction = null;
         }
       } else if (!direction) {
@@ -3162,9 +3208,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100) ancak kripto sepeti kotası (3/3) dolu; kalan kapasite küresel piyasalar (Altın/Endeks/FX) için korunuyor.`;
         continue;
       }
-      if (sameClusterOpen >= 1) {
+      const clusterMax = candidate.cluster === 'US_TECH' ? 2 : 1;
+      if (sameClusterOpen >= clusterMax) {
         item.blockedStatus = 'KORELASYON KALKANI';
-        item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100) ancak aynı korelasyon kümesinde (${candidate.cluster}) halihazırda açık pozisyon var; aşırı yoğunlaşma engellendi.`;
+        item.blockedReason = `${direction} kırılımı hazır (${item.candidateScore}/100) ancak aynı korelasyon kümesinde (${candidate.cluster} ${sameClusterOpen}/${clusterMax}) kota dolu; aşırı yoğunlaşma engellendi.`;
         continue;
       }
       if (isCrypto && sameDirCryptoOpen >= 2) {
@@ -3452,6 +3499,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       scanStatus = 'PİYASA KAPALI (HAFTA SONU)';
       scanReason = marketSession.reason || 'Hafta sonu nedeniyle piyasa kapalıdır. Pazartesi Asya/Londra seansı açılışı bekleniyor.';
       scanScore = 50;
+    } else if (!isAutonomousExecutionAllowed(candidate.symbol, new Date(now)).allowed) {
+      scanStatus = 'ALTCOİN KAPALI (BORSA+BTC)';
+      scanReason = 'Yüksek Doğruluk Modu: Yalnızca hafta içi Küresel Borsa + yüksek inançlı BTC ve hafta sonu BTC işlem açar; altcoin gürültüsü kapalı.';
+      scanScore = Math.min(scanScore, 48);
     } else if (isNewsVeto) {
       scanStatus = 'HABER VETOSU';
       scanScore = 44;
@@ -3633,8 +3684,10 @@ export async function runLiveWalkForwardAudit(
     bar: HourlyBar;
   }
 
+  const activeAuditUniverse = CORE_UNIVERSE.filter((c) => !c.cluster.startsWith('CRYPTO') || c.symbol === 'BTC/USD');
+
   const events: AuditEvent[] = [];
-  for (const spec of CORE_UNIVERSE) {
+  for (const spec of activeAuditUniverse) {
     const hBars = hourlyMap.get(spec.symbol) || [];
     for (let i = 50; i < hBars.length; i++) {
       const closeTs = hBars[i].timestamp + 3600 * 1000;
@@ -3946,8 +3999,9 @@ export async function runLiveWalkForwardAudit(
     const isCrypto = evalRes.isCrypto;
     const totalCryptoOpen = openPositions.filter((p) => p.spec.cluster.startsWith('CRYPTO')).length;
     const sameClusterOpen = openPositions.filter((p) => p.spec.cluster === spec.cluster).length;
+    const clusterCap = spec.cluster === 'US_TECH' ? 2 : 1;
     const sameDirCrypto = openPositions.filter((p) => p.spec.cluster.startsWith('CRYPTO') && p.direction === evalRes.direction).length;
-    if ((isCrypto && totalCryptoOpen >= 3) || sameClusterOpen >= 1 || (isCrypto && sameDirCrypto >= 2)) {
+    if ((isCrypto && totalCryptoOpen >= 3) || sameClusterOpen >= clusterCap || (isCrypto && sameDirCrypto >= 2)) {
       markEquity(ev.ts, false);
       continue;
     }
@@ -4107,7 +4161,7 @@ export async function runLiveWalkForwardAudit(
 
   const result: WalkForwardAuditResult = {
     window,
-    strategyVersion: 'v8.0-regime-forecast',
+    strategyVersion: 'v9.0-borsa-btc-alpha',
     generatedAt: new Date(nowMs).toISOString(),
     liveUsdTry: usdTry,
     initialCapitalTRY: initCap,

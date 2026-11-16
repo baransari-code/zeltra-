@@ -222,7 +222,7 @@ interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
   forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   forecastTarget4h?: number;
   forecastTarget12h?: number;
@@ -908,8 +908,8 @@ export const AutonomousTestView: React.FC = () => {
             <div className="p-4 bg-zinc-950 rounded border border-zinc-800 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="text-xs text-zinc-300 leading-relaxed">
-                  <strong className="text-white">Nakit Kalkanı Aktif (250.000 TL Nakitte Bekliyor):</strong>{' '}
-                  Mevcut piyasa dar yatay/sıkışma fazında olduğu için komisyon yakmamak adına teyitsiz giriş engelleniyor; en yakın kırılım &amp; Kelly adayları aşağıdadır.
+                  <strong className="text-white">Nakit Kalkanı Aktif ({formatTRY(ledger.availableCashTRY)} Boşta):</strong>{' '}
+                  Hafta içi Borsa + Yüksek İnançlı BTC | Hafta sonu Yalnızca BTC modunda doğrulanmış saatlik kırılım bekleniyor; aktif odak adayları aşağıdadır.
                 </div>
                 <button
                   onClick={() => setSubView('backtest')}
@@ -922,7 +922,7 @@ export const AutonomousTestView: React.FC = () => {
               {ledger.marketScanner && ledger.marketScanner.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                   {ledger.marketScanner
-                    .filter((m) => m.status !== 'PİYASA KAPALI (HAFTA SONU)')
+                    .filter((m) => m.status !== 'PİYASA KAPALI (HAFTA SONU)' && m.status !== 'ALTCOİN KAPALI (BORSA+BTC)')
                     .slice()
                     .sort((a, b) => b.confluenceScore - a.confluenceScore)
                     .slice(0, 3)
@@ -1410,7 +1410,7 @@ export const AutonomousTestView: React.FC = () => {
                 Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Canlı Kraken 60dk/15dk ve CME Vadeli/Yahoo barları üzerinde birebir IBKR komisyon, spread, slippage, Saatlik Bar Kapanış Teyidi, Tahmin Vetosu ve Kesirli Kelly ({auditData?.strategyVersion || 'v8.0-regime-forecast'}) uygulanarak hesaplanır.
+                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v9.0-borsa-btc-alpha'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">
