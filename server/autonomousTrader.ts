@@ -16,6 +16,7 @@ import {
 import { synthesizeAssetNewsAI } from './newsAiEngine';
 import { computeMultiHorizonForecast, MultiHorizonForecast } from './quantForecastEngine';
 import { CALIBRATION_DEADLINE_ISO, LAB_TRACKED_ASSETS, getLearnedSymbolCalibration } from './forecastLab3m';
+import { analyzeCandlestickSetup } from './candleIntelligence';
 
 export interface GateCheckItem {
   step: number;
@@ -246,6 +247,9 @@ export interface MarketScannerItem {
   kellyMultiplier?: number;
   squeezeOn?: boolean;
   regimePhase?: string;
+  candlePatternLabel?: string;
+  activeEngineType?: 'BREAKOUT' | 'CANDLE_PB';
+  newsDirection?: string;
   dataDelaySec?: number;
   liveDataSource?: string;
   decisionReason: string;
@@ -1849,7 +1853,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const obsActive = now < new Date(CALIBRATION_DEADLINE_ISO).getTime();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v11.0-alpha-calibrated',
+    strategyVersion: 'v12.0-pro-candle-news',
     observationModeActive: obsActive,
     observationDeadlineIso: CALIBRATION_DEADLINE_ISO,
     observationManualOverride: 'AUTO',
@@ -1959,6 +1963,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v12.0-pro-candle-news' ||
           parsed.strategyVersion === 'v11.0-alpha-calibrated' ||
           parsed.strategyVersion === 'v10.0-3m-calibration-live' ||
           parsed.strategyVersion === 'v9.1-strict-forecast' ||
@@ -1971,7 +1976,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v11.0-alpha-calibrated';
+          parsed.strategyVersion = 'v12.0-pro-candle-news';
           parsed.observationDeadlineIso = CALIBRATION_DEADLINE_ISO;
           parsed.observationManualOverride = parsed.observationManualOverride || 'AUTO';
           parsed.observationModeActive = isObservationModeLocked(parsed);
@@ -2012,6 +2017,9 @@ interface TechnicalBreakoutResult {
   m15Don16: { high: number; low: number };
   m15Don28: { high: number; low: number };
   direction: 'AL (LONG)' | 'SAT (SHORT)' | null;
+  engineType: 'BREAKOUT' | 'CANDLE_PB';
+  candlePatternLabel: string;
+  candleStrengthScore: number;
   entryTimeframe: '1H' | '15M';
   rationale: string;
   vetoReason: string;
@@ -2088,9 +2096,20 @@ function evaluateTechnicalBreakoutSetup(params: {
   const m15Don16 = computeDonchianChannel(m15Bars, 16);
 
   let direction: 'AL (LONG)' | 'SAT (SHORT)' | null = null;
+  let engineType: 'BREAKOUT' | 'CANDLE_PB' = 'BREAKOUT';
   let entryTimeframe: '1H' | '15M' = '1H';
   let rationale = '';
   let vetoReason = '';
+
+  const hCandle = hBars.length >= 30 ? analyzeCandlestickSetup({ bars: hBars, h1Bars: hBars }) : null;
+  const candlePatternLabel = hCandle?.patternLabelTR || 'Denge Mumu';
+  const candleStrengthScore = hCandle ? Math.abs(hCandle.strengthScore) : 0;
+  const isPullbackCandlePattern =
+    hCandle !== null &&
+    (hCandle.patternCode === 'PINBAR_AL' ||
+      hCandle.patternCode === 'PINBAR_SAT' ||
+      hCandle.patternCode === 'YUTAN_BOGA' ||
+      hCandle.patternCode === 'YUTAN_AYI');
 
   if (isCrypto) {
     const execPolicy = isAutonomousExecutionAllowed(candidate.symbol, new Date(now));
@@ -2273,6 +2292,48 @@ function evaluateTechnicalBreakoutSetup(params: {
     }
   }
 
+  // v12.0 Engine A Mum Fitil Koruması (Üst fitil reddine LONG, alt fitil emilimine SHORT yasak)
+  if (direction === 'AL (LONG)' && hCandle && hCandle.anatomy.upperWickRatio > 0.56 && hCandle.anatomy.clv < -0.15) {
+    vetoReason = `1S Üst Fitil Reddi (Tepe Avı) Koruması: Üst fitil %${Math.round(hCandle.anatomy.upperWickRatio * 100)} alıcı zayıflığı gösteriyor; tepe kırılımı engellendi.`;
+    direction = null;
+  } else if (direction === 'SAT (SHORT)' && hCandle && hCandle.anatomy.lowerWickRatio > 0.56 && hCandle.anatomy.clv > 0.15) {
+    vetoReason = `1S Alt Fitil Emilimi (Dip Avı) Koruması: Alt fitil %${Math.round(hCandle.anatomy.lowerWickRatio * 100)} alıcı savunması gösteriyor; dip kırılımı engellendi.`;
+    direction = null;
+  }
+
+  // v12.0 Engine B — Trend İçi Kurumsal Mum Formasyonu (Pinbar / Yutan Pullback Motoru)
+  const execPolicyB = isAutonomousExecutionAllowed(candidate.symbol, new Date(now));
+  const utcHourB = new Date(now).getUTCHours();
+  const liquidSessionB = isCrypto ? execPolicyB.allowed : !isFx || (utcHourB >= 7 && utcHourB <= 20);
+  if (
+    !direction &&
+    allow1h &&
+    liquidSessionB &&
+    hCandle &&
+    isPullbackCandlePattern &&
+    hEr >= 0.24 &&
+    candleStrengthScore >= 72
+  ) {
+    const canLongB =
+      hCandle.direction === 'AL (LONG)' &&
+      (!isCrypto || btcBullMacro) &&
+      midPrice > hEma50 &&
+      hRsi >= 38 &&
+      hRsi <= 66;
+    const canShortB =
+      hCandle.direction === 'SAT (SHORT)' &&
+      (!isCrypto || btcBearMacro) &&
+      midPrice < hEma50 &&
+      hRsi >= 34 &&
+      hRsi <= 62;
+    if (canLongB || canShortB) {
+      direction = hCandle.direction as 'AL (LONG)' | 'SAT (SHORT)';
+      engineType = 'CANDLE_PB';
+      entryTimeframe = '1H';
+      rationale = `1S Mum Formasyonu (${candlePatternLabel} · Güç ${candleStrengthScore}/100 | ER ${hEr} | CLV ${hCandle.anatomy.clv})`;
+    }
+  }
+
   const activeRawAtr = entryTimeframe === '15M' ? m15Atr : hAtr;
   const minTradeAtr = midPrice * (isCrypto ? (entryTimeframe === '15M' ? 0.0055 : 0.009) : 0.0018);
   const maxTradeAtr = midPrice * (isCrypto ? (entryTimeframe === '15M' ? 0.021 : 0.024) : 0.009);
@@ -2297,6 +2358,9 @@ function evaluateTechnicalBreakoutSetup(params: {
     m15Don16,
     m15Don28,
     direction,
+    engineType,
+    candlePatternLabel,
+    candleStrengthScore,
     entryTimeframe,
     rationale,
     vetoReason,
@@ -2335,7 +2399,8 @@ function scoreBreakoutSetupConfluence(params: {
       : 6
     : 8;
   const feePts = tp1RatioPct >= minViableTpPct * 1.4 ? 8 : 5;
-  return Math.max(0, Math.min(98, erPts + adxPts + rvolPts + rsiCenterPts + macroObPts + feePts));
+  const candlePts = evalRes.engineType === 'CANDLE_PB' && evalRes.candleStrengthScore >= 78 ? 4 : 0;
+  return Math.max(0, Math.min(98, erPts + adxPts + rvolPts + rsiCenterPts + macroObPts + feePts + candlePts));
 }
 
 // Canlı Piyasa Tarama, Açık Pozisyon Güncelleme, Canlı Haber Risk Kalkanı, 16-Varlık Radarı ve Yeni İşlem Açma Döngüsü
@@ -2870,6 +2935,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     isMarketClosed: boolean;
     marketSession: { isOpen: boolean; reason?: string };
     direction: 'AL (LONG)' | 'SAT (SHORT)' | null;
+    engineType: 'BREAKOUT' | 'CANDLE_PB';
+    candlePatternLabel?: string;
+    newsDirection?: string;
     rationale: string;
     riskScale: number;
     vetoReason: string;
@@ -3009,6 +3077,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           isMarketClosed,
           marketSession,
           direction: existingOpen.direction,
+          engineType: 'BREAKOUT',
+          candlePatternLabel: evalRes.candlePatternLabel,
+          newsDirection: aiNews.direction,
           rationale: existingOpen.rationale,
           riskScale: 1,
           vetoReason: '',
@@ -3021,6 +3092,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       }
 
       let direction: 'AL (LONG)' | 'SAT (SHORT)' | null = evalRes.direction;
+      const engineType = evalRes.engineType;
       const entryTimeframe: '1H' | '15M' = evalRes.entryTimeframe;
       let rationale = evalRes.rationale;
       const riskScale = 1.0;
@@ -3030,28 +3102,31 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       let candidateScore = 52;
 
       const execPolicy = isAutonomousExecutionAllowed(candidate.symbol, new Date(now));
-      // v9.1 Canlı Fiyat Teyidi: Kapanan 1S bar teyidi üzerinden <=20dk pencere, kanal dışı tazelik ve <=0.75 ATR anti-chase koruması
+      // v12.0 Canlı Fiyat Teyidi: Kapanan 1S bar teyidi üzerinden kırılım (<=20dk + kanal dışı) / mum geri çekilme (<=45dk + anti-chase)
       if (!execPolicy.allowed) {
         direction = null;
         vetoReason = execPolicy.modeLabel;
       } else if (direction && hasClosed1H) {
         const refHi = isCrypto ? hDon20.high : hDon16.high;
         const refLo = isCrypto ? hDon20.low : hDon16.low;
-        const staleClosedBar = now - sigNow > 20 * 60 * 1000;
+        const maxAgeMs = engineType === 'CANDLE_PB' ? 45 * 60 * 1000 : 20 * 60 * 1000;
+        const staleClosedBar = now - sigNow > maxAgeMs;
         const snappedBackInside =
-          (direction === 'AL (LONG)' && midPrice <= refHi) ||
-          (direction === 'SAT (SHORT)' && midPrice >= refLo);
+          engineType === 'BREAKOUT' &&
+          ((direction === 'AL (LONG)' && midPrice <= refHi) ||
+            (direction === 'SAT (SHORT)' && midPrice >= refLo));
+        const chaseMult = engineType === 'CANDLE_PB' ? 0.9 : 0.75;
         const chasedTooFar =
-          (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * 0.75) ||
-          (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * 0.75);
+          (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * chaseMult) ||
+          (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * chaseMult);
         if (staleClosedBar) {
-          vetoReason = `Saatlik Kapanış Bekleniyor: Son 1S kırılım sinyali 20 dakikayı aştığı için taze bar kapanışı bekleniyor.`;
+          vetoReason = `Saatlik Kapanış Bekleniyor: Son 1S sinyal barı tazelik süresini aştığı için yeni kapanış bekleniyor.`;
           direction = null;
         } else if (snappedBackInside) {
           vetoReason = `Sahte Kırılım Koruması: Önceki 1S mum kırılım yaptı ancak anlık fiyat (${midPrice.toFixed(candidate.digits)}) tekrar kanal içine döndü; işlem açılmadı.`;
           direction = null;
         } else if (chasedTooFar) {
-          vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+0.75 ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
+          vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+${chaseMult} ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
           direction = null;
         }
       } else if (!direction) {
@@ -3121,16 +3196,23 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           minViableTpPct,
         });
 
-        // v9.1 İleriye Dönük Kesin Tahmin Doğrulama Kapısı (Tepe/Dip Tuzakları + YATAY Düşük İnançlı Kırılımları Engeller)
+        // v12.0 İleriye Dönük Tahmin Doğrulama Kapısı (BREAKOUT sıkı yön teyidi; CANDLE_PB karşıt olmayan bias kapısı)
         const dirTp1Prob = direction === 'AL (LONG)' ? forecast.tp1HitProbLong : forecast.tp1HitProbShort;
-        if (direction === 'AL (LONG)' && (forecast.gateBias < -0.05 || forecast.horizonDirection !== 'YÜKSELİŞ')) {
+        const allowCandlePb = engineType === 'CANDLE_PB';
+        const blocksLong = allowCandlePb
+          ? forecast.gateBias < -0.05
+          : forecast.gateBias < -0.05 || forecast.horizonDirection !== 'YÜKSELİŞ';
+        const blocksShort = allowCandlePb
+          ? forecast.gateBias > 0.05
+          : forecast.gateBias > 0.05 || forecast.horizonDirection !== 'DÜŞÜŞ';
+        if (direction === 'AL (LONG)' && blocksLong) {
           isForecastVeto = true;
           vetoReason =
             forecast.gateBias < -0.05
               ? `Tahmin Kalkanı Vetosu (AL): Kısa vadeli aşırı uzama sonrası ileriye dönük +4S/+12S projeksiyon düşüş riski gösteriyor (Hedef ${forecast.pred4hPrice}, Bias ${forecast.gateBias}); tepe tuzağı engellendi.`
               : `Tahmin Kalkanı Vetosu (AL): +4S/+12S kantitatif tahmin yönü ${forecast.horizonDirection} (%${dirTp1Prob} TP1) — aktif YÜKSELİŞ teyidi olmadığı için düşük inançlı giriş engellendi.`;
           direction = null;
-        } else if (direction === 'SAT (SHORT)' && (forecast.gateBias > 0.05 || forecast.horizonDirection !== 'DÜŞÜŞ')) {
+        } else if (direction === 'SAT (SHORT)' && blocksShort) {
           isForecastVeto = true;
           vetoReason =
             forecast.gateBias > 0.05
@@ -3140,6 +3222,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         } else {
           if (dirTp1Prob >= 47 && Math.abs(forecast.gateBias) >= 0.22) {
             candidateScore = Math.min(98, candidateScore + 5);
+          }
+          if (isFreshAiShock && aiNews.direction === direction && aiNews.convictionScore >= 70) {
+            candidateScore = Math.min(98, candidateScore + 3);
           }
           const learnedCal = getLearnedSymbolCalibration(candidate.symbol);
           if (learnedCal.samples15m >= 12 && learnedCal.dirAcc15m < 42 && learnedCal.samples3m >= 12 && learnedCal.dirAcc3m < 42) {
@@ -3236,6 +3321,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         isMarketClosed,
         marketSession,
         direction,
+        engineType,
+        candlePatternLabel: evalRes.candlePatternLabel,
+        newsDirection: aiNews.direction,
         rationale,
         riskScale,
         vetoReason,
@@ -3320,9 +3408,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           ? +(liveAsk + candidate.slippagePts).toFixed(candidate.digits)
           : +(liveBid - candidate.slippagePts).toFixed(candidate.digits);
 
-      const slDist = tradeAtr * 2.0;
-      const tp1Dist = tradeAtr * (isCrypto ? 3.2 : 3.0);
-      const tp2Dist = tradeAtr * (isCrypto ? 5.8 : 6.8);
+      const isCandlePb = item.engineType === 'CANDLE_PB';
+      const slDist = tradeAtr * (isCandlePb ? 2.2 : 2.0);
+      const tp1Dist = tradeAtr * (isCandlePb ? 2.8 : isCrypto ? 3.2 : 3.0);
+      const tp2Dist = tradeAtr * (isCandlePb ? 5.2 : isCrypto ? 5.8 : 6.8);
 
       const stopLoss =
         direction === 'AL (LONG)'
@@ -3516,6 +3605,9 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       kellyMultiplier: activeKelly,
       squeezeOn: forecast.indicators.squeezeOn,
       regimePhase: forecast.regimePhase,
+      candlePatternLabel: e.candlePatternLabel,
+      activeEngineType: e.engineType,
+      newsDirection: e.newsDirection,
       dataDelaySec: microBundle?.dataDelaySec,
       liveDataSource: microBundle?.liveSource,
     };
@@ -4141,9 +4233,10 @@ export async function runLiveWalkForwardAudit(
     );
 
     const isLongSig = evalRes.direction === 'AL (LONG)';
+    const isCandlePb = evalRes.engineType === 'CANDLE_PB';
     if (
-      (isLongSig && (forecast.gateBias < -0.05 || forecast.horizonDirection !== 'YÜKSELİŞ')) ||
-      (!isLongSig && (forecast.gateBias > 0.05 || forecast.horizonDirection !== 'DÜŞÜŞ'))
+      (isLongSig && (forecast.gateBias < -0.05 || (!isCandlePb && forecast.horizonDirection !== 'YÜKSELİŞ'))) ||
+      (!isLongSig && (forecast.gateBias > 0.05 || (!isCandlePb && forecast.horizonDirection !== 'DÜŞÜŞ')))
     ) {
       markEquity(ev.ts, false);
       continue;
@@ -4172,9 +4265,9 @@ export async function runLiveWalkForwardAudit(
     const entryPx = isLongSig
       ? +(midPrice + halfSp + spec.slippagePts).toFixed(spec.digits)
       : +(midPrice - halfSp - spec.slippagePts).toFixed(spec.digits);
-    const slDist = evalRes.tradeAtr * 2.0;
-    const tp1Dist = evalRes.tradeAtr * (isCrypto ? 3.2 : 3.0);
-    const tp2Dist = evalRes.tradeAtr * (isCrypto ? 5.8 : 6.8);
+    const slDist = evalRes.tradeAtr * (isCandlePb ? 2.2 : 2.0);
+    const tp1Dist = evalRes.tradeAtr * (isCandlePb ? 2.8 : isCrypto ? 3.2 : 3.0);
+    const tp2Dist = evalRes.tradeAtr * (isCandlePb ? 5.2 : isCrypto ? 5.8 : 6.8);
 
     const stopLoss = isLongSig ? +(entryPx - slDist).toFixed(spec.digits) : +(entryPx + slDist).toFixed(spec.digits);
     const tp1 = isLongSig ? +(entryPx + tp1Dist).toFixed(spec.digits) : +(entryPx - tp1Dist).toFixed(spec.digits);
@@ -4268,7 +4361,7 @@ export async function runLiveWalkForwardAudit(
 
   const result: WalkForwardAuditResult = {
     window,
-    strategyVersion: 'v11.0-alpha-calibrated',
+    strategyVersion: 'v12.0-pro-candle-news',
     generatedAt: new Date(nowMs).toISOString(),
     liveUsdTry: usdTry,
     initialCapitalTRY: initCap,

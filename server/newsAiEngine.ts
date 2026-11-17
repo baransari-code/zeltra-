@@ -102,10 +102,10 @@ const CAUSAL_RULES: CausalRule[] = [
     id: 'geopolitical_safe_haven_and_oil',
     category: 'Jeopolitik & Güvenli Liman',
     patterns: [
-      /\b(middle east|war|conflict|missile|sanctions|strait of hormuz|red sea|geopolitical|safe[- ]haven|escalat|opec cuts|supply disruption)\b/i,
-      /\b(jeopolitik|savaş|gerilim|yaptırım|güvenli liman|arz kesintisi)\b/i,
+      /\b(armed conflict|missile strike|strait of hormuz|red sea attack|military escalat|opec cuts|supply disruption)\b/i,
+      /\b(jeopolitik kriz|füze saldırısı|arz kesintisi)\b/i,
     ],
-    whatHappenedTR: 'Jeopolitik gerilim veya enerji arz güvenliği endişesi gündeme geldi.',
+    whatHappenedTR: 'Jeopolitik gerilim veya enerji arz kesintisi endişesi gündeme geldi.',
     mechanismTR: 'Küresel belirsizlik anlarında kurumsal fonlar hisse senetlerinden çıkıp güvenli liman olan Ons Altın ve Ham Petrole geçer.',
     impacts: [
       { symbol: 'XAU/USD', direction: 'AL (LONG)', weight: 0.86, reasonTR: 'Güvenli liman talebi Ons Altın alımlarını hızlandırır.' },
@@ -131,8 +131,9 @@ const CAUSAL_RULES: CausalRule[] = [
     id: 'crypto_bullish_adoption_or_inflows',
     category: 'Kripto Kurumsal & Likidite',
     patterns: [
-      /\b(bitcoin surges|bitcoin rallies|btc surges|etf inflows|strong inflows|institutional buying|short squeeze|all[- ]time high|crypto rally)\b/i,
-      /\b(bitcoin yükseldi|bitcoin ralli|kurumsal alım|rekor giriş)\b/i,
+      /\b(bitcoin surges|bitcoin rallies|btc surges|bitcoin etf inflows|spot etf inflows|crypto rally)\b/i,
+      /\b(bitcoin.*short squeeze|btc.*short squeeze)\b/i,
+      /\b(bitcoin yükseldi|bitcoin ralli|kurumsal kripto alım|bitcoin.*rekor giriş)\b/i,
     ],
     whatHappenedTR: 'Kripto varlıklara güçlü kurumsal fon girişi (ETF) ve alım ivmesi kaydedildi.',
     mechanismTR: 'Spot ETF ve kurumsal alımlar borsalardaki arzı daraltarak yukarı yönlü trend kırılımı (Long fırsatı) başlatır.',
@@ -160,7 +161,7 @@ const CAUSAL_RULES: CausalRule[] = [
     id: 'oil_oversupply_or_demand_weak',
     category: 'Emtia Arz & Talep',
     patterns: [
-      /\b(crude|oil|wti|brent|opec).*\b(fall|drop|slump|surplus|oversupply|weak demand|inventories rise)\b/i,
+      /\b(crude|oil|wti|brent|opec).*\b(fall|falls|fell|drop|drops|decline|declines|slump|surplus|oversupply|weak demand|inventories rise|recovering.*exports)\b/i,
       /\b(petrol).*\b(geriledi|düştü|arz fazlası|stoklar arttı)\b/i,
     ],
     whatHappenedTR: 'Petrol piyasasında arz fazlası, stok artışı veya küresel talep yavaşlaması bildirildi.',

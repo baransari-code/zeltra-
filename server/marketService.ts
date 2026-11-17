@@ -1092,7 +1092,7 @@ const FINANCIAL_NEWS_FEEDS = [
   { source: 'Cointelegraph', url: 'https://cointelegraph.com/rss' },
 ];
 
-// Magazin, Yaşam, Seyahat ve Kişisel Tüketici Şikayeti Filtresi (Örn: "Uçmaktan bıktım / bagaj" vb. haberleri kesin olarak eler)
+// Magazin, Yaşam, Seyahat ve Kişisel Tüketici Şikayeti Filtresi (Örn: Moneyist aile/araba tamiri/vasiyet haberlerini kesin eler)
 const NON_FINANCIAL_LIFESTYLE_BLOCKLIST = [
   'boarding', 'luggage', 'baggage', 'overhead bin', 'sick of flying', 'vacation',
   'wedding', 'divorce', 'mother-in-law', 'stepchild', 'inheritance', 'etiquette',
@@ -1100,52 +1100,53 @@ const NON_FINANCIAL_LIFESTYLE_BLOCKLIST = [
   'hotel room', 'dating', 'spouse', 'funeral', 'pet', 'dog', 'cat',
   'worst fight', 'is that unreasonable', 'retire at', 'my older brother', 'only sister',
   'out of his will', 'do i tell', 'moneyist', 'dear penny', 'prediction markets call',
+  'elderly', 'aging mother', 'aging mom', 'my mother', 'my mom', 'cousin', 'car repair',
+  'sours me', 'nephew', 'niece', 'brother-in-law', 'sister-in-law', '401(k)', 'social security',
 ];
 
 // Enstrüman Bazlı Kurumsal Anahtar Kelime Haritası (Tam Kelime Sınırı Kontrollü)
 const ASSET_KEYWORD_MAP: Record<string, string[]> = {
   'EUR/USD': ['eur/usd', 'eurusd', 'eurozone', 'ecb', 'lagarde', 'avrupa merkez bankası', 'euro'],
-  'GBP/USD': ['gbp/usd', 'gbpusd', 'pound', 'sterling', 'boe', 'bailey', 'bank of england', 'uk inflation', 'britain', 'sterlin'],
-  'USD/TRY': ['usd/try', 'usdtry', 'turkey', 'lira', 'cbrt', 'tcmb', 'turkish lira', 'merkez bankası'],
-  'USD/JPY': ['usd/jpy', 'usdjpy', 'japanese yen', 'boj', 'ueda', 'bank of japan', 'japon yeni', 'yen'],
+  'GBP/USD': ['gbp/usd', 'gbpusd', 'pound sterling', 'boe', 'bailey', 'bank of england', 'uk inflation', 'britain', 'sterlin'],
+  'USD/TRY': ['usd/try', 'usdtry', 'turkey', 'lira', 'cbrt', 'tcmb', 'turkish lira'],
+  'USD/JPY': ['usd/jpy', 'usdjpy', 'japanese yen', 'boj', 'ueda', 'bank of japan', 'japon yeni'],
   'USD/CHF': ['usd/chf', 'usdchf', 'swiss franc', 'snb', 'switzerland', 'isviçre frangı'],
   'AUD/USD': ['aud/usd', 'audusd', 'australian dollar', 'rba', 'aussie', 'avustralya doları'],
   'USD/CAD': ['usd/cad', 'usdcad', 'canadian dollar', 'boc', 'loonie', 'kanada doları'],
   'XAU/USD': ['xau/usd', 'xauusd', 'gold', 'bullion', 'precious metal', 'safe haven', 'safe-haven', 'ons altın', 'altın'],
   'XAG/USD': ['xag/usd', 'xagusd', 'silver', 'gümüş'],
-  'WTI': ['wti', 'crude oil', 'west texas', 'opec', 'petroleum', 'oil prices', 'barrel', 'ham petrol', 'petrol'],
-  'BRENT': ['brent', 'brent crude', 'opec', 'north sea oil', 'oil prices', 'petrol'],
+  'WTI': ['wti', 'crude oil', 'west texas', 'opec', 'petroleum', 'oil prices', 'barrel of oil', 'ham petrol', 'brent crude'],
+  'BRENT': ['brent', 'brent crude', 'opec', 'north sea oil', 'oil prices'],
   'NATGAS': ['natural gas', 'natgas', 'lng', 'doğalgaz'],
-  'BTC/USD': ['btc/usd', 'btc', 'bitcoin', 'crypto', 'coindesk', 'cointelegraph', 'bitcoin etf', 'crypto etf', 'mining', 'capitulation', 'halving', 'binance', 'coinbase', 'kripto'],
+  'BTC/USD': ['btc/usd', 'btc', 'bitcoin', 'crypto', 'coindesk', 'cointelegraph', 'bitcoin etf', 'crypto etf', 'halving', 'binance', 'coinbase', 'kripto'],
   'ETH/USD': ['eth/usd', 'ethereum', 'ether', 'defi', 'ether etf', 'staking'],
-  'SOL/USD': ['sol/usd', 'solana', 'altcoin', 'altcoins', 'crypto market'],
-  'BNB/USD': ['bnb/usd', 'bnb', 'binance coin', 'binance', 'bsc', 'altcoin', 'crypto market'],
-  'XRP/USD': ['xrp/usd', 'ripple', 'xrp', 'altcoin', 'crypto market'],
-  'AVAX/USD': ['avax/usd', 'avax', 'avalanche', 'altcoin', 'crypto market'],
-  'LINK/USD': ['link/usd', 'chainlink', 'altcoin', 'crypto market'],
-  'DOGE/USD': ['doge/usd', 'doge', 'dogecoin', 'memecoin', 'altcoin', 'crypto market'],
+  'SOL/USD': ['sol/usd', 'solana'],
+  'BNB/USD': ['bnb/usd', 'bnb', 'binance coin', 'bsc'],
+  'XRP/USD': ['xrp/usd', 'ripple', 'xrp'],
+  'AVAX/USD': ['avax/usd', 'avax', 'avalanche'],
+  'LINK/USD': ['link/usd', 'chainlink'],
+  'DOGE/USD': ['doge/usd', 'doge', 'dogecoin', 'memecoin'],
   'ADA/USD': ['ada/usd', 'cardano'],
-  'NVDA': ['nvidia', 'nvda', 'jensen huang', 'huang', 'blackwell', 'semiconductor', 'chips', 'gpu', 'ai chip', 'yapay zeka çip'],
+  'NVDA': ['nvidia', 'nvda', 'jensen huang', 'blackwell', 'semiconductor', 'ai chip', 'gpu', 'yapay zeka çip'],
   'AAPL': ['apple', 'aapl', 'iphone', 'tim cook', 'cupertino'],
   'MSFT': ['microsoft', 'msft', 'satya nadella', 'azure', 'copilot'],
   'GOOGL': ['alphabet', 'google', 'googl', 'sundar pichai', 'waymo'],
   'AMZN': ['amazon', 'amzn', 'aws', 'andy jassy'],
-  'META': ['meta platforms', 'meta', 'zuckerberg', 'instagram', 'whatsapp'],
+  'META': ['meta platforms', 'zuckerberg', 'instagram', 'whatsapp'],
   'AMD': ['advanced micro devices', 'amd', 'lisa su'],
-  'TSLA': ['tesla', 'tsla', 'elon musk', 'musk', 'electric vehicle', 'cybertruck'],
-  'SPX500': ['s&p 500', 's&p500', 'spx', 'wall street', 'equities', 'us stocks', 'dow jones'],
+  'TSLA': ['tesla', 'tsla', 'elon musk', 'electric vehicle', 'cybertruck'],
+  'SPX500': ['s&p 500', 's&p500', 'spx', 'wall street', 'us stocks', 'dow jones'],
   'NAS100': ['nasdaq', 'tech stocks', 'big tech', 'qqq', 'ai trade', 'yapay zeka ticaret'],
   'US30': ['dow jones', 'djia', 'blue-chip'],
   'GER40': ['dax', 'german economy', 'bundesbank'],
   'US10Y': ['10-year treasury', 'treasury yield', 'treasury yields', 'bond yields', 'us10y'],
 };
 
-// Küresel Makro / Merkez Bankası Anahtar Kelimeleri (Tüm Pariteleri ve Riskli Varlıkları Etkiler)
+// Küresel Makro / ABD Merkez Bankası Anahtar Kelimeleri (Yalnızca gerçek majör makro olayları bağlar)
 const GLOBAL_MACRO_KEYWORDS = [
   'federal reserve', 'powell', 'fomc', 'interest rate', 'interest rates', 'rate cut', 'rate hike',
-  'inflation', 'cpi', 'pce', 'ppi', 'nonfarm', 'payrolls', 'unemployment', 'jobless',
-  'gdp', 'recession', 'treasury yield', 'treasury yields', 'tariff', 'tariffs', 'trade war',
-  'central bank', 'dxy', 'greenback', 'enflasyon', 'faiz kararı',
+  'u.s. inflation', 'us inflation', 'cpi', 'pce', 'ppi', 'nonfarm', 'payrolls', 'jobless claims',
+  'recession', 'treasury yield', 'treasury yields', 'dxy', 'greenback', 'enflasyon verisi', 'faiz kararı',
 ];
 
 // Alt-kelime (substring) tuzaklarını önleyen kelime sınırı kontrolcüsü (Örn: "turmoil" != "oil", "yeniden" != "yen")
@@ -1187,15 +1188,12 @@ export function analyzeFinancialHeadline(rawTitle: string, rawDesc: string, sour
     if (!affectedAssets.includes('SPX500')) affectedAssets.push('SPX500');
   }
 
-  // Hiçbir finansal varlık veya makro göstergeyle ilgisi yoksa elenir
-  if (affectedAssets.length === 0 && !rawCombined.includes('market') && !rawCombined.includes('stock') && !rawCombined.includes('investor') && !rawCombined.includes('bank') && !rawCombined.includes('economy') && !rawCombined.includes('earnings') && !rawCombined.includes('shares')) {
+  // Hiçbir finansal varlık veya makro göstergeyle ilgisi yoksa elenir (alakasız başlıkları SPX500/NVDA'ya zorlama)
+  if (affectedAssets.length === 0) {
     return null;
   }
-  if (affectedAssets.length === 0) {
-    affectedAssets.push('SPX500');
-  }
 
-  // 3. Bağlamsal (Phrase-First) Duyarlılık ve Risk Skoru Hesabı (-1.0 ile +1.0 arası)
+  // 3. Bağlamsal (Phrase-First + Tam Kelime Sınırı) Duyarlılık ve Risk Skoru Hesabı (-1.0 ile +1.0 arası)
   let rawScore = 0;
   let cleanedForSingleWords = fullCombined;
 
@@ -1265,10 +1263,10 @@ export function analyzeFinancialHeadline(rawTitle: string, rawDesc: string, sour
   ];
 
   for (const w of bearishWords) {
-    if (cleanedForSingleWords.includes(w)) rawScore -= 0.28;
+    if (matchesKeywordWithBoundary(cleanedForSingleWords, w)) rawScore -= 0.28;
   }
   for (const w of bullishWords) {
-    if (cleanedForSingleWords.includes(w)) rawScore += 0.28;
+    if (matchesKeywordWithBoundary(cleanedForSingleWords, w)) rawScore += 0.28;
   }
 
   const sentimentScore = Math.max(-0.95, Math.min(0.95, +rawScore.toFixed(2)));
@@ -1381,13 +1379,19 @@ export async function fetchRealFinancialNews() {
         if (!resp.ok) return;
 
         const xml = await resp.text();
-        const items = [...xml.matchAll(/<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<description>(.*?)<\/description>[\s\S]*?<pubDate>(.*?)<\/pubDate>/g)];
+        const itemBlocks = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
 
-        for (const m of items) {
-          const rawTitle = cleanXml(m[1]);
-          const rawLink = cleanXml(m[2]);
-          const rawDesc = cleanXml(m[3]);
-          const pubDate = new Date(m[4]);
+        for (const block of itemBlocks) {
+          const titleM = block.match(/<title>([\s\S]*?)<\/title>/i);
+          const linkM = block.match(/<link>([\s\S]*?)<\/link>/i);
+          const descM = block.match(/<description>([\s\S]*?)<\/description>/i);
+          const pubM = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+          if (!titleM || !pubM) continue;
+
+          const rawTitle = cleanXml(titleM[1]);
+          const rawLink = cleanXml(linkM?.[1] || '');
+          const rawDesc = cleanXml(descM?.[1] || '');
+          const pubDate = new Date(cleanXml(pubM[1]));
           const ageMs = now - pubDate.getTime();
 
           if (!isNaN(pubDate.getTime()) && ageMs >= 0 && ageMs <= ONE_DAY_MS) {

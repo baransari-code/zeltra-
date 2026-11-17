@@ -233,6 +233,9 @@ interface MarketScannerItem {
   kellyMultiplier?: number;
   squeezeOn?: boolean;
   regimePhase?: string;
+  candlePatternLabel?: string;
+  activeEngineType?: 'BREAKOUT' | 'CANDLE_PB';
+  newsDirection?: string;
   dataDelaySec?: number;
   liveDataSource?: string;
   decisionReason: string;
@@ -254,7 +257,12 @@ interface PredictionRecord3m {
   isMarketClosed: boolean;
   sessionLabel: string;
   entryPrice: number;
-  setupType?: 'CLEAN_TREND' | 'PULLBACK_TURN' | 'SPIKE_FADE' | 'YATAY';
+  setupType?: 'CLEAN_TREND' | 'PULLBACK_TURN' | 'SPIKE_FADE' | 'WICK_ABSORPTION' | 'YATAY';
+  candlePatternCode?: string;
+  candlePatternLabel?: string;
+  newsDirection?: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
+  newsConviction?: number;
+  newsHeadline?: string;
   predictedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   predicted15mDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   predictedPrice3m: number;
@@ -272,6 +280,10 @@ interface PredictionRecord3m {
     vwapZScore: number;
     volRatio3m: number;
     h1TrendBias: number;
+    bodyRatio?: number;
+    lowerWickRatio?: number;
+    upperWickRatio?: number;
+    clv?: number;
     dxyChg3mPct: number;
     vixPrice: number;
     takerBuyRatio: number;
@@ -295,6 +307,10 @@ interface Symbol3mStats {
   directionalCount3m: number;
   directionalCorrect3m: number;
   directionalAccuracy3m: number;
+  bullCount3m?: number;
+  bullCorrect3m?: number;
+  bearCount3m?: number;
+  bearCorrect3m?: number;
   overallCorrect3m: number;
   overallAccuracy3m: number;
   evaluated15m: number;
@@ -323,6 +339,13 @@ interface ForecastLab3mState {
   directionalEvaluated3m: number;
   directionalCorrect3m: number;
   directionalAccuracy3m: number;
+  directionalCoveragePct?: number;
+  directionalBullishCount?: number;
+  directionalBullishCorrect?: number;
+  directionalBullishAccuracy?: number;
+  directionalBearishCount?: number;
+  directionalBearishCorrect?: number;
+  directionalBearishAccuracy?: number;
   flatEvaluated3m: number;
   flatCorrect3m: number;
   evaluated15m: number;
@@ -1510,6 +1533,13 @@ export const AutonomousTestView: React.FC = () => {
                           )}
                         </div>
                         <div className="text-[11px] text-zinc-500">{item.name}</div>
+                        {item.candlePatternLabel && (
+                          <div className="text-[10px] font-mono text-sky-400/90 mt-0.5">
+                            1S Mum: {item.candlePatternLabel}
+                            {item.activeEngineType === 'CANDLE_PB' ? ' · PB Motoru' : ''}
+                            {item.newsDirection && item.newsDirection !== 'BEKLE' ? ` · Haber: ${item.newsDirection}` : ''}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2.5 px-2 text-right font-mono font-semibold text-white">
                         {item.price.toFixed(item.digits)}
@@ -1672,7 +1702,7 @@ export const AutonomousTestView: React.FC = () => {
                 Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v11.0-alpha-calibrated'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
+                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v12.0-pro-candle-news'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">
@@ -1909,15 +1939,20 @@ export const AutonomousTestView: React.FC = () => {
                 {/* ÜST ÖZET KARTLARI & MAKRO NABIZ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                   <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                    <div className="text-zinc-400">3dk Yön Tahmin Doğruluğu</div>
+                    <div className="text-zinc-400">3dk Yön Tahmin Doğruluğu ({lab3mData.version})</div>
                     <div className={`text-lg font-mono font-semibold ${lab3mData.directionalAccuracy3m >= 58 ? 'text-emerald-400' : lab3mData.directionalAccuracy3m >= 50 ? 'text-sky-300' : 'text-rose-400'}`}>
                       %{lab3mData.directionalAccuracy3m}{' '}
                       <span className="text-xs font-normal text-zinc-400">
                         ({lab3mData.directionalCorrect3m}/{lab3mData.directionalEvaluated3m})
                       </span>
                     </div>
+                    <div className="text-[11px] text-zinc-400 font-mono">
+                      Yön Al/Sat: <span className="text-emerald-400">↑ %{lab3mData.directionalBullishAccuracy ?? 0} ({lab3mData.directionalBullishCount ?? 0})</span>
+                      {' · '}
+                      <span className="text-rose-400">↓ %{lab3mData.directionalBearishAccuracy ?? 0} ({lab3mData.directionalBearishCount ?? 0})</span>
+                    </div>
                     <div className="text-[11px] text-zinc-500">
-                      Yatay uyum: {lab3mData.flatCorrect3m}/{lab3mData.flatEvaluated3m} • +15dk devam: %{lab3mData.directionalAccuracy15m}
+                      Yön oranı: %{lab3mData.directionalCoveragePct ?? 0} • Yatay: {lab3mData.flatCorrect3m}/{lab3mData.flatEvaluated3m} • +15dk: %{lab3mData.directionalAccuracy15m}
                     </div>
                   </div>
 
@@ -1954,7 +1989,7 @@ export const AutonomousTestView: React.FC = () => {
 
                 {/* SİSTEMİN ÖĞRENME ÇIKARIMLARI & KURULUM STRATEJİ KARNESİ */}
                 {lab3mData.setupStats && lab3mData.setupStats.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                     {lab3mData.setupStats.map((ss) => (
                       <div key={ss.setupType} className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
                         <div className="flex items-center justify-between">
@@ -2034,17 +2069,21 @@ export const AutonomousTestView: React.FC = () => {
                                     {lp.predictedDirection} → {lp.predictedPrice3m.toFixed(st.digits)} (%{lp.confidencePct})
                                     {lp.setupType && lp.setupType !== 'YATAY' ? ` [${lp.setupType}]` : ''}
                                   </div>
-                                  <div className="text-[10px] text-zinc-500">
-                                    Giriş: {lp.entryPrice.toFixed(st.digits)}
-                                    {lp.predicted15mDirection && lp.predicted15mDirection !== 'YATAY' ? ` · +15dk: ${lp.predicted15mDirection}` : ''} •{' '}
-                                    {lp.status3m === 'BEKLIYOR'
-                                      ? `⏳ ${new Date(lp.target3mTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} bekleniyor`
-                                      : lp.status3m === 'DOGRU'
-                                      ? `✓ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
-                                      : lp.status3m === 'YANLIS'
-                                      ? `✗ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
-                                      : 'Piyasa Kapalı'}
-                                  </div>
+                                    <div className="text-[10px] text-zinc-400">
+                                      Giriş: {lp.entryPrice.toFixed(st.digits)}
+                                      {lp.candlePatternLabel ? ` · Mum: ${lp.candlePatternLabel}` : ''}
+                                      {lp.newsDirection && lp.newsDirection !== 'BEKLE' ? ` · Haber: ${lp.newsDirection} (%${lp.newsConviction ?? 0})` : ''}
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500">
+                                      {lp.predicted15mDirection && lp.predicted15mDirection !== 'YATAY' ? `+15dk: ${lp.predicted15mDirection} • ` : ''}
+                                      {lp.status3m === 'BEKLIYOR'
+                                        ? `⏳ ${new Date(lp.target3mTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} bekleniyor`
+                                        : lp.status3m === 'DOGRU'
+                                        ? `✓ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
+                                        : lp.status3m === 'YANLIS'
+                                        ? `✗ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
+                                        : 'Piyasa Kapalı'}
+                                    </div>
                                 </div>
                               ) : (
                                 '-'
@@ -2249,7 +2288,10 @@ export const AutonomousTestView: React.FC = () => {
                               </td>
                               <td className="py-2 px-2 text-[11px] text-zinc-400 max-w-md">
                                 <div className="font-mono text-[10px] text-zinc-500">
-                                  RSI7:{r.features.rsi7_3m} · ER:{r.features.er3m} · VWAPz:{r.features.vwapZScore} · 1H:{r.features.h1TrendBias} · DXY3m:{r.features.dxyChg3mPct}%
+                                  {r.candlePatternLabel ? `Mum:${r.candlePatternLabel} · ` : ''}
+                                  {r.features.bodyRatio !== undefined ? `Gövde:%${Math.round(r.features.bodyRatio * 100)} · ` : ''}
+                                  {r.newsDirection && r.newsDirection !== 'BEKLE' ? `Haber:${r.newsDirection}(%${r.newsConviction ?? 0}) · ` : ''}
+                                  RSI7:{r.features.rsi7_3m} · ER:{r.features.er3m} · VWAPz:{r.features.vwapZScore} · 1H:{r.features.h1TrendBias}
                                 </div>
                                 <div className={r.status3m === 'YANLIS' ? 'text-amber-200' : 'text-zinc-300'}>
                                   {r.errorCategory !== 'YOK' && <strong className="text-amber-400">[{r.errorCategory}] </strong>}
