@@ -35,6 +35,7 @@ export interface CandleAnatomy {
   lowerWickRatio: number; // 0..1 alt fitil oranı
   clv: number; // -1..+1 Close Location Value (kapanışın mum içindeki alıcı/satıcı hakimiyeti)
   rvol: number; // 20 bar ortalamasına göre hacim katsayısı
+  hasVolumeFeed: boolean;
   isBullBar: boolean;
   isBearBar: boolean;
 }
@@ -109,6 +110,7 @@ export function analyzeSingleCandleAnatomy(bar: OhlcvCandleLike, priorBarsForVol
   const body = Math.abs(cl - o);
 
   const vols = priorBarsForVol.map((b) => b.volume || 0).filter((v) => v > 0);
+  const hasVolumeFeed = vols.length >= 5;
   const avgVol = vols.length ? vols.reduce((a, b) => a + b, 0) / vols.length : 0;
   const rvol = avgVol > 0 && (bar.volume || 0) > 0 ? +((bar.volume || 0) / avgVol).toFixed(2) : 1.0;
 
@@ -124,6 +126,7 @@ export function analyzeSingleCandleAnatomy(bar: OhlcvCandleLike, priorBarsForVol
     lowerWickRatio: +((Math.min(o, cl) - l) / rng).toFixed(3),
     clv: +(((cl - l) - (h - cl)) / rng).toFixed(3),
     rvol,
+    hasVolumeFeed,
     isBullBar: cl > o,
     isBearBar: cl < o,
   };
@@ -198,17 +201,17 @@ export function analyzeCandlestickSetup(params: {
     direction = 'SAT (SHORT)';
     strengthScore = -Math.round(64 + anatomy.upperWickRatio * 24 + (anatomy.rvol >= 1.15 ? 8 : 0));
   }
-  // 2) Trend-Aligned Volume Engulfing in Pullback Zone (Hacimli Yutan Mum — %71 WR @ 15m)
+  // 2) Trend-Aligned Volume Engulfing in Pullback Zone (Hacimli Yutan Mum — sıfır hacimli FX akışında sıkı fiyat yutma kuralıyla uyumlu)
   else if (
     h1TrendBias === 1 &&
     z20 <= 0.30 &&
     anatomy.isBullBar &&
     prevCl < prevO &&
-    anatomy.body > prevBody * 1.15 &&
-    anatomy.bodyRatio >= 0.48 &&
+    anatomy.body > prevBody * (anatomy.hasVolumeFeed ? 1.15 : 1.25) &&
+    anatomy.bodyRatio >= (anatomy.hasVolumeFeed ? 0.48 : 0.52) &&
     anatomy.close > prevO &&
-    anatomy.clv >= 0.35 &&
-    anatomy.rvol >= 1.05
+    anatomy.clv >= (anatomy.hasVolumeFeed ? 0.35 : 0.42) &&
+    (!anatomy.hasVolumeFeed || anatomy.rvol >= 1.05)
   ) {
     patternCode = 'YUTAN_BOGA';
     patternLabelTR = 'Hacimli Yutan Boğa Mumu';
@@ -219,11 +222,11 @@ export function analyzeCandlestickSetup(params: {
     z20 >= -0.30 &&
     anatomy.isBearBar &&
     prevCl > prevO &&
-    anatomy.body > prevBody * 1.15 &&
-    anatomy.bodyRatio >= 0.48 &&
+    anatomy.body > prevBody * (anatomy.hasVolumeFeed ? 1.15 : 1.25) &&
+    anatomy.bodyRatio >= (anatomy.hasVolumeFeed ? 0.48 : 0.52) &&
     anatomy.close < prevO &&
-    anatomy.clv <= -0.35 &&
-    anatomy.rvol >= 1.05
+    anatomy.clv <= -(anatomy.hasVolumeFeed ? 0.35 : 0.42) &&
+    (!anatomy.hasVolumeFeed || anatomy.rvol >= 1.05)
   ) {
     patternCode = 'YUTAN_AYI';
     patternLabelTR = 'Hacimli Yutan Ayı Mumu';

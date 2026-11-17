@@ -15,7 +15,7 @@ import {
 } from './marketService';
 import { synthesizeAssetNewsAI } from './newsAiEngine';
 import { computeMultiHorizonForecast, MultiHorizonForecast } from './quantForecastEngine';
-import { CALIBRATION_DEADLINE_ISO, LAB_TRACKED_ASSETS, getLearnedSymbolCalibration } from './forecastLab3m';
+import { CALIBRATION_DEADLINE_ISO, LAB_TRACKED_ASSETS, getLearnedSymbolCalibration, getLive3mEntryFilter } from './forecastLab3m';
 import { analyzeCandlestickSetup } from './candleIntelligence';
 
 export interface GateCheckItem {
@@ -236,7 +236,7 @@ export interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'TAHMİN & GÖZLEM (09:00)' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'TAHMİN & GÖZLEM (09:00)' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)' | 'RİSK KALKANI (DEVRE KESİCİ)';
   forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   forecastTarget4h?: number;
   forecastTarget12h?: number;
@@ -321,6 +321,22 @@ export interface AutonomousLedgerState {
   closedTrades: AutonomousTrade[];
   equityCurve: EquityPoint[];
   activityLog: ActivityLogItem[];
+  riskGuard?: {
+    dailyPnLPct: number;
+    currentDrawdownPct: number;
+    lossStreak: number;
+    riskScaleFactor: number;
+    throttleActive: boolean;
+    circuitBreakerActive: boolean;
+    reason: string;
+  };
+  readinessAudit?: {
+    passedCount: number;
+    totalGates: number;
+    isReadyForRealCapital: boolean;
+    summaryText: string;
+    gates: { label: string; current: string; target: string; passed: boolean }[];
+  };
 }
 
 const LEDGER_FILE = path.resolve(process.cwd(), 'data', 'autonomous_trader_ledger.json');
@@ -1211,6 +1227,90 @@ export function recalculateLedgerMetrics(state: AutonomousLedgerState): void {
     maxLossStreak,
   };
 
+  // Gerçek Para Koruma Şalteri (Günlük -3% / Peak -7% Devre Kesici & Ardışık Kayıp Risk Kısıcı)
+  const todayUtcPrefix = new Date().toISOString().slice(0, 10);
+  const dailyClosedNet = state.closedTrades
+    .filter((t) => (t.closeTime || '').startsWith(todayUtcPrefix))
+    .reduce((s, t) => s + (t.realizedPnL_TRY || 0), 0);
+  const dailyTotalNet = dailyClosedNet + openFloating;
+  const dailyPnLPct = +((dailyTotalNet / Math.max(1, state.initialCapitalTRY)) * 100).toFixed(2);
+  const lossStreakVal = curStreakType === 'LOSS' ? curStreakCount : 0;
+  const throttleActive = lossStreakVal >= 2 || currentDd >= 3.0;
+  const circuitBreakerActive = dailyPnLPct <= -3.0 || currentDd >= 7.0;
+  const riskScaleFactor = circuitBreakerActive ? 0 : throttleActive ? 0.65 : 1.0;
+  const riskGuardReason = circuitBreakerActive
+    ? `Devre Kesici Devrede (Günlük %${dailyPnLPct} / Zirveden Düşüş %${currentDd.toFixed(2)}): Ana sermayeyi korumak için yeni işlem açımı durduruldu.`
+    : throttleActive
+      ? `Kayıp Freni Aktif (${lossStreakVal} seri kayıp / Düşüş %${currentDd.toFixed(2)}): İşlem başı risk otomatik 0.65x kısıldı.`
+      : 'Normal Kurumsal Mod (Tek İşlem Risk Tavanı %1.6 · Cuma Gece & Asya Altın Kalkanı Aktif)';
+
+  state.riskGuard = {
+    dailyPnLPct,
+    currentDrawdownPct: +currentDd.toFixed(2),
+    lossStreak: lossStreakVal,
+    riskScaleFactor,
+    throttleActive,
+    circuitBreakerActive,
+    reason: riskGuardReason,
+  };
+
+  // Gerçek Sermaye Hazırlık Karnesi (Canlı performans 20+ işlemle doğrulanmadan gerçek paraya geçilmez)
+  const feeRatioPct =
+    grossProfit > 0 ? +((totalExecCost / Math.max(1, grossProfit)) * 100).toFixed(1) : totalExecCost > 0 ? 100 : 0;
+  const wrVal = state.metrics.winRatePercent;
+  const pfVal = state.metrics.profitFactor;
+  const readinessGates = [
+    {
+      label: 'Canlı İşlem Örneklemi',
+      current: `${totalClosed}/20 işlem`,
+      target: '≥ 20 kapanış',
+      passed: totalClosed >= 20,
+    },
+    {
+      label: 'Canlı Kazanma Oranı (WR)',
+      current: `%${wrVal}`,
+      target: '≥ %52',
+      passed: totalClosed >= 20 && wrVal >= 52,
+    },
+    {
+      label: 'Net Kâr Çarpanı (PF)',
+      current: `${pfVal}x`,
+      target: '≥ 1.50x',
+      passed: totalClosed >= 20 && pfVal >= 1.5,
+    },
+    {
+      label: 'Komisyon / Brüt Kâr Yükü',
+      current: `%${feeRatioPct}`,
+      target: '≤ %30',
+      passed: grossProfit > 0 && feeRatioPct <= 30,
+    },
+    {
+      label: 'Maksimum Sermaye Düşüşü',
+      current: `%${state.metrics.maxDrawdownPercent}`,
+      target: '≤ %7.0',
+      passed: state.metrics.maxDrawdownPercent <= 7.0,
+    },
+    {
+      label: 'Devre Kesici & Risk Kalkanı',
+      current: circuitBreakerActive ? 'DEVRE KESİK' : 'KORUMALI',
+      target: 'Aktif Koruma',
+      passed: !circuitBreakerActive,
+    },
+  ];
+  const passedCount = readinessGates.filter((g) => g.passed).length;
+  const isReadyForRealCapital = passedCount === readinessGates.length;
+  state.readinessAudit = {
+    passedCount,
+    totalGates: readinessGates.length,
+    isReadyForRealCapital,
+    summaryText: isReadyForRealCapital
+      ? 'TÜM KURUMSAL EŞİKLER GEÇİLDİ: Canlı sanal kasa gerçek sermaye disiplinine hazır.'
+      : totalClosed < 20
+        ? `CANLI KANIT TOPLANIYOR (${totalClosed}/20 kapanış): 1S canlı işlemlerde 20+ kapanış & PF ≥ 1.5x görülene kadar sanal doğrulama sürdürülmeli.`
+        : `${passedCount}/${readinessGates.length} kriter tamamlandı — tüm eşikler yeşil olana kadar risk düşük tutulmalıdır.`,
+    gates: readinessGates,
+  };
+
   // Attribution Matrix (By Asset & By Direction)
   const byAsset: AssetAttributionItem[] = CORE_UNIVERSE.map((spec) => {
     const assetClosed = state.closedTrades.filter((t) => t.symbol === spec.symbol);
@@ -1853,7 +1953,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const obsActive = now < new Date(CALIBRATION_DEADLINE_ISO).getTime();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v12.0-pro-candle-news',
+    strategyVersion: 'v13.0-institutional-live-ready',
     observationModeActive: obsActive,
     observationDeadlineIso: CALIBRATION_DEADLINE_ISO,
     observationManualOverride: 'AUTO',
@@ -1963,6 +2063,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v13.0-institutional-live-ready' ||
           parsed.strategyVersion === 'v12.0-pro-candle-news' ||
           parsed.strategyVersion === 'v11.0-alpha-calibrated' ||
           parsed.strategyVersion === 'v10.0-3m-calibration-live' ||
@@ -1976,7 +2077,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v12.0-pro-candle-news';
+          parsed.strategyVersion = 'v13.0-institutional-live-ready';
           parsed.observationDeadlineIso = CALIBRATION_DEADLINE_ISO;
           parsed.observationManualOverride = parsed.observationManualOverride || 'AUTO';
           parsed.observationModeActive = isObservationModeLocked(parsed);
@@ -2224,10 +2325,11 @@ function evaluateTechnicalBreakoutSetup(params: {
     }
   } else {
     const isUsTech = candidate.cluster === 'US_TECH';
+    const isGold = candidate.symbol === 'XAU/USD';
     const rsiMaxLong = isUsTech ? 71 : 68;
     const rsiMinShort = isUsTech ? 29 : 32;
     const utcHour = new Date(now).getUTCHours();
-    const liquidTradFiSession = !isFx || (utcHour >= 7 && utcHour <= 20);
+    const liquidTradFiSession = (!isFx && !isGold) || (utcHour >= 7 && utcHour <= 20);
     const hTradFiQual = allow1h && liquidTradFiSession && hBars.length >= 40 && hEr >= 0.24 && hAdx.adx >= 22;
     if (
       hTradFiQual &&
@@ -2304,7 +2406,8 @@ function evaluateTechnicalBreakoutSetup(params: {
   // v12.0 Engine B — Trend İçi Kurumsal Mum Formasyonu (Pinbar / Yutan Pullback Motoru)
   const execPolicyB = isAutonomousExecutionAllowed(candidate.symbol, new Date(now));
   const utcHourB = new Date(now).getUTCHours();
-  const liquidSessionB = isCrypto ? execPolicyB.allowed : !isFx || (utcHourB >= 7 && utcHourB <= 20);
+  const isGoldB = candidate.symbol === 'XAU/USD';
+  const liquidSessionB = isCrypto ? execPolicyB.allowed : (!isFx && !isGoldB) || (utcHourB >= 7 && utcHourB <= 20);
   if (
     !direction &&
     allow1h &&
@@ -2831,6 +2934,51 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         continue;
       }
 
+      // Cuma Kapanışı Öncesi Hafta Sonu Boşluk Kalkanı (TradFi !TP1 pozisyonları Cuma >= 20:00 UTC öncesi kapatılır)
+      const nowUtcDate = new Date(now);
+      const isFriPreClose =
+        !isPosCrypto &&
+        !pos.tp1Hit &&
+        nowUtcDate.getUTCDay() === 5 &&
+        nowUtcDate.getUTCHours() >= 20;
+      if (isFriPreClose) {
+        const wkUnits = calcRemainingUnits();
+        const wkNotionalTRY = wkUnits * livePrice * quoteToUsd * usdTry;
+        const wkExitFeeTRY = computeIbkrCommissionTRY(spec, wkNotionalTRY, wkUnits, usdTry);
+        const grossWkPnL = wkUnits * priceDiff * quoteToUsd * usdTry;
+        const netWkDeltaTRY = +(grossWkPnL - wkExitFeeTRY).toFixed(2);
+
+        pos.exitCommissionTRY = +((pos.exitCommissionTRY || 0) + wkExitFeeTRY).toFixed(2);
+        pos.executionCostTRY = +(
+          (pos.entryCommissionTRY || 0) +
+          pos.exitCommissionTRY +
+          (pos.financingCostTRY || 0)
+        ).toFixed(2);
+        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + netWkDeltaTRY).toFixed(2);
+        pos.grossUnrealizedPnL_TRY = 0;
+        pos.unrealizedPnL_TRY = 0;
+        pos.totalPnL_TRY = pos.realizedPnL_TRY;
+        pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
+        pos.closePrice = livePrice;
+        pos.closeTime = nowIso;
+        pos.closeTimestamp = now;
+        pos.status = 'MANUEL_KAPANDI';
+        pos.exitReason = `Hafta Sonu Boşluk Kalkanı (Cuma 20:00+ UTC): Kâra oturmamış TradFi pozisyonu hafta sonu açılış gap riskine karşı @ ${livePrice} seviyesinden kapatıldı.`;
+
+        state.cashBalanceTRY = +(state.cashBalanceTRY + netWkDeltaTRY).toFixed(2);
+        state.closedTrades.unshift(pos);
+
+        state.activityLog.unshift({
+          id: `ACT-WKND-${now}-${pos.symbol}`,
+          timestamp: nowIso,
+          type: 'SYSTEM',
+          symbol: pos.symbol,
+          message: `HAFTA SONU BOŞLUK KALKANI: ${pos.symbol} (${pos.direction}) Cuma kapanış öncesi @ ${livePrice} seviyesinden kapatıldı (Net: ${pos.totalPnL_TRY >= 0 ? '+' : ''}${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL).`,
+          pnlImpactTRY: netWkDeltaTRY,
+        });
+        continue;
+      }
+
       // Ölüm / Yatay Testere Zaman Aşımı Kalkanı (Time-Stop: TP1 gelmeden 18s/36s sürünüyorsa sermayeyi serbest bırak)
       const ageMs = now - (pos.entryTimestamp || now);
       const timeStopMs = (pos.entryTimeframe === '15M' ? 18 : 36) * 60 * 60 * 1000;
@@ -3235,8 +3383,31 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
             if (learnedCal.samples15m >= 8 && learnedCal.dirAcc15m >= 62) {
               candidateScore = Math.min(98, candidateScore + 4);
             }
-            const fcPctStr = forecast.pred4hPct >= 0 ? `+${forecast.pred4hPct}%` : `${forecast.pred4hPct}%`;
-            rationale = `${rationale} | +4S Tahmin: ${forecast.pred4hPrice} (${fcPctStr}, TP1 İhtimali %${dirTp1Prob})`;
+            // v13.0 Canlı 3dk Sniper Köprüsü (Aşırı uzamış 3dk spike tepesinden girişi geciktirir, uyumlu 3dk trendi ödüllendirir)
+            const live3m = getLive3mEntryFilter(candidate.symbol, now);
+            const overstretchedLong3m =
+              direction === 'AL (LONG)' &&
+              live3m.hasFresh3m &&
+              (live3m.vwapZScore >= 1.55 || (live3m.setupType === 'SPIKE_FADE' && live3m.predictedDirection === 'DÜŞÜŞ'));
+            const overstretchedShort3m =
+              direction === 'SAT (SHORT)' &&
+              live3m.hasFresh3m &&
+              (live3m.vwapZScore <= -1.55 || (live3m.setupType === 'SPIKE_FADE' && live3m.predictedDirection === 'YÜKSELİŞ'));
+            if (overstretchedLong3m || overstretchedShort3m) {
+              isForecastVeto = true;
+              vetoReason = `3dk Sniper Uzama Kalkanı: Fiyat son 3dk'da aşırı uzadı (VWAPz ${live3m.vwapZScore} / ${live3m.setupType}); kötü kaymayla tepe/dip girişi önlendi.`;
+              direction = null;
+            } else {
+              if (
+                live3m.hasFresh3m &&
+                ((direction === 'AL (LONG)' && live3m.predictedDirection === 'YÜKSELİŞ') ||
+                  (direction === 'SAT (SHORT)' && live3m.predictedDirection === 'DÜŞÜŞ'))
+              ) {
+                candidateScore = Math.min(98, candidateScore + 3);
+              }
+              const fcPctStr = forecast.pred4hPct >= 0 ? `+${forecast.pred4hPct}%` : `${forecast.pred4hPct}%`;
+              rationale = `${rationale} | +4S Tahmin: ${forecast.pred4hPrice} (${fcPctStr}, TP1 İhtimali %${dirTp1Prob})`;
+            }
           }
         }
 
@@ -3251,7 +3422,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const bestAdx = Math.max(hAdx.adx, m15Adx.adx);
         const bestRvol = Math.max(hRvol, m15Rvol);
         const utcHourNow = new Date(now).getUTCHours();
-        const isFxOffHours = isFx && (utcHourNow < 7 || utcHourNow > 20);
+        const isFxOffHours = (isFx || candidate.symbol === 'XAU/USD') && (utcHourNow < 7 || utcHourNow > 20);
+        const errOffsetMsg = `Asya Düşük Likidite Kalkanı (${candidate.symbol === 'XAU/USD' ? 'Altın' : 'FX'} 07:00-20:00 UTC Londra/NY bekleniyor)`;
 
         const impBullAligned = isCrypto && midPrice > hEma21 && hEma21 >= hEma50 * 0.998 && btcBullMacro;
         const impBearAligned = isCrypto && midPrice < hEma21 && hEma21 <= hEma50 * 1.002 && btcBearMacro;
@@ -3284,7 +3456,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           const trigLo = trigLoVal.toFixed(candidate.digits);
           const obNote = isCrypto && obDepth.bidVol + obDepth.askVol > 0 ? ` · Defter B/A: ${obDepth.ratio}x` : '';
           const erGapNote = isFxOffHours
-            ? `Asya Düşük Likidite Kalkanı (FX 07:00-20:00 UTC Londra/NY bekleniyor)`
+            ? errOffsetMsg
             : midPrice >= trigHiVal
               ? `Üst Tetik Geçildi ancak Trend/Hacim Teyidi Bekleniyor (15dk RVOL ${m15Rvol}x, ADX ${m15Adx.adx})`
               : midPrice <= trigLoVal
@@ -3337,7 +3509,11 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     }
   }
 
-  // Pass 2: v5.3 Konviksiyon Ağırlıklı Sermaye Dağıtımı (Kalibrasyon Gözlem Modunda yeni işlem açılmaz)
+  // Pass 2'den hemen önce güncel riskGuard / drawdown durumunu hesapla
+  recalculateLedgerMetrics(state);
+  const riskGuardActive = state.riskGuard;
+
+  // Pass 2: v13.0 Kurumsal Sermaye Dağıtımı (Kalibrasyon Gözlem Modunda veya Devre Kesici Devredeyken yeni işlem açılmaz)
   if (state.isRunning && !isObserving) {
     const qualified = evaluatedList
       .filter((e) => e.direction && !e.existingOpen && !e.isMarketClosed)
@@ -3349,6 +3525,12 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
     for (const item of qualified) {
       const { candidate, market, midPrice, ema8, ema21, ema50, ema200, rsi, dailyAtr, tradeAtr, newsScore, newsCtx, direction, rationale, riskScale } = item;
       if (!direction) continue;
+
+      if (riskGuardActive?.circuitBreakerActive) {
+        item.blockedStatus = 'RİSK KALKANI (DEVRE KESİCİ)';
+        item.blockedReason = riskGuardActive.reason;
+        continue;
+      }
 
       const isCrypto = candidate.cluster.startsWith('CRYPTO');
       const totalCryptoOpen = state.openPositions.filter((p) => getSpec(p.symbol).cluster.startsWith('CRYPTO')).length;
@@ -3381,7 +3563,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
 
       const dirTp1ForKelly = direction === 'AL (LONG)' ? item.forecast.tp1HitProbLong : item.forecast.tp1HitProbShort;
       const convRiskMult = computeFractionalKellyMultiplier(dirTp1ForKelly, isCrypto);
-      const effScale = +(riskScale * convRiskMult).toFixed(2);
+      const riskThrottle = riskGuardActive?.riskScaleFactor ?? 1.0;
+      const effScale = +(riskScale * convRiskMult * riskThrottle).toFixed(2);
 
       const usedMarginTRY = state.openPositions.reduce(
         (s, p) => s + p.allocatedCapitalTRY * (p.tp1Hit ? 0.5 : 1),
@@ -3389,7 +3572,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       );
       const freeMarginTRY = Math.max(0, state.cashBalanceTRY - usedMarginTRY);
       const currentEq = state.cashBalanceTRY;
-      const desiredRiskTRY = +(currentEq * 0.014 * effScale).toFixed(2);
+      // Kurumsal Tek İşlem Risk Tavanı: %1.6 sert sınır (Altın/kripto kayma aşımına karşı)
+      const desiredRiskTRY = +Math.min(currentEq * 0.016, currentEq * 0.014 * effScale).toFixed(2);
       const rawAllocTRY = +(currentEq * 0.16 * effScale).toFixed(2);
       const allocTRY = +Math.min(rawAllocTRY, freeMarginTRY * 0.95).toFixed(2);
       if (allocTRY < 5000) continue;
@@ -4116,6 +4300,12 @@ export async function runLiveWalkForwardAudit(
         continue;
       }
 
+      const dUtcEv = new Date(ev.ts);
+      if (!isPosCrypto && !pos.tp1Hit && dUtcEv.getUTCDay() === 5 && dUtcEv.getUTCHours() >= 20) {
+        closePosFull(closeLiq, 'MANUEL_KAPANDI');
+        continue;
+      }
+
       const ageMs = ev.ts - pos.entryTs;
       const tsMs = (pos.entryTimeframe === '15M' ? 18 : 36) * 3600 * 1000;
       const curDiff = isLong ? closeLiq - pos.entryPrice : pos.entryPrice - closeLiq;
@@ -4260,7 +4450,7 @@ export async function runLiveWalkForwardAudit(
       continue;
     }
 
-    const desiredRiskTRY = +(cashTRY * 0.014 * kellyMult).toFixed(2);
+    const desiredRiskTRY = +Math.min(cashTRY * 0.016, cashTRY * 0.014 * kellyMult).toFixed(2);
     const halfSp = spec.spreadPts / 2;
     const entryPx = isLongSig
       ? +(midPrice + halfSp + spec.slippagePts).toFixed(spec.digits)
@@ -4361,7 +4551,7 @@ export async function runLiveWalkForwardAudit(
 
   const result: WalkForwardAuditResult = {
     window,
-    strategyVersion: 'v12.0-pro-candle-news',
+    strategyVersion: 'v13.0-institutional-live-ready',
     generatedAt: new Date(nowMs).toISOString(),
     liveUsdTry: usdTry,
     initialCapitalTRY: initCap,

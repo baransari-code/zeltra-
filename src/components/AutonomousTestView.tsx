@@ -222,7 +222,7 @@ interface MarketScannerItem {
   newsHeadline: string;
   confluenceScore: number;
   candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'TAHMİN & GÖZLEM (09:00)' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)';
+  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'TAHMİN & GÖZLEM (09:00)' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)' | 'RİSK KALKANI (DEVRE KESİCİ)';
   forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
   forecastTarget4h?: number;
   forecastTarget12h?: number;
@@ -481,6 +481,22 @@ interface AutonomousLedgerState {
   closedTrades: AutonomousTrade[];
   equityCurve: EquityPoint[];
   activityLog: ActivityLogItem[];
+  riskGuard?: {
+    dailyPnLPct: number;
+    currentDrawdownPct: number;
+    lossStreak: number;
+    riskScaleFactor: number;
+    throttleActive: boolean;
+    circuitBreakerActive: boolean;
+    reason: string;
+  };
+  readinessAudit?: {
+    passedCount: number;
+    totalGates: number;
+    isReadyForRealCapital: boolean;
+    summaryText: string;
+    gates: { label: string; current: string; target: string; passed: boolean }[];
+  };
 }
 
 export const AutonomousTestView: React.FC = () => {
@@ -970,6 +986,57 @@ export const AutonomousTestView: React.FC = () => {
             >
               3dk Tahmin &amp; Hata Teşhisini Gör →
             </button>
+          </div>
+        )}
+
+        {/* GERÇEK SERMAYE HAZIRLIK KARNESİ & KURUMSAL DEVRE KESİCİ */}
+        {ledger.readinessAudit && (
+          <div
+            className={`rounded border px-3.5 py-2.5 space-y-2 text-xs ${
+              ledger.readinessAudit.isReadyForRealCapital
+                ? 'border-emerald-800/70 bg-emerald-950/25'
+                : ledger.riskGuard?.circuitBreakerActive
+                ? 'border-rose-800/70 bg-rose-950/30'
+                : 'border-zinc-800 bg-zinc-950/70'
+            }`}
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-white">
+                  Gerçek Sermaye Hazırlık Karnesi ({ledger.readinessAudit.passedCount}/{ledger.readinessAudit.totalGates} Onay)
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded font-mono text-[10px] border ${
+                    ledger.readinessAudit.isReadyForRealCapital
+                      ? 'bg-emerald-950/80 border-emerald-700 text-emerald-300'
+                      : 'bg-amber-950/70 border-amber-800/70 text-amber-300'
+                  }`}
+                >
+                  {ledger.readinessAudit.isReadyForRealCapital ? 'GERÇEK PARAYA HAZIR' : 'SANAL KANIT AŞAMASI'}
+                </span>
+                {ledger.riskGuard && (
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    • {ledger.riskGuard.reason}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[11px]">
+              {ledger.readinessAudit.gates.map((g) => (
+                <div
+                  key={g.label}
+                  className={`rounded border px-2 py-1.5 ${
+                    g.passed ? 'border-emerald-800/60 bg-emerald-950/30' : 'border-zinc-800 bg-zinc-900/70'
+                  }`}
+                >
+                  <div className="text-zinc-400 truncate">{g.label}</div>
+                  <div className="font-mono font-semibold text-white flex items-center justify-between mt-0.5">
+                    <span className={g.passed ? 'text-emerald-400' : 'text-amber-300'}>{g.current}</span>
+                    <span className="text-[10px] text-zinc-500">{g.target}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1702,7 +1769,7 @@ export const AutonomousTestView: React.FC = () => {
                 Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v12.0-pro-candle-news'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
+                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v13.0-institutional-live-ready'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">

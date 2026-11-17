@@ -1090,6 +1090,38 @@ export function getLearnedSymbolCalibration(symbol: string): {
   };
 }
 
+export function getLive3mEntryFilter(symbol: string, nowMs = Date.now()): {
+  hasFresh3m: boolean;
+  vwapZScore: number;
+  predictedDirection: ForecastDirection3m;
+  setupType: SetupType3m;
+  candlePatternCode: CandlePatternCode;
+  er3m: number;
+} {
+  const store = loadStore();
+  for (let i = store.records.length - 1; i >= 0; i--) {
+    const r = store.records[i];
+    if (r.symbol !== symbol) continue;
+    if (nowMs - r.bucketTs > 6 * 60_000 || r.dataDelaySec > 180) break;
+    return {
+      hasFresh3m: true,
+      vwapZScore: r.features?.vwapZScore ?? 0,
+      predictedDirection: r.predictedDirection,
+      setupType: r.setupType || 'YATAY',
+      candlePatternCode: r.candlePatternCode || 'DENGE_MUMU',
+      er3m: r.features?.er3m ?? 0.2,
+    };
+  }
+  return {
+    hasFresh3m: false,
+    vwapZScore: 0,
+    predictedDirection: 'YATAY',
+    setupType: 'YATAY',
+    candlePatternCode: 'DENGE_MUMU',
+    er3m: 0.2,
+  };
+}
+
 export async function getForecastLab3mState(): Promise<ForecastLab3mState> {
   const store = loadStore();
   return buildPublicView(store, latestFeedHealth);
