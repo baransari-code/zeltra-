@@ -2326,14 +2326,16 @@ function evaluateTechnicalBreakoutSetup(params: {
   } else {
     const isUsTech = candidate.cluster === 'US_TECH';
     const isGold = candidate.symbol === 'XAU/USD';
+    const isExplosiveTrend = hEr >= 0.32 && hAdx.adx >= 26;
     const rsiMaxLong = isUsTech ? 71 : 68;
-    const rsiMinShort = isUsTech ? 29 : 32;
+    const rsiMinShort = isExplosiveTrend && (isUsTech || isFx) ? (isUsTech ? 25 : 28) : (isUsTech ? 29 : 32);
+    const brkBufferPct = isFx ? 0.0001 : 0.0003;
     const utcHour = new Date(now).getUTCHours();
     const liquidTradFiSession = (!isFx && !isGold) || (utcHour >= 7 && utcHour <= 20);
     const hTradFiQual = allow1h && liquidTradFiSession && hBars.length >= 40 && hEr >= 0.24 && hAdx.adx >= 22;
     if (
       hTradFiQual &&
-      midPrice > hDon16.high * 1.0003 &&
+      midPrice > hDon16.high * (1 + brkBufferPct) &&
       midPrice > hEma21 &&
       hEma21 > hEma50 &&
       hEma50 >= hEma100 * 0.998 &&
@@ -2347,7 +2349,7 @@ function evaluateTechnicalBreakoutSetup(params: {
       rationale = `1S Küresel Trend Kırılımı (Donchian16 > ${hDon16.high.toFixed(candidate.digits)}): ER ${hEr} | ADX ${hAdx.adx} (+DI ${hAdx.pdi})`;
     } else if (
       hTradFiQual &&
-      midPrice < hDon16.low * 0.9997 &&
+      midPrice < hDon16.low * (1 - brkBufferPct) &&
       midPrice < hEma21 &&
       hEma21 < hEma50 &&
       hEma50 <= hEma100 * 1.002 &&
@@ -3185,8 +3187,6 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       const {
         isCrypto,
         isFx,
-        hEma21,
-        hEma50,
         hAtr,
         hAdx,
         hEr,
@@ -3196,8 +3196,6 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         m15Adx,
         m15Er,
         m15Rvol,
-        m15Don16,
-        m15Don28,
         tradeAtr,
       } = evalRes;
 
@@ -3448,18 +3446,8 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         const isFxOffHours = (isFx || candidate.symbol === 'XAU/USD') && (utcHourNow < 7 || utcHourNow > 20);
         const errOffsetMsg = `Asya Düşük Likidite Kalkanı (${candidate.symbol === 'XAU/USD' ? 'Altın' : 'FX'} 07:00-20:00 UTC Londra/NY bekleniyor)`;
 
-        const impBullAligned = isCrypto && midPrice > hEma21 && hEma21 >= hEma50 * 0.998 && btcBullMacro;
-        const impBearAligned = isCrypto && midPrice < hEma21 && hEma21 <= hEma50 * 1.002 && btcBearMacro;
-        const activeRefHi = isCrypto
-          ? impBullAligned
-            ? m15Don16.high
-            : Math.min(m15Bars.length >= 40 ? m15Don28.high : Infinity, hDon20.high)
-          : Math.min(m15Bars.length >= 40 ? m15Don28.high : Infinity, hDon16.high);
-        const activeRefLo = isCrypto
-          ? impBearAligned
-            ? m15Don16.low
-            : Math.max(m15Bars.length >= 40 ? m15Don28.low : -Infinity, hDon20.low)
-          : Math.max(m15Bars.length >= 40 ? m15Don28.low : -Infinity, hDon16.low);
+        const activeRefHi = isCrypto ? hDon20.high : hDon16.high;
+        const activeRefLo = isCrypto ? hDon20.low : hDon16.low;
         const trigHiVal = Number.isFinite(activeRefHi) ? activeRefHi : hDon20.high;
         const trigLoVal = Number.isFinite(activeRefLo) ? activeRefLo : hDon20.low;
 
@@ -3481,15 +3469,15 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           const erGapNote = isFxOffHours
             ? errOffsetMsg
             : midPrice >= trigHiVal
-              ? `Üst Tetik Geçildi ancak Trend/Hacim Teyidi Bekleniyor (15dk RVOL ${m15Rvol}x, ADX ${m15Adx.adx})`
+              ? `Üst Tetik Geçildi ancak 1S Trend/Tahmin/15dk Kapanış Teyidi Bekleniyor (1S ER ${hEr}, ADX ${hAdx.adx})`
               : midPrice <= trigLoVal
-                ? `Alt Tetik Kırıldı ancak Trend/Hacim Teyidi Bekleniyor (15dk RVOL ${m15Rvol}x, ADX ${m15Adx.adx})`
-                : bestEr < erTarget
-                  ? `Yön Netliği (ER ${bestEr}/${erTarget} — piyasa yatay testerede)`
-                  : bestRvol < 1.1
-                    ? `Hacim Teyidi Düşük (RVOL ${bestRvol}x/1.10x)`
-                    : `Fiyat Henüz Bant İçinde`;
-          vetoReason = `Nakit Kalkanı — Gerçek Kırılım Tetikleyicisi (AL > ${trigHi} | SAT < ${trigLo}): ${erGapNote} · 15dk ER ${m15Er} / Hacim ${m15Rvol}x${obNote}. Doğrulanmamış girişte komisyon yakmamak için tetik bekleniyor.`;
+                ? `Alt Tetik Kırıldı ancak 1S Trend/Tahmin/15dk Kapanış Teyidi Bekleniyor (1S ER ${hEr}, ADX ${hAdx.adx})`
+                : hEr < (isCrypto ? 0.16 : 0.24)
+                  ? `Yön Netliği (1S ER ${hEr}/${isCrypto ? 0.16 : 0.24} — piyasa yatay testerede)`
+                  : isCrypto && hRvol < 1.1
+                    ? `Hacim Teyidi Düşük (1S RVOL ${hRvol}x/1.10x)`
+                    : `Fiyat Henüz 1S Kırılım Kanalı İçinde (ADX ${hAdx.adx} · ER ${hEr})`;
+          vetoReason = `Nakit Kalkanı — 1S Kırılım Tetikleyicisi (AL > ${trigHi} | SAT < ${trigLo}): ${erGapNote} · 15dk ER ${m15Er}${isCrypto ? ` / Hacim ${m15Rvol}x` : ''}${obNote}. Doğrulanmamış girişte komisyon yakmamak için tetik bekleniyor.`;
         }
       }
 

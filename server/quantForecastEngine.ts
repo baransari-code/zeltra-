@@ -407,6 +407,8 @@ export function computeMultiHorizonForecast(
     }
   } else if (assetClass === 'FX') {
     const trendStrong = er16 >= 0.25 && adx14 >= 22;
+    const fxRsiFloor = adx14 >= 26 && er16 >= 0.28 ? 24 : 29;
+    const fxRsiCeil = adx14 >= 26 && er16 >= 0.28 ? 75 : 71;
     rawS1 = Math.tanh(-ret1Atr * 0.20 + macdSlope * 0.40 + freshNewsBias * 0.45);
     if (trendStrong && px > donHigh && pdi14 > ndi14 && ema21 > ema50) {
       rawS4 = 0.48;
@@ -418,6 +420,16 @@ export function computeMultiHorizonForecast(
       rawS12 = -0.44;
       rawS24 = -0.38;
       rawGate = -0.48;
+    } else if (trendStrong && adx14 >= 24 && px > ema21 && ema8 > ema21 && ema21 > ema50 && pdi14 > ndi14 && rsi14 >= 50 && rsi14 <= fxRsiCeil) {
+      rawS4 = 0.34;
+      rawS12 = 0.32;
+      rawS24 = 0.28;
+      rawGate = 0.34;
+    } else if (trendStrong && adx14 >= 24 && px < ema21 && ema8 < ema21 && ema21 < ema50 && ndi14 > pdi14 && rsi14 <= 50 && rsi14 >= fxRsiFloor) {
+      rawS4 = -0.34;
+      rawS12 = -0.32;
+      rawS24 = -0.28;
+      rawGate = -0.34;
     } else if (!trendStrong && er32 < 0.20 && zEma50 >= 1.6 && rsi3 >= 70 && macdSlope < 0) {
       rawS4 = -0.34;
       rawS12 = -0.30;
@@ -432,14 +444,19 @@ export function computeMultiHorizonForecast(
   } else {
     const macroUp = ema21 > ema50 && e50Slope > 0.04;
     const macroDn = ema21 < ema50 && e50Slope < -0.04;
+    const strongTrend = adx14 >= 28 && er16 >= 0.30;
+    const macroRsiFloor = strongTrend ? 22 : 28;
+    const macroRsiCeil = strongTrend ? 75 : 72;
+    const contUp = macroUp && strongTrend && px > ema21 && ema8 > ema21;
+    const contDn = macroDn && strongTrend && px < ema21 && ema8 < ema21;
     rawS1 = Math.tanh(macdSlope * 0.45 + (er16 >= 0.22 ? Math.tanh(ret3Atr * 0.20) : 0) + freshNewsBias * 0.45);
-    if ((brkL || (macroUp && er16 >= 0.22 && macdSlope > 0)) && pdi14 > ndi14 && rsi14 >= 50 && rsi14 <= 72) {
+    if ((brkL || contUp || (macroUp && er16 >= 0.22 && macdSlope > 0)) && pdi14 > ndi14 && rsi14 >= 50 && rsi14 <= macroRsiCeil) {
       const str = Math.min(0.82, 0.44 + (adx14 >= 24 ? 0.16 : 0) + (brkL ? 0.16 : 0));
       rawS4 = str;
       rawS12 = Math.min(0.86, str * 1.02);
       rawS24 = Math.min(0.82, str * 0.90);
       rawGate = str;
-    } else if ((brkS || (macroDn && er16 >= 0.22 && macdSlope < 0)) && ndi14 > pdi14 && rsi14 <= 50 && rsi14 >= 28) {
+    } else if ((brkS || contDn || (macroDn && er16 >= 0.22 && macdSlope < 0)) && ndi14 > pdi14 && rsi14 <= 50 && rsi14 >= macroRsiFloor) {
       const str = Math.min(0.82, 0.44 + (adx14 >= 24 ? 0.16 : 0) + (brkS ? 0.16 : 0));
       rawS4 = -str;
       rawS12 = -Math.min(0.86, str * 1.02);
