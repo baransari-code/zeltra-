@@ -1190,7 +1190,7 @@ export const AutonomousTestView: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="text-xs text-zinc-300 leading-relaxed">
                   <strong className="text-white">Nakit Kalkanı Aktif ({formatTRY(ledger.availableCashTRY)} Boşta):</strong>{' '}
-                  Hafta içi Borsa + Yüksek İnançlı BTC | Hafta sonu Yalnızca BTC modunda doğrulanmış saatlik kırılım bekleniyor; aktif odak adayları aşağıdadır.
+                  Hafta içi Borsa + Yüksek İnançlı BTC | Hafta sonu Yalnızca BTC modunda 15dk/1S mum kapanışı teyitli saatlik kırılım bekleniyor; aktif odak adayları aşağıdadır.
                 </div>
                 <button
                   onClick={() => setSubView('backtest')}

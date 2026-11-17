@@ -57,6 +57,8 @@ const MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
+let lastHealthBgKickTs = 0;
+
 const server = http.createServer(async (req, res) => {
   const urlObj = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const pathname = urlObj.pathname;
@@ -75,8 +77,14 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 0. API: Sistem Sağlık Kontrolü (/api/health)
+  // 0. API: Sistem Sağlık Kontrolü (/api/health — harici keep-alive pingiyle motoru arka planda canlı tutar)
   if (pathname === '/api/health') {
+    const nowMs = Date.now();
+    if (nowMs - lastHealthBgKickTs >= 45_000) {
+      lastHealthBgKickTs = nowMs;
+      executeAutonomousTradingTick(false).catch(() => {});
+      runForecastLab3mTick(false).catch(() => {});
+    }
     res.setHeader('Content-Type', 'application/json');
     res.end(
       JSON.stringify({

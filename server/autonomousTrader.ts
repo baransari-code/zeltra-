@@ -3127,13 +3127,6 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         lastH.low = Math.min(lastH.low ?? midPrice, midPrice);
       }
 
-      // v8.0 Stop-Hunt Kalkanı: Giriş kırılımları yalnızca tamamlanmış (kapanmış) 1S mumlarla teyit edilir!
-      const closedHBars = hBarsRaw.filter((b) => b.timestamp + 3540 * 1000 <= now);
-      const hasClosed1H = closedHBars.length >= 40;
-      const sigHBars = hasClosed1H ? closedHBars : hBars;
-      const sigPx = hasClosed1H ? closedHBars[closedHBars.length - 1].close : midPrice;
-      const sigNow = hasClosed1H ? closedHBars[closedHBars.length - 1].timestamp + 3600 * 1000 : now;
-
       const m15BarsRaw = bars15mMap.get(candidate.symbol) || [];
       const m15Bars = m15BarsRaw.length >= 25 ? m15BarsRaw.map((b) => ({ ...b })) : [];
       if (m15Bars.length > 0) {
@@ -3141,6 +3134,36 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
         lastM.close = midPrice;
         lastM.high = Math.max(lastM.high ?? midPrice, midPrice);
         lastM.low = Math.min(lastM.low ?? midPrice, midPrice);
+      }
+
+      // v13.1 Çok-Zamanlı Kurumsal Tetik: Tamamlanmış 1S mum + varsa saat içi tamamlanmış son 15dk mumlarıyla 1S Donchian teyidi (bar içi fitil avı engellenir, 40dk kör nokta kalkar)
+      const closedHBars = hBarsRaw.filter((b) => b.timestamp + 3540 * 1000 <= now);
+      const closedM15Bars = m15BarsRaw.filter((b) => b.timestamp + 840 * 1000 <= now);
+      const hasClosed1H = closedHBars.length >= 40;
+      const lastClosedH = hasClosed1H ? closedHBars[closedHBars.length - 1] : null;
+      const hCloseTs = lastClosedH ? lastClosedH.timestamp + 3600 * 1000 : 0;
+      const lastClosedM15 = closedM15Bars.length > 0 ? closedM15Bars[closedM15Bars.length - 1] : null;
+      const m15CloseTs = lastClosedM15 ? lastClosedM15.timestamp + 900 * 1000 : 0;
+      const hasNewerClosedM15 = hasClosed1H && lastClosedM15 !== null && m15CloseTs > hCloseTs;
+
+      let sigHBars = hasClosed1H ? closedHBars : hBars;
+      let sigPx = hasClosed1H ? lastClosedH!.close : midPrice;
+      let sigNow = hasClosed1H ? hCloseTs : now;
+      if (hasNewerClosedM15 && lastClosedH && lastClosedM15) {
+        const intraSlice = closedM15Bars.filter((b) => b.timestamp >= lastClosedH.timestamp + 3540 * 1000);
+        if (intraSlice.length > 0) {
+          const intraBar: HourlyBar = {
+            timestamp: lastClosedH.timestamp + 3600 * 1000,
+            open: intraSlice[0].open ?? intraSlice[0].close,
+            high: Math.max(...intraSlice.map((b) => b.high ?? b.close)),
+            low: Math.min(...intraSlice.map((b) => b.low ?? b.close)),
+            close: lastClosedM15.close,
+            volume: intraSlice.reduce((s, b) => s + (b.volume || 0), 0),
+          };
+          sigHBars = [...closedHBars, intraBar];
+          sigPx = lastClosedM15.close;
+          sigNow = m15CloseTs;
+        }
       }
 
       const evalRes = evaluateTechnicalBreakoutSetup({
@@ -3268,10 +3291,10 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           (direction === 'AL (LONG)' && midPrice > sigPx + tradeAtr * chaseMult) ||
           (direction === 'SAT (SHORT)' && midPrice < sigPx - tradeAtr * chaseMult);
         if (staleClosedBar) {
-          vetoReason = `Saatlik Kapanış Bekleniyor: Son 1S sinyal barı tazelik süresini aştığı için yeni kapanış bekleniyor.`;
+          vetoReason = `Kapanış Teyidi Bekleniyor: Son 15dk/1S onay barı tazelik süresini aştığı için yeni mum kapanışı bekleniyor.`;
           direction = null;
         } else if (snappedBackInside) {
-          vetoReason = `Sahte Kırılım Koruması: Önceki 1S mum kırılım yaptı ancak anlık fiyat (${midPrice.toFixed(candidate.digits)}) tekrar kanal içine döndü; işlem açılmadı.`;
+          vetoReason = `Sahte Kırılım Koruması: Kapanan son mum kırılım yaptı ancak anlık fiyat (${midPrice.toFixed(candidate.digits)}) tekrar kanal içine döndü; işlem açılmadı.`;
           direction = null;
         } else if (chasedTooFar) {
           vetoReason = `Aşırı Kaçış Koruması: Kapanış sonrası fiyat (+${chaseMult} ATR) fazla uzaklaştığı için kötü fiyattan kovalama engellendi.`;
@@ -3280,7 +3303,7 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
       } else if (!direction) {
         const liveDonRef = computeDonchianChannel(hBars, isCrypto ? 20 : 16);
         if (midPrice > liveDonRef.high * 1.0003 || midPrice < liveDonRef.low * 0.9997) {
-          vetoReason = `Saatlik Kapanış Onayı Bekleniyor (Anlık fiyat ${midPrice.toFixed(candidate.digits)} kırılım seviyesini test ediyor — bar içi stop-hunt fitil tuzağına karşı saat kapanışı bekleniyor).`;
+          vetoReason = `Mum Kapanış Onayı Bekleniyor (Anlık fiyat ${midPrice.toFixed(candidate.digits)} kırılım seviyesini test ediyor — bar içi fitil tuzağına karşı 15dk/1S kapanışı bekleniyor).`;
         }
       }
 
@@ -4318,8 +4341,9 @@ export async function runLiveWalkForwardAudit(
     }
     openPositions = nextOpen;
 
-    // 2. Yeni Giriş Taraması (Yalnızca 1S bar kapanışlarında yeni giriş açılır; 15m olayları Stop/TP yönetimi içindir)
-    if (ev.tf !== '1h' || openPositions.length >= 5 || openPositions.some((p) => p.spec.symbol === ev.symbol)) {
+    // 2. Yeni Giriş Taraması (30G modda 1S kapanışı; 7.5G modda canlıyla birebir 15dk kapalı mum teyitli 1S Donchian girişi)
+    const allow15mChannelEvent = window === '7d' && ev.tf === '15m';
+    if ((ev.tf !== '1h' && !allow15mChannelEvent) || openPositions.length >= 5 || openPositions.some((p) => p.spec.symbol === ev.symbol)) {
       markEquity(ev.ts, false);
       continue;
     }
@@ -4338,11 +4362,30 @@ export async function runLiveWalkForwardAudit(
     const hEndIdx = seenHIdx.get(ev.symbol);
     const allHBars = hourlyMap.get(ev.symbol) || [];
     const allM15Bars = m15Map.get(ev.symbol) || [];
-    const hSlice = hEndIdx !== undefined ? allHBars.slice(Math.max(0, hEndIdx - 119), hEndIdx + 1) : [];
+    const rawHSlice = hEndIdx !== undefined ? allHBars.slice(Math.max(0, hEndIdx - 119), hEndIdx + 1) : [];
     const m15Slice =
       window === '7d'
         ? allM15Bars.filter((mb) => mb.timestamp + 900 * 1000 <= ev.ts).slice(-120)
         : [];
+
+    let hSlice = rawHSlice;
+    if (allow15mChannelEvent && rawHSlice.length > 0 && m15Slice.length > 0) {
+      const lastH = rawHSlice[rawHSlice.length - 1];
+      const intraM15 = m15Slice.filter((mb) => mb.timestamp >= lastH.timestamp + 3540 * 1000);
+      if (intraM15.length > 0) {
+        hSlice = [
+          ...rawHSlice,
+          {
+            timestamp: lastH.timestamp + 3600 * 1000,
+            open: intraM15[0].open ?? intraM15[0].close,
+            high: Math.max(...intraM15.map((mb) => mb.high ?? mb.close)),
+            low: Math.min(...intraM15.map((mb) => mb.low ?? mb.close)),
+            close: intraM15[intraM15.length - 1].close,
+            volume: intraM15.reduce((s, mb) => s + (mb.volume || 0), 0),
+          },
+        ];
+      }
+    }
 
     if (hSlice.length < 40) {
       markEquity(ev.ts, false);
