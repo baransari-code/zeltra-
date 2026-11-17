@@ -753,7 +753,8 @@ function evaluateRecordAgainstBars(
   livePriceNow: number,
   nowMs: number,
   spec: TrackedAssetSpec,
-  macro: MacroPulseSnapshot
+  macro: MacroPulseSnapshot,
+  feedDelaySec = 0
 ): boolean {
   let changed = false;
   if (rec.isMarketClosed) return false;
@@ -765,7 +766,8 @@ function evaluateRecordAgainstBars(
     if (before.length > 0 && Math.abs(targetTs - before[before.length - 1].timestamp) <= 180_000) {
       return before[before.length - 1].close;
     }
-    if (Math.abs(nowMs - targetTs) <= 150_000 && livePriceNow > 0) return livePriceNow;
+    // Yalnızca gerçek zamanlı (gecikmesiz) akışta son canlı fiyattan yedek değerlendir; 10dk CME gecikmesinde zaman kaymasını önle
+    if (feedDelaySec <= 180 && Math.abs(nowMs - targetTs) <= 150_000 && livePriceNow > 0) return livePriceNow;
     return null;
   };
 
@@ -1210,7 +1212,9 @@ export async function runForecastLab3mTick(forceGenerateNow = false): Promise<Fo
     store.lastTickIso = new Date(now).toISOString();
 
     const beforeLen = store.records.length;
-    store.records = store.records.filter((r) => r.dataDelaySec < 5000);
+    store.records = store.records.filter(
+      (r) => r.dataDelaySec < 5000 && r.errorCategory !== 'BAYAT_VERİ_GECİKMESİ' && !(r.sourceMode === 'CANLI_TICK' && r.dataDelaySec > 240 && !r.isMarketClosed)
+    );
     let dirty = store.records.length !== beforeLen;
     const byId = new Set(store.records.map((r) => r.id));
 
@@ -1222,7 +1226,7 @@ export async function runForecastLab3mTick(forceGenerateNow = false): Promise<Fo
       }
       for (const rec of store.records) {
         if (rec.symbol === spec.symbol && (rec.status3m === 'BEKLIYOR' || rec.status15m === 'BEKLIYOR')) {
-          if (evaluateRecordAgainstBars(rec, bundle.bars1m, bundle.livePrice, now, spec, macro)) {
+          if (evaluateRecordAgainstBars(rec, bundle.bars1m, bundle.livePrice, now, spec, macro, bundle.dataDelaySec)) {
             dirty = true;
           }
         }
@@ -1284,7 +1288,7 @@ export async function runForecastLab3mTick(forceGenerateNow = false): Promise<Fo
         }
         const bundle = bundles[i];
         const entryPx = bundle.livePrice;
-        if (!(entryPx > 0) || bundle.bars1m.length < 15 || bundle.dataDelaySec >= 5000) continue;
+        if (!(entryPx > 0) || bundle.bars1m.length < 15 || bundle.dataDelaySec > 240) continue;
 
         const aiNews = newsBySym.get(spec.symbol);
         const isFreshNews = !!aiNews?.hasNews && !aiNews.isRecapOnly && now - aiNews.newestTimestamp <= 6 * 3600 * 1000;

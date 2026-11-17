@@ -720,12 +720,67 @@ let macroPulseCache: { timestamp: number; data: MacroPulseSnapshot } | null = nu
 let inFlightMacro: Promise<MacroPulseSnapshot> | null = null;
 const tradeFlowCache = new Map<string, { timestamp: number; data: KrakenTradeFlow }>();
 
-const REALTIME_PROXY_TICKERS: Record<string, { proxyType: 'KRAKEN' | 'YAHOO'; ticker: string; label: string }> = {
-  'XAU/USD': { proxyType: 'KRAKEN', ticker: 'PAXGUSD', label: 'Kraken PAXG Spot Proxy (0sn)' },
+const REALTIME_PROXY_TICKERS: Record<string, { proxyType: 'KRAKEN' | 'YAHOO'; ticker: string; label: string; tvStreamingSymbol?: string }> = {
+  'XAU/USD': { proxyType: 'KRAKEN', ticker: 'PAXGUSD', label: 'Kraken PAXG Spot Proxy (0sn)', tvStreamingSymbol: 'FX:XAUUSD' },
   NAS100: { proxyType: 'YAHOO', ticker: 'QQQ', label: 'QQQ Pre/Post Real-Time Proxy' },
   SPX500: { proxyType: 'YAHOO', ticker: 'SPY', label: 'SPY Pre/Post Real-Time Proxy' },
-  WTI: { proxyType: 'YAHOO', ticker: 'USO', label: 'USO Pre/Post Real-Time Proxy' },
+  WTI: { proxyType: 'YAHOO', ticker: 'USO', label: 'USO Pre/Post Real-Time Proxy', tvStreamingSymbol: 'FX:USOIL' },
 };
+
+const tvStreamingMinuteBuffer = new Map<string, HourlyBar[]>();
+
+async function fetchTradingViewStreamingPrice(tvTicker: string): Promise<number | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3500);
+  try {
+    const resp = await fetch('https://scanner.tradingview.com/global/scan', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+      body: JSON.stringify({
+        symbols: { tickers: [tvTicker] },
+        columns: ['name', 'close', 'update_mode'],
+      }),
+    });
+    if (!resp.ok) return null;
+    const json: any = await resp.json();
+    const row = json?.data?.[0]?.d;
+    const px = Number(row?.[1]);
+    const mode = String(row?.[2] || '');
+    if (Number.isFinite(px) && px > 0 && mode === 'streaming') {
+      return px;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function recordTvStreamingMinuteTick(tvTicker: string, price: number, nowMs: number): HourlyBar[] {
+  const minTs = Math.floor(nowMs / 60000) * 60000;
+  const arr = tvStreamingMinuteBuffer.get(tvTicker) || [];
+  const last = arr[arr.length - 1];
+  if (!last || last.timestamp < minTs) {
+    arr.push({
+      timestamp: minTs,
+      open: price,
+      high: price,
+      low: price,
+      close: price,
+      volume: 1,
+    });
+    if (arr.length > 240) arr.splice(0, arr.length - 240);
+  } else if (last.timestamp === minTs) {
+    last.close = price;
+    last.high = Math.max(last.high ?? price, price);
+    last.low = Math.min(last.low ?? price, price);
+    last.volume = (last.volume ?? 0) + 1;
+  }
+  tvStreamingMinuteBuffer.set(tvTicker, arr);
+  return arr;
+}
 
 function aggregateBarsTo3m(bars1m: HourlyBar[]): HourlyBar[] {
   if (!bars1m.length) return [];
@@ -888,12 +943,13 @@ export async function fetchReal1mAnd3mHistory(symbol: string): Promise<MicroBarB
         rawPrice = bars1m.length ? bars1m[bars1m.length - 1].close : primary.metaPrice;
         livePrice = rawPrice;
 
-        // CME vadeli kontratlar ücretsiz akışta ~10dk gecikmeli olduğu için canlı ETF / 7-24 PAXG spot proxy getirisiyle gerçek zamanlıya projekte et
+        // CME vadeli kontratlar ücretsiz akışta ~10dk gecikmeli olduğu için canlı ETF / 7-24 PAXG spot proxy / TradingView Streaming (0sn) ile gerçek zamanlıya projekte et
         const proxyCfg = REALTIME_PROXY_TICKERS[symbol];
         if (proxyCfg && bars1m.length > 5) {
           const lastPrimaryBar = bars1m[bars1m.length - 1];
           const primaryLagSec = Math.max(0, Math.round((Date.now() - lastPrimaryBar.timestamp) / 1000));
           if (primaryLagSec > 90) {
+            let appliedProxy = false;
             const proxyBars =
               proxyCfg.proxyType === 'KRAKEN'
                 ? await fetchKraken1mBarsRaw(proxyCfg.ticker)
@@ -921,8 +977,23 @@ export async function fetchReal1mAnd3mHistory(symbol: string): Promise<MicroBarB
                     bars1m = [...bars1m, ...syntheticTail];
                     livePrice = bars1m[bars1m.length - 1].close;
                     liveSource = `${yTicker} + ${proxyCfg.label}`;
+                    appliedProxy = Date.now() - bars1m[bars1m.length - 1].timestamp <= 150000;
                   }
                 }
+              }
+            }
+
+            if (!appliedProxy && proxyCfg.tvStreamingSymbol) {
+              const tvPx = await fetchTradingViewStreamingPrice(proxyCfg.tvStreamingSymbol);
+              if (tvPx && tvPx > 0) {
+                const tvBars = recordTvStreamingMinuteTick(proxyCfg.tvStreamingSymbol, tvPx, Date.now());
+                const latestPrimaryTs = bars1m[bars1m.length - 1].timestamp;
+                const extraBars = tvBars.filter((b) => b.timestamp > latestPrimaryTs);
+                if (extraBars.length > 0) {
+                  bars1m = [...bars1m, ...extraBars];
+                }
+                livePrice = tvPx;
+                liveSource = `${yTicker} + TV ${proxyCfg.tvStreamingSymbol} (0sn)`;
               }
             }
           }
