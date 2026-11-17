@@ -15,7 +15,7 @@ import {
 } from './marketService';
 import { synthesizeAssetNewsAI } from './newsAiEngine';
 import { computeMultiHorizonForecast, MultiHorizonForecast } from './quantForecastEngine';
-import { CALIBRATION_DEADLINE_ISO, LAB_TRACKED_ASSETS } from './forecastLab3m';
+import { CALIBRATION_DEADLINE_ISO, LAB_TRACKED_ASSETS, getLearnedSymbolCalibration } from './forecastLab3m';
 
 export interface GateCheckItem {
   step: number;
@@ -1849,7 +1849,7 @@ function createCleanZeroLedgerObject(newCapitalTRY: number, usdTry: number): Aut
   const obsActive = now < new Date(CALIBRATION_DEADLINE_ISO).getTime();
   return {
     botId: 'ZELTRA-QUANT-AUTO-250K',
-    strategyVersion: 'v10.0-3m-calibration-live',
+    strategyVersion: 'v11.0-alpha-calibrated',
     observationModeActive: obsActive,
     observationDeadlineIso: CALIBRATION_DEADLINE_ISO,
     observationManualOverride: 'AUTO',
@@ -1959,6 +1959,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           (parsed.closedTrades || []).some((t) => t.entryCommissionTRY === undefined) ||
           (parsed.openPositions || []).some((t) => t.entryCommissionTRY === undefined);
         const isCurrentStrategy =
+          parsed.strategyVersion === 'v11.0-alpha-calibrated' ||
           parsed.strategyVersion === 'v10.0-3m-calibration-live' ||
           parsed.strategyVersion === 'v9.1-strict-forecast' ||
           parsed.strategyVersion === 'v9.0-borsa-btc-alpha' ||
@@ -1970,7 +1971,7 @@ export async function loadOrInitAutonomousLedger(): Promise<AutonomousLedgerStat
           parsed.strategyVersion === 'v5.1-quant-alpha' ||
           parsed.strategyVersion === 'v5.0-quant-alpha';
         if (!hasLegacyBackfill && !hasLegacyNonIbkr && isCurrentStrategy) {
-          parsed.strategyVersion = 'v10.0-3m-calibration-live';
+          parsed.strategyVersion = 'v11.0-alpha-calibrated';
           parsed.observationDeadlineIso = CALIBRATION_DEADLINE_ISO;
           parsed.observationManualOverride = parsed.observationManualOverride || 'AUTO';
           parsed.observationModeActive = isObservationModeLocked(parsed);
@@ -3140,8 +3141,18 @@ async function runAutonomousTradingTickInternal(_forceScan = false): Promise<Aut
           if (dirTp1Prob >= 47 && Math.abs(forecast.gateBias) >= 0.22) {
             candidateScore = Math.min(98, candidateScore + 5);
           }
-          const fcPctStr = forecast.pred4hPct >= 0 ? `+${forecast.pred4hPct}%` : `${forecast.pred4hPct}%`;
-          rationale = `${rationale} | +4S Tahmin: ${forecast.pred4hPrice} (${fcPctStr}, TP1 İhtimali %${dirTp1Prob})`;
+          const learnedCal = getLearnedSymbolCalibration(candidate.symbol);
+          if (learnedCal.samples15m >= 12 && learnedCal.dirAcc15m < 42 && learnedCal.samples3m >= 12 && learnedCal.dirAcc3m < 42) {
+            isForecastVeto = true;
+            vetoReason = `Adaptif Kalibrasyon Kalkanı: ${candidate.symbol} canlı 3dk (%${learnedCal.dirAcc3m}) ve 15dk (%${learnedCal.dirAcc15m}) öğrenme başarısı %42 altında olduğu için geçici olarak korumada.`;
+            direction = null;
+          } else {
+            if (learnedCal.samples15m >= 8 && learnedCal.dirAcc15m >= 62) {
+              candidateScore = Math.min(98, candidateScore + 4);
+            }
+            const fcPctStr = forecast.pred4hPct >= 0 ? `+${forecast.pred4hPct}%` : `${forecast.pred4hPct}%`;
+            rationale = `${rationale} | +4S Tahmin: ${forecast.pred4hPrice} (${fcPctStr}, TP1 İhtimali %${dirTp1Prob})`;
+          }
         }
 
         if (direction && candidateScore < 68) {
@@ -4257,7 +4268,7 @@ export async function runLiveWalkForwardAudit(
 
   const result: WalkForwardAuditResult = {
     window,
-    strategyVersion: 'v10.0-3m-calibration-live',
+    strategyVersion: 'v11.0-alpha-calibrated',
     generatedAt: new Date(nowMs).toISOString(),
     liveUsdTry: usdTry,
     initialCapitalTRY: initCap,
