@@ -81,4 +81,12 @@ server.listen(PORT, '0.0.0.0', () => {
   setInterval(() => {
     executeManualTradingTick(false).catch(() => {});
   }, 45 * 1000);
+
+  // Render harici URL mevcutsa 9 dakikada bir yedek self-heartbeat (GitHub Actions gecikmelerine karşı çift kalkan)
+  const externalUrl = process.env.RENDER_EXTERNAL_URL;
+  if (externalUrl && externalUrl.startsWith('http')) {
+    setInterval(() => {
+      fetch(`${externalUrl.replace(/\/+$/, '')}/api/health`).catch(() => {});
+    }, 9 * 60 * 1000);
+  }
 });
