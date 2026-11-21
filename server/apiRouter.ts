@@ -33,7 +33,7 @@ import {
   type WalkForwardWindow,
 } from './autonomousTrader';
 import { handleManualTestHttpRequest } from './manualTrader';
-import { getLiveAuditDashboard, runLiveAuditTick } from './liveAuditEngine';
+import { getLiveAuditDashboard, resetLiveAuditStoreClean, runLiveAuditTick } from './liveAuditEngine';
 
 let lastHealthBgKickTs = 0;
 
@@ -333,6 +333,11 @@ export async function handleZeltraApiRequest(
     try {
       const body = req.method === 'POST' ? await readJsonBody(req) : {};
       const action = (body.action || urlObj.searchParams.get('action') || 'status').toLowerCase();
+      if (action === 'reset_clean') {
+        const payload = await resetLiveAuditStoreClean();
+        sendJson(res, 200, payload);
+        return true;
+      }
       const syncNow = action === 'sync' || action === 'lock' || action === 'tick';
       const payload = await getLiveAuditDashboard(syncNow);
       sendJson(res, 200, payload);

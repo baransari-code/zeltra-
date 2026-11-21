@@ -3,10 +3,10 @@
   "strategyVersion": "v14.0-zeltra-alpha-3pod",
   "isRunning": true,
   "observationModeActive": false,
-  "startedAt": "2026-11-21T15:57:28.417Z",
-  "lastTickAt": "2026-11-21T22:03:10.507Z",
+  "startedAt": "2026-11-21T22:14:11.998Z",
+  "lastTickAt": "2026-11-21T22:14:12.102Z",
   "liveGoTargetIso": "2026-12-01T00:00:00.000Z",
-  "tickCount": 490,
+  "tickCount": 2,
   "liveUsdTry": 50.5142,
   "vixLevel": 35.89,
   "initialCapitalTRY": 250000,
@@ -24,8 +24,8 @@
   "closedTrades": [],
   "activityLog": [
     {
-      "id": "SYS-1795276648417",
-      "timestamp": "21.11.2026 18:57:28",
+      "id": "SYS-1795299251998",
+      "timestamp": "22.11.2026 01:14:11",
       "type": "SYSTEM",
       "symbol": "PORTFÖY",
       "pod": "SYSTEM",
@@ -34,892 +34,40 @@
   ],
   "equityHistory": [
     {
-      "timestamp": 1795276648417,
-      "timeStr": "21.11.2026 18:57:28",
+      "timestamp": 1795299251998,
+      "timeStr": "22.11.2026 01:14:11",
       "equityTRY": 250000,
       "ddPct": 0
     },
     {
-      "timestamp": 1795276648418,
-      "timeStr": "21.11.2026 18:57:28",
+      "timestamp": 1795299251999,
+      "timeStr": "22.11.2026 01:14:11",
       "equityTRY": 250000,
       "ddPct": 0
     },
     {
-      "timestamp": 1795276990707,
-      "timeStr": "21.11.2026 19:03:10",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795277296791,
-      "timeStr": "21.11.2026 19:08:16",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795277596791,
-      "timeStr": "21.11.2026 19:13:16",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795277896794,
-      "timeStr": "21.11.2026 19:18:16",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795278197585,
-      "timeStr": "21.11.2026 19:23:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795278497587,
-      "timeStr": "21.11.2026 19:28:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795278797588,
-      "timeStr": "21.11.2026 19:33:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795279097590,
-      "timeStr": "21.11.2026 19:38:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795279397593,
-      "timeStr": "21.11.2026 19:43:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795279697594,
-      "timeStr": "21.11.2026 19:48:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795279997785,
-      "timeStr": "21.11.2026 19:53:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795280297787,
-      "timeStr": "21.11.2026 19:58:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795280597790,
-      "timeStr": "21.11.2026 20:03:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795280897791,
-      "timeStr": "21.11.2026 20:08:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795281197792,
-      "timeStr": "21.11.2026 20:13:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795281497884,
-      "timeStr": "21.11.2026 20:18:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795281797887,
-      "timeStr": "21.11.2026 20:23:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795282097890,
-      "timeStr": "21.11.2026 20:28:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795282397892,
-      "timeStr": "21.11.2026 20:33:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795282697895,
-      "timeStr": "21.11.2026 20:38:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795282997899,
-      "timeStr": "21.11.2026 20:43:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795283297903,
-      "timeStr": "21.11.2026 20:48:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795283597906,
-      "timeStr": "21.11.2026 20:53:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795283897985,
-      "timeStr": "21.11.2026 20:58:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795284197988,
-      "timeStr": "21.11.2026 21:03:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795284497992,
-      "timeStr": "21.11.2026 21:08:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795284797994,
-      "timeStr": "21.11.2026 21:13:17",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795285098013,
-      "timeStr": "21.11.2026 21:18:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795285398015,
-      "timeStr": "21.11.2026 21:23:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795285698020,
-      "timeStr": "21.11.2026 21:28:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795285998039,
-      "timeStr": "21.11.2026 21:33:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795286298083,
-      "timeStr": "21.11.2026 21:38:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795286598089,
-      "timeStr": "21.11.2026 21:43:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795286898094,
-      "timeStr": "21.11.2026 21:48:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795287198099,
-      "timeStr": "21.11.2026 21:53:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795287498103,
-      "timeStr": "21.11.2026 21:58:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795287798107,
-      "timeStr": "21.11.2026 22:03:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795288098112,
-      "timeStr": "21.11.2026 22:08:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795288398116,
-      "timeStr": "21.11.2026 22:13:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795288698120,
-      "timeStr": "21.11.2026 22:18:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795288998124,
-      "timeStr": "21.11.2026 22:23:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795289298127,
-      "timeStr": "21.11.2026 22:28:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795289598132,
-      "timeStr": "21.11.2026 22:33:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795289898133,
-      "timeStr": "21.11.2026 22:38:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795290198189,
-      "timeStr": "21.11.2026 22:43:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795290498194,
-      "timeStr": "21.11.2026 22:48:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795290798200,
-      "timeStr": "21.11.2026 22:53:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795291098204,
-      "timeStr": "21.11.2026 22:58:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795291398209,
-      "timeStr": "21.11.2026 23:03:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795291698286,
-      "timeStr": "21.11.2026 23:08:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795291998290,
-      "timeStr": "21.11.2026 23:13:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795292298294,
-      "timeStr": "21.11.2026 23:18:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795292598298,
-      "timeStr": "21.11.2026 23:23:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795292898303,
-      "timeStr": "21.11.2026 23:28:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795293198307,
-      "timeStr": "21.11.2026 23:33:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795293498312,
-      "timeStr": "21.11.2026 23:38:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795293798317,
-      "timeStr": "21.11.2026 23:43:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795294098392,
-      "timeStr": "21.11.2026 23:48:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795294398396,
-      "timeStr": "21.11.2026 23:53:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795294698402,
-      "timeStr": "21.11.2026 23:58:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795294998406,
-      "timeStr": "22.11.2026 00:03:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795295298410,
-      "timeStr": "22.11.2026 00:08:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795295598588,
-      "timeStr": "22.11.2026 00:13:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795295898594,
-      "timeStr": "22.11.2026 00:18:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795296198599,
-      "timeStr": "22.11.2026 00:23:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795296498605,
-      "timeStr": "22.11.2026 00:28:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795296798618,
-      "timeStr": "22.11.2026 00:33:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795297098627,
-      "timeStr": "22.11.2026 00:38:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795297398683,
-      "timeStr": "22.11.2026 00:43:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795297698687,
-      "timeStr": "22.11.2026 00:48:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795297998700,
-      "timeStr": "22.11.2026 00:53:18",
-      "equityTRY": 250000,
-      "ddPct": 0
-    },
-    {
-      "timestamp": 1795298298704,
-      "timeStr": "22.11.2026 00:58:18",
+      "timestamp": 1795299252102,
+      "timeStr": "22.11.2026 01:14:12",
       "equityTRY": 250000,
       "ddPct": 0
     }
   ],
   "equityCurve": [
     {
-      "timestamp": 1795276648417,
-      "timeStr": "21.11.2026 18:57:28",
+      "timestamp": 1795299251998,
+      "timeStr": "22.11.2026 01:14:11",
       "equityTRY": 250000,
       "drawdownPercent": 0
     },
     {
-      "timestamp": 1795276648418,
-      "timeStr": "21.11.2026 18:57:28",
+      "timestamp": 1795299251999,
+      "timeStr": "22.11.2026 01:14:11",
       "equityTRY": 250000,
       "drawdownPercent": 0
     },
     {
-      "timestamp": 1795276990707,
-      "timeStr": "21.11.2026 19:03:10",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795277296791,
-      "timeStr": "21.11.2026 19:08:16",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795277596791,
-      "timeStr": "21.11.2026 19:13:16",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795277896794,
-      "timeStr": "21.11.2026 19:18:16",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795278197585,
-      "timeStr": "21.11.2026 19:23:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795278497587,
-      "timeStr": "21.11.2026 19:28:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795278797588,
-      "timeStr": "21.11.2026 19:33:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795279097590,
-      "timeStr": "21.11.2026 19:38:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795279397593,
-      "timeStr": "21.11.2026 19:43:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795279697594,
-      "timeStr": "21.11.2026 19:48:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795279997785,
-      "timeStr": "21.11.2026 19:53:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795280297787,
-      "timeStr": "21.11.2026 19:58:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795280597790,
-      "timeStr": "21.11.2026 20:03:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795280897791,
-      "timeStr": "21.11.2026 20:08:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795281197792,
-      "timeStr": "21.11.2026 20:13:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795281497884,
-      "timeStr": "21.11.2026 20:18:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795281797887,
-      "timeStr": "21.11.2026 20:23:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795282097890,
-      "timeStr": "21.11.2026 20:28:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795282397892,
-      "timeStr": "21.11.2026 20:33:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795282697895,
-      "timeStr": "21.11.2026 20:38:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795282997899,
-      "timeStr": "21.11.2026 20:43:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795283297903,
-      "timeStr": "21.11.2026 20:48:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795283597906,
-      "timeStr": "21.11.2026 20:53:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795283897985,
-      "timeStr": "21.11.2026 20:58:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795284197988,
-      "timeStr": "21.11.2026 21:03:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795284497992,
-      "timeStr": "21.11.2026 21:08:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795284797994,
-      "timeStr": "21.11.2026 21:13:17",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795285098013,
-      "timeStr": "21.11.2026 21:18:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795285398015,
-      "timeStr": "21.11.2026 21:23:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795285698020,
-      "timeStr": "21.11.2026 21:28:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795285998039,
-      "timeStr": "21.11.2026 21:33:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795286298083,
-      "timeStr": "21.11.2026 21:38:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795286598089,
-      "timeStr": "21.11.2026 21:43:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795286898094,
-      "timeStr": "21.11.2026 21:48:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795287198099,
-      "timeStr": "21.11.2026 21:53:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795287498103,
-      "timeStr": "21.11.2026 21:58:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795287798107,
-      "timeStr": "21.11.2026 22:03:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795288098112,
-      "timeStr": "21.11.2026 22:08:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795288398116,
-      "timeStr": "21.11.2026 22:13:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795288698120,
-      "timeStr": "21.11.2026 22:18:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795288998124,
-      "timeStr": "21.11.2026 22:23:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795289298127,
-      "timeStr": "21.11.2026 22:28:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795289598132,
-      "timeStr": "21.11.2026 22:33:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795289898133,
-      "timeStr": "21.11.2026 22:38:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795290198189,
-      "timeStr": "21.11.2026 22:43:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795290498194,
-      "timeStr": "21.11.2026 22:48:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795290798200,
-      "timeStr": "21.11.2026 22:53:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795291098204,
-      "timeStr": "21.11.2026 22:58:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795291398209,
-      "timeStr": "21.11.2026 23:03:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795291698286,
-      "timeStr": "21.11.2026 23:08:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795291998290,
-      "timeStr": "21.11.2026 23:13:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795292298294,
-      "timeStr": "21.11.2026 23:18:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795292598298,
-      "timeStr": "21.11.2026 23:23:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795292898303,
-      "timeStr": "21.11.2026 23:28:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795293198307,
-      "timeStr": "21.11.2026 23:33:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795293498312,
-      "timeStr": "21.11.2026 23:38:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795293798317,
-      "timeStr": "21.11.2026 23:43:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795294098392,
-      "timeStr": "21.11.2026 23:48:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795294398396,
-      "timeStr": "21.11.2026 23:53:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795294698402,
-      "timeStr": "21.11.2026 23:58:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795294998406,
-      "timeStr": "22.11.2026 00:03:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795295298410,
-      "timeStr": "22.11.2026 00:08:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795295598588,
-      "timeStr": "22.11.2026 00:13:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795295898594,
-      "timeStr": "22.11.2026 00:18:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795296198599,
-      "timeStr": "22.11.2026 00:23:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795296498605,
-      "timeStr": "22.11.2026 00:28:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795296798618,
-      "timeStr": "22.11.2026 00:33:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795297098627,
-      "timeStr": "22.11.2026 00:38:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795297398683,
-      "timeStr": "22.11.2026 00:43:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795297698687,
-      "timeStr": "22.11.2026 00:48:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795297998700,
-      "timeStr": "22.11.2026 00:53:18",
-      "equityTRY": 250000,
-      "drawdownPercent": 0
-    },
-    {
-      "timestamp": 1795298298704,
-      "timeStr": "22.11.2026 00:58:18",
+      "timestamp": 1795299252102,
+      "timeStr": "22.11.2026 01:14:12",
       "equityTRY": 250000,
       "drawdownPercent": 0
     }
@@ -939,7 +87,7 @@
       "zacScore": 59,
       "regime": "DIP_SPRING",
       "regimeLabelTR": "Boğa İçi Dip Sıkışması (MR12)",
-      "ewmac": 5.26,
+      "ewmac": 5.29,
       "aboveSma200": true,
       "sma200": 303.23,
       "volRatio": 1.07,
@@ -952,7 +100,7 @@
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 32,
-      "pred24hPct": 0.37,
+      "pred24hPct": 0.36,
       "pUp24h": 55,
       "status": "SEANS KAPALI (İzlemede)",
       "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +59, EWMAC 5.3, IBS12 0.15).",
@@ -975,9 +123,9 @@
       "zacScore": -49,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -13.21,
+      "ewmac": -13.2,
       "aboveSma200": false,
-      "sma200": 65.135,
+      "sma200": 65.136,
       "volRatio": 0.94,
       "efficiencyRatio": 0.51,
       "ibs12h": 0.242,
@@ -991,11 +139,11 @@
       "pred24hPct": -0.5,
       "pUp24h": 46,
       "status": "SEANS KAPALI (İzlemede)",
-      "reason": "Fiyat 200G ortalamanın (65.135) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (65.136) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 49,
-      "botReason": "Fiyat 200G ortalamanın (65.135) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (65.136) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "MSFT",
@@ -1013,7 +161,7 @@
       "regimeLabelTR": "Boğa İçi Dip Sıkışması (MR12)",
       "ewmac": 1.45,
       "aboveSma200": true,
-      "sma200": 443.63,
+      "sma200": 443.64,
       "volRatio": 1.2,
       "efficiencyRatio": 0.21,
       "ibs12h": 0.153,
@@ -1047,27 +195,27 @@
       "zacScore": -42,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -10.27,
+      "ewmac": -10.24,
       "aboveSma200": false,
-      "sma200": 4333.42,
+      "sma200": 4333.32,
       "volRatio": 1.05,
       "efficiencyRatio": 0.47,
       "ibs12h": 0.149,
       "cumRsi2_12h": 0.1,
       "mom12hAtr": -0.85,
       "xsmomRank": 15,
-      "xsmomScore30d": -1.446,
+      "xsmomScore30d": -1.441,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 23,
       "pred24hPct": -0.22,
       "pUp24h": 46,
       "status": "SEANS KAPALI (İzlemede)",
-      "reason": "Fiyat 200G ortalamanın (4333.42) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (4333.32) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 42,
-      "botReason": "Fiyat 200G ortalamanın (4333.42) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (4333.32) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "NVDA",
@@ -1083,16 +231,16 @@
       "zacScore": -42,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -11.79,
+      "ewmac": -11.82,
       "aboveSma200": false,
       "sma200": 203.34,
       "volRatio": 1.32,
       "efficiencyRatio": 0.67,
       "ibs12h": 0.054,
       "cumRsi2_12h": 0.6,
-      "mom12hAtr": -1.93,
+      "mom12hAtr": -1.94,
       "xsmomRank": 17,
-      "xsmomScore30d": -1.962,
+      "xsmomScore30d": -1.967,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 23,
@@ -1110,17 +258,17 @@
       "name": "Bitcoin",
       "cluster": "CRYPTO_MAJOR",
       "digits": 2,
-      "price": 60280.05,
-      "bid": 60280,
-      "ask": 60280.1,
-      "change24hPercent": 2.17,
+      "price": 60203.15,
+      "bid": 60203.1,
+      "ask": 60203.2,
+      "change24hPercent": 1.98,
       "isOpen": true,
       "zacScore": -39,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
       "ewmac": -9.71,
       "aboveSma200": false,
-      "sma200": 72530.52,
+      "sma200": 72534.97,
       "volRatio": 1.18,
       "efficiencyRatio": 0.59,
       "ibs12h": 0.754,
@@ -1154,37 +302,37 @@
       "zacScore": -38,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -9.08,
+      "ewmac": -9.06,
       "aboveSma200": false,
-      "sma200": 6.3521,
-      "volRatio": 1.13,
+      "sma200": 6.352,
+      "volRatio": 1.12,
       "efficiencyRatio": 0.72,
       "ibs12h": 0.308,
       "cumRsi2_12h": 0.5,
       "mom12hAtr": -0.45,
       "xsmomRank": 14,
-      "xsmomScore30d": -1.42,
+      "xsmomScore30d": -1.417,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 21,
       "pred24hPct": -0.22,
       "pUp24h": 47,
       "status": "SEANS KAPALI (İzlemede)",
-      "reason": "Fiyat 200G ortalamanın (6.3521) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (6.352) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 38,
-      "botReason": "Fiyat 200G ortalamanın (6.3521) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (6.352) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "SOL/USD",
       "name": "Solana",
       "cluster": "CRYPTO_L1",
       "digits": 2,
-      "price": 70.13,
+      "price": 70.14,
       "bid": 70.13,
-      "ask": 70.14,
-      "change24hPercent": 1.73,
+      "ask": 70.15,
+      "change24hPercent": 1.34,
       "isOpen": true,
       "zacScore": -37,
       "regime": "CRYPTO_CALM_MOM",
@@ -1216,17 +364,17 @@
       "name": "Ethereum",
       "cluster": "CRYPTO_MAJOR",
       "digits": 2,
-      "price": 1683.01,
-      "bid": 1683,
-      "ask": 1683.01,
-      "change24hPercent": 4.13,
+      "price": 1680.99,
+      "bid": 1680.99,
+      "ask": 1681,
+      "change24hPercent": 3.82,
       "isOpen": true,
       "zacScore": -33,
       "regime": "CRYPTO_CALM_MOM",
       "regimeLabelTR": "Kripto Sakin Düşüş İvmesi",
       "ewmac": -9.64,
       "aboveSma200": false,
-      "sma200": 2128.79,
+      "sma200": 2129,
       "volRatio": 1.13,
       "efficiencyRatio": 0.53,
       "ibs12h": 0.86,
@@ -1298,7 +446,7 @@
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
       "ewmac": -6.05,
       "aboveSma200": false,
-      "sma200": 28901.11,
+      "sma200": 28901.04,
       "volRatio": 1.35,
       "efficiencyRatio": 0.43,
       "ibs12h": 0.098,
@@ -1312,11 +460,11 @@
       "pred24hPct": -0.13,
       "pUp24h": 48,
       "status": "SEANS KAPALI (İzlemede)",
-      "reason": "Fiyat 200G ortalamanın (28901.11) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (28901.04) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 19,
-      "botReason": "Fiyat 200G ortalamanın (28901.11) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (28901.04) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "SPX500",
@@ -1334,11 +482,11 @@
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
       "ewmac": -5.01,
       "aboveSma200": false,
-      "sma200": 7494.49,
+      "sma200": 7494.51,
       "volRatio": 1.43,
       "efficiencyRatio": 0.44,
       "ibs12h": 0.116,
-      "cumRsi2_12h": 5.4,
+      "cumRsi2_12h": 5.3,
       "mom12hAtr": -1.93,
       "xsmomRank": 10,
       "xsmomScore30d": -1.091,
@@ -1348,11 +496,11 @@
       "pred24hPct": -0.08,
       "pUp24h": 48,
       "status": "SEANS KAPALI (İzlemede)",
-      "reason": "Fiyat 200G ortalamanın (7494.49) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (7494.51) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 18,
-      "botReason": "Fiyat 200G ortalamanın (7494.49) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (7494.51) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "GBP/USD",
@@ -1406,7 +554,7 @@
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
       "ewmac": -3.56,
       "aboveSma200": false,
-      "sma200": 95.63,
+      "sma200": 95.64,
       "volRatio": 0.93,
       "efficiencyRatio": 0.43,
       "ibs12h": 0.825,
@@ -1420,11 +568,11 @@
       "pred24hPct": -0.13,
       "pUp24h": 49,
       "status": "SEANS KAPALI (İzlemede)",
-      "reason": "Fiyat 200G ortalamanın (95.63) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (95.64) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 15,
-      "botReason": "Fiyat 200G ortalamanın (95.63) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (95.64) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "US30",
@@ -1434,7 +582,7 @@
       "price": 48216,
       "bid": 48215.1,
       "ask": 48216.9,
-      "change24hPercent": -1.92,
+      "change24hPercent": -1.93,
       "isOpen": false,
       "closedReason": "Hafta Sonu Kapalı (Cumartesi)",
       "zacScore": -13,
@@ -1442,7 +590,7 @@
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
       "ewmac": -4.15,
       "aboveSma200": false,
-      "sma200": 51486.87,
+      "sma200": 51486.86,
       "volRatio": 1.31,
       "efficiencyRatio": 0.4,
       "ibs12h": 0.101,
@@ -1456,11 +604,11 @@
       "pred24hPct": -0.05,
       "pUp24h": 49,
       "status": "SEANS KAPALI (İzlemede)",
-      "reason": "Fiyat 200G ortalamanın (51486.87) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (51486.86) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 13,
-      "botReason": "Fiyat 200G ortalamanın (51486.87) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (51486.86) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "WTI",
@@ -1482,8 +630,8 @@
       "volRatio": 0.94,
       "efficiencyRatio": 0.48,
       "ibs12h": 0.764,
-      "cumRsi2_12h": 48.9,
-      "mom12hAtr": 0.47,
+      "cumRsi2_12h": 48.6,
+      "mom12hAtr": 0.48,
       "xsmomRank": 6,
       "xsmomScore30d": -0.801,
       "activePod": "NONE",
@@ -1587,7 +735,7 @@
         "id": "LIVE_EXEC",
         "label": "Aktif Test Ortamı Emir İletimi",
         "status": "DEVAM EDİYOR",
-        "metric": "0 Açık / 0 Kapalı İşlem (490 tarama)",
+        "metric": "0 Açık / 0 Kapalı İşlem (2 tarama)",
         "target": "01.12.2026’ya kadar kesintisiz canlı veri takibi"
       },
       {
@@ -1629,7 +777,7 @@
       "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "score": 49,
-      "reason": "Fiyat 200G ortalamanın (65.135) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (65.136) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "MSFT",
@@ -1643,7 +791,7 @@
       "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "score": 42,
-      "reason": "Fiyat 200G ortalamanın (4333.42) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (4333.32) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "NVDA",
@@ -1664,7 +812,7 @@
       "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "score": 38,
-      "reason": "Fiyat 200G ortalamanın (6.3521) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (6.352) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "SOL/USD",
@@ -1692,14 +840,14 @@
       "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "score": 19,
-      "reason": "Fiyat 200G ortalamanın (28901.11) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (28901.04) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "SPX500",
       "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "score": 18,
-      "reason": "Fiyat 200G ortalamanın (7494.49) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (7494.51) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "GBP/USD",
@@ -1713,14 +861,14 @@
       "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "score": 15,
-      "reason": "Fiyat 200G ortalamanın (95.63) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (95.64) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "US30",
       "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "score": 13,
-      "reason": "Fiyat 200G ortalamanın (51486.87) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (51486.86) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "WTI",

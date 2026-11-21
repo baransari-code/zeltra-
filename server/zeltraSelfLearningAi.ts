@@ -721,6 +721,7 @@ export function learnFromSettledForecast(params: {
   er1hAtEntry: number;
   volRatioAtEntry: number;
   settledAtMs?: number;
+  skipSave?: boolean;
 }): AiPostMortemReflection {
   const brain = loadOrInitAiBrain();
   const nowMs = params.settledAtMs || Date.now();
@@ -902,6 +903,24 @@ export function learnFromSettledForecast(params: {
     brain.recentLessons = brain.recentLessons.slice(0, 120);
   }
 
-  saveBrainAtomic(brain);
+  if (!params.skipSave) {
+    saveBrainAtomic(brain);
+  }
   return reflection;
+}
+
+export function finalizePretrainedBrain(): ZeltraAiBrainState {
+  const brain = loadOrInitAiBrain();
+  for (const hk of ['1', '4', '24'] as const) {
+    brain.horizons[hk].biasCorrectionScore = +(brain.horizons[hk].biasCorrectionScore * 0.35).toFixed(2);
+  }
+  brain.totalPostMortems = 0;
+  brain.recentLessons = [];
+  for (const k of Object.keys(brain.rootCauseStats) as RootCauseCategory[]) {
+    brain.rootCauseStats[k] = 0;
+  }
+  brain.updatedAtMs = Date.now();
+  brain.updatedAtTR = formatTR(brain.updatedAtMs);
+  saveBrainAtomic(brain);
+  return brain;
 }

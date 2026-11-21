@@ -23,6 +23,7 @@ import {
   analyzeCandlestickAndMicrostructure,
   buildExpertVector,
   computeAdaptiveHorizonForecast,
+  finalizePretrainedBrain,
   learnFromSettledForecast,
   loadOrInitAiBrain,
   resetAiBrain,
@@ -32,6 +33,7 @@ import {
   type ZeltraAiBrainState,
 } from './zeltraSelfLearningAi';
 import {
+  controlAutonomousBot,
   CORE_SYMBOLS,
   getAutonomousLedgerSnapshot,
   getSpec,
@@ -42,7 +44,7 @@ import {
 } from './autonomousTrader';
 
 const AUDIT_FILE = path.resolve(process.cwd(), 'data', 'live_forward_audit.json');
-const AUDIT_SCHEMA_VERSION = 'live-forward-v1';
+const AUDIT_SCHEMA_VERSION = 'live-forward-v2-cortex15';
 
 export type ForecastHorizonH = 1 | 4 | 24;
 
@@ -223,6 +225,109 @@ export function loadOrInitLiveAuditStore(): LiveForwardAuditStore {
   cachedStore = createFreshStore();
   saveStoreAtomic(cachedStore);
   return cachedStore;
+}
+
+export async function resetLiveAuditStoreClean(): Promise<LiveAuditDashboardPayload> {
+  resetAiBrain();
+
+  // 17 varlığın son 14 günlük gerçek 1H/Daily barlarını paralel çekip 5-Uzman ağırlıklarını ön-eğit
+  const assetData: { sym: string; h1: HourlyBar[]; daily: HourlyBar[] }[] = [];
+  for (let i = 0; i < CORE_SYMBOLS.length; i += 6) {
+    const batch = CORE_SYMBOLS.slice(i, i + 6);
+    const res = await Promise.all(
+      batch.map(async (sym) => {
+        try {
+          const [h1, daily] = await Promise.all([
+            fetchExtendedHourlyHistory(sym, '90d'),
+            fetchCleanDailyHistory(sym),
+          ]);
+          return { sym, h1, daily };
+        } catch {
+          return { sym, h1: [] as HourlyBar[], daily: [] as HourlyBar[] };
+        }
+      })
+    );
+    assetData.push(...res);
+  }
+
+  for (const { sym, h1, daily } of assetData) {
+    if (h1.length < 250 || daily.length < 150) continue;
+    const spec = getSpec(sym);
+    const dPack = buildDailyIndicatorPack(daily);
+    const p12 = build12hIndicatorPack(h1);
+    const startIdx = Math.max(60, h1.length - 200);
+    let dpIdx = 0;
+    let i12Idx = 0;
+
+    for (let i = startIdx; i < h1.length - 24; i += 4) {
+      const b = h1[i];
+      while (dpIdx + 1 < dPack.bars.length && dPack.bars[dpIdx + 1].timestamp + 86400000 <= b.timestamp) dpIdx++;
+      while (i12Idx + 1 < p12.bars.length && p12.bars[i12Idx + 1].timestamp + 12 * 3600000 <= b.timestamp) i12Idx++;
+      if (dpIdx < 60 || i12Idx < 5) continue;
+
+      const micro = analyzeCandlestickAndMicrostructure(h1, spec.digits, i);
+      const snap = evaluateZacAt(sym, spec.digits, b.close, dPack, dpIdx, p12, i12Idx, 20, 0, CORE_SYMBOLS.length);
+      const experts = buildExpertVector(
+        snap.ewmac,
+        snap.aboveSma200,
+        snap.ibs12h,
+        snap.cumRsi2_12h,
+        snap.mom12hAtr,
+        0,
+        CORE_SYMBOLS.length,
+        snap.volRatio,
+        micro,
+        ZAC_CRYPTO_ASSETS.has(sym),
+        ZAC_MR12_ASSETS.has(sym)
+      );
+
+      for (const h of [1, 4, 24] as const) {
+        if (i + h >= h1.length) continue;
+        const fc = computeAdaptiveHorizonForecast(
+          h,
+          b.close,
+          snap.atr12h14,
+          spec.digits,
+          experts,
+          micro,
+          snap.activeSetup.pod !== 'NONE'
+        );
+        const actualPx = h1[i + h].close;
+        const actualMovePct = +(((actualPx - b.close) / b.close) * 100).toFixed(3);
+        const inside90 = actualPx >= fc.lower90 && actualPx <= fc.upper90;
+        const dirHit =
+          fc.expectedDirection === 'YATAY'
+            ? inside90
+            : fc.expectedDirection === 'YÜKSELİŞ'
+              ? actualPx >= b.close
+              : actualPx <= b.close;
+
+        learnFromSettledForecast({
+          forecastId: 'PRETRAIN',
+          symbol: sym,
+          horizonHours: h,
+          predictedDirection: fc.expectedDirection,
+          predictedMovePct: fc.expectedMovePct,
+          actualMovePct,
+          inside90Band: inside90,
+          directionHit: dirHit,
+          expertsAtEntry: experts,
+          patternAtEntry: micro.pattern,
+          patternLabelAtEntryTR: micro.patternLabelTR,
+          er1hAtEntry: micro.er1h,
+          volRatioAtEntry: snap.volRatio,
+          settledAtMs: h1[i + h].timestamp,
+          skipSave: true,
+        });
+      }
+    }
+  }
+
+  finalizePretrainedBrain();
+  await controlAutonomousBot('reset');
+  cachedStore = createFreshStore(Date.now());
+  saveStoreAtomic(cachedStore);
+  return getLiveAuditDashboard(true);
 }
 
 // Hedef zamanı geçmiş bir tahmin için o hedef saate en yakın gerçek 1H kapanış fiyatını bulur
