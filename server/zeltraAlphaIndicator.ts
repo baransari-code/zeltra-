@@ -815,3 +815,105 @@ export function computeZacChartOverlay(
     },
   };
 }
+
+export interface ProChartCandle {
+  timestamp: number;
+  timeStr: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  rvol: number;
+  ema8: number;
+  ema21: number;
+  ema50: number;
+  bbUpper: number;
+  bbLower: number;
+  donHigh: number;
+  donLow: number;
+  rsi14: number;
+  macdHist: number;
+  macdLine: number;
+  macdSignal: number;
+  adx14: number;
+  pdi14: number;
+  ndi14: number;
+}
+
+export function computeProChartSeries(
+  bars: HourlyBar[],
+  digits = 4,
+  maxBars = 110,
+  isIntraday = true
+): ProChartCandle[] {
+  if (!bars || bars.length === 0) return [];
+  const closes = bars.map((b) => b.close);
+  const ema8Arr = calcEmaSeries(closes, 8);
+  const ema21Arr = calcEmaSeries(closes, 21);
+  const ema50Arr = calcEmaSeries(closes, 50);
+  const ema12Arr = calcEmaSeries(closes, 12);
+  const ema26Arr = calcEmaSeries(closes, 26);
+  const macdLineArr = closes.map((_, i) => (ema12Arr[i] || 0) - (ema26Arr[i] || 0));
+  const macdSigArr = calcEmaSeries(macdLineArr, 9);
+  const rsiArr = calcRsiSeries(closes, 14);
+
+  const startIdx = Math.max(0, bars.length - maxBars);
+  const out: ProChartCandle[] = [];
+
+  for (let i = startIdx; i < bars.length; i++) {
+    const b = bars[i];
+    const bbS = closes.slice(Math.max(0, i - 19), i + 1);
+    const bbMean = bbS.reduce((a, v) => a + v, 0) / bbS.length;
+    const bbSd = Math.sqrt(bbS.reduce((a, v) => a + (v - bbMean) ** 2, 0) / bbS.length);
+
+    let dHi = b.high ?? b.close;
+    let dLo = b.low ?? b.close;
+    for (let j = Math.max(0, i - 20); j < i; j++) {
+      dHi = Math.max(dHi, bars[j].high ?? bars[j].close);
+      dLo = Math.min(dLo, bars[j].low ?? bars[j].close);
+    }
+
+    const vSlice = bars
+      .slice(Math.max(0, i - 20), i)
+      .map((x) => x.volume || 0)
+      .filter((v) => v > 0);
+    const avgVol = vSlice.length > 0 ? vSlice.reduce((a, v) => a + v, 0) / vSlice.length : 0;
+    const vol = b.volume || 0;
+    const rv = avgVol > 0 ? +(vol / avgVol).toFixed(2) : 1.0;
+
+    const dt = new Date(b.timestamp);
+    const timeStr = isIntraday
+      ? dt.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : dt.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+    const ml = macdLineArr[i] ?? 0;
+    const ms = macdSigArr[i] ?? 0;
+
+    out.push({
+      timestamp: b.timestamp,
+      timeStr,
+      open: +(b.open ?? b.close).toFixed(digits),
+      high: +(b.high ?? b.close).toFixed(digits),
+      low: +(b.low ?? b.close).toFixed(digits),
+      close: +b.close.toFixed(digits),
+      volume: Math.round(vol),
+      rvol: rv,
+      ema8: +(ema8Arr[i] ?? b.close).toFixed(digits),
+      ema21: +(ema21Arr[i] ?? b.close).toFixed(digits),
+      ema50: +(ema50Arr[i] ?? b.close).toFixed(digits),
+      bbUpper: +(bbMean + 2 * bbSd).toFixed(digits),
+      bbLower: +(bbMean - 2 * bbSd).toFixed(digits),
+      donHigh: +dHi.toFixed(digits),
+      donLow: +dLo.toFixed(digits),
+      rsi14: +(rsiArr[i] ?? 50).toFixed(1),
+      macdHist: +(ml - ms).toFixed(digits + 2),
+      macdLine: +ml.toFixed(digits + 2),
+      macdSignal: +ms.toFixed(digits + 2),
+      adx14: 20,
+      pdi14: 20,
+      ndi14: 20,
+    });
+  }
+  return out;
+}

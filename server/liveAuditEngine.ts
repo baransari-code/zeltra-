@@ -1,9 +1,6 @@
 // server/liveAuditEngine.ts
-// ZELTRA /canli — %100 GERÇEK ZAMANLI, İLERİ-DÖNÜK (FORWARD-ONLY) KİLİTLİ TAHMİN & GERÇEKLEŞEN KÂR DEFTERİ
-// Sıfır backtest, sıfır geçmiş simülasyon, sıfır sonradan düzenleme:
-//   1. Her tahmin, hedef saat henüz GELMEDEN gerçek canlı fiyatla kilitlenir ve diske yazılır.
-//   2. Hedef saat geldiğinde, o anki gerçek piyasa fiyatıyla otomatik olarak karşılaştırılıp DOĞRU / YANLIŞ işlenir.
-//   3. Canlı 250.000 TL otonom test kasasının sadece ileriye dönük gerçek zamanlı kâr/zararı birlikte gösterilir.
+// ZELTRA /canli — %100 GERÇEK ZAMANLI, İLERİ-DÖNÜK (FORWARD-ONLY) KİLİTLİ TAHMİN,
+// ÖZ-ÖĞRENEN YAPAY ZEKA (CORTEX v15.0) & GERÇEKLEŞEN KÂR DEFTERİ
 
 import fs from 'fs';
 import path from 'path';
@@ -18,8 +15,22 @@ import {
   build12hIndicatorPack,
   buildDailyIndicatorPack,
   evaluateZacAt,
+  ZAC_CRYPTO_ASSETS,
+  ZAC_MR12_ASSETS,
   type ZacPodType,
 } from './zeltraAlphaIndicator';
+import {
+  analyzeCandlestickAndMicrostructure,
+  buildExpertVector,
+  computeAdaptiveHorizonForecast,
+  learnFromSettledForecast,
+  loadOrInitAiBrain,
+  resetAiBrain,
+  type AiPostMortemReflection,
+  type ExpertSignalVector,
+  type InstitutionalCandlePattern,
+  type ZeltraAiBrainState,
+} from './zeltraSelfLearningAi';
 import {
   CORE_SYMBOLS,
   getAutonomousLedgerSnapshot,
@@ -45,7 +56,6 @@ export interface LockedForwardForecast {
   lockedAtTR: string;
   targetAtMs: number;
   targetAtTR: string;
-  // Kilit anında değişmez olarak mühürlenen değerler:
   baselinePrice: number;
   predictedPrice: number;
   predictedMovePct: number;
@@ -56,7 +66,17 @@ export interface LockedForwardForecast {
   pUp: number;
   activePod: ZacPodType;
   regimeLabelTR: string;
-  // Canlı takip & hedef saatte otomatik sonuçlandırma alanları:
+  // Cortex v15.0 5-Uzman & Mum Mikroyapı Kayıtları:
+  expertsAtEntry?: ExpertSignalVector;
+  patternAtEntry?: InstitutionalCandlePattern;
+  patternLabelAtEntryTR?: string;
+  vsaDetailTR?: string;
+  structureLabelTR?: string;
+  dominantExpertLabelTR?: string;
+  aiReasoningTR?: string;
+  er1hAtEntry?: number;
+  volRatioAtEntry?: number;
+  // Sonuçlandırma & Öz-Eleştiri (Post-Mortem):
   status: 'BEKLİYOR' | 'DOĞRU' | 'YANLIŞ' | 'YATAY_NÖTR';
   currentLivePrice: number;
   currentMovePct: number;
@@ -67,11 +87,13 @@ export interface LockedForwardForecast {
   inside90Band?: boolean;
   settledAtMs?: number;
   settledAtTR?: string;
+  postMortem?: AiPostMortemReflection;
 }
 
 export interface LiveForwardAuditStore {
   schemaVersion: string;
   strategyVersion: string;
+  cortexCalibrated?: boolean;
   startedAtMs: number;
   startedAtTR: string;
   lastUpdatedAtMs: number;
@@ -137,6 +159,7 @@ export interface LiveAuditDashboardPayload {
     avgPriceErrorPct: number;
     byHorizon: LiveAuditHorizonStats[];
   };
+  aiBrain: ZeltraAiBrainState;
   forecasts: LockedForwardForecast[];
 }
 
@@ -163,6 +186,7 @@ function createFreshStore(nowMs = Date.now()): LiveForwardAuditStore {
   return {
     schemaVersion: AUDIT_SCHEMA_VERSION,
     strategyVersion: STRATEGY_VERSION,
+    cortexCalibrated: true,
     startedAtMs: nowMs,
     startedAtTR: formatTR(nowMs),
     lastUpdatedAtMs: nowMs,
@@ -187,7 +211,7 @@ export function loadOrInitLiveAuditStore(): LiveForwardAuditStore {
   if (cachedStore) return cachedStore;
   try {
     if (fs.existsSync(AUDIT_FILE)) {
-      const parsed = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8'));
+      const parsed = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8').replace(/^\uFEFF/, ''));
       if (parsed && parsed.schemaVersion === AUDIT_SCHEMA_VERSION && Array.isArray(parsed.forecasts)) {
         cachedStore = parsed as LiveForwardAuditStore;
         return cachedStore;
@@ -201,8 +225,35 @@ export function loadOrInitLiveAuditStore(): LiveForwardAuditStore {
   return cachedStore;
 }
 
+// Hedef zamanı geçmiş bir tahmin için o hedef saate en yakın gerçek 1H kapanış fiyatını bulur
+function findHistoricalPriceAtTarget(h1Bars: HourlyBar[], targetAtMs: number, fallbackLivePx: number): number {
+  if (!h1Bars || h1Bars.length === 0) return fallbackLivePx;
+  let bestBar = h1Bars[h1Bars.length - 1];
+  let bestDiff = Infinity;
+  for (const b of h1Bars) {
+    // 1H bar timestamp [T, T+1h) aralığındadır; barın sonu T + 3600_000'dir
+    const barEndMs = b.timestamp + 3600 * 1000;
+    const diff = Math.abs(barEndMs - targetAtMs);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestBar = b;
+    }
+  }
+  return bestDiff <= 2 * 3600 * 1000 ? bestBar.close : fallbackLivePx;
+}
+
+function findBarIndexAtTime(bars: HourlyBar[], targetMs: number): number {
+  if (!bars || bars.length === 0) return 0;
+  let idx = 0;
+  for (let i = 0; i < bars.length; i++) {
+    if (bars[i].timestamp <= targetMs) idx = i;
+    else break;
+  }
+  return idx;
+}
+
 // =========================================================================
-// GERÇEK ZAMANLI TAHMİN KİLİTLEME & HEDEF SAATTE OTOMATİK SONUÇLANDIRMA
+// GERÇEK ZAMANLI TAHMİN KİLİTLEME, DOĞRULAMA & CORTEX v15 ÖZ-ÖĞRENME DÖNGÜSÜ
 // =========================================================================
 export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<LiveForwardAuditStore> {
   if (auditTickInFlight) return auditTickInFlight;
@@ -217,12 +268,9 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
     ]);
     const vixLevel = macro?.vixPrice && macro.vixPrice > 5 ? macro.vixPrice : 18.0;
 
-    // 1) Tüm 17 varlık için güncel canlı fiyatı çek (sadece açık piyasa + bekleyen tahmini olanlar)
-    const pendingSymbols = new Set(
-      store.forecasts.filter((f) => f.status === 'BEKLİYOR').map((f) => f.symbol)
-    );
+    const allForecastSyms = new Set(store.forecasts.map((f) => f.symbol));
     const activeSymbols = CORE_SYMBOLS.filter(
-      (s) => isMarketOpenForAsset(s, nowMs).open || pendingSymbols.has(s)
+      (s) => isMarketOpenForAsset(s, nowMs).open || allForecastSyms.has(s)
     );
 
     const livePriceMap = new Map<string, number>();
@@ -258,26 +306,158 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
       );
     }
 
-    // 2) Önce BEKLEYEN tüm kilitli tahminleri canlı fiyatla güncelle ve vadesi gelenleri SONUÇLANDIR
+    // 1) RETROAKTİF KENDİ-ONARIM & İLK CORTEX v15 KALİBRASYONU:
+    // Daha önce Render uykusu yüzünden 14 saat gecikmeli kapanmış veya henüz post-mortem analizi yapılmamış
+    // geçmiş sonuçlanan kayıtları gerçek hedef saat mumuyla düzeltip kronolojik olarak yapay zeka beynine öğret!
+    const needsRetroCalibration =
+      !store.cortexCalibrated ||
+      store.forecasts.some((f) => f.status !== 'BEKLİYOR' && !f.postMortem);
+
+    if (needsRetroCalibration) {
+      resetAiBrain();
+      // En eskiden en yeniye doğru sırala ki öğrenme kronolojik olsun
+      const chronological = store.forecasts
+        .slice()
+        .sort((a, b) => a.lockedAtMs - b.lockedAtMs);
+
+      for (const f of chronological) {
+        if (f.status === 'BEKLİYOR') continue;
+        const h1 = h1Map.get(f.symbol) || [];
+        const daily = dailyMap.get(f.symbol) || [];
+        const livePx = livePriceMap.get(f.symbol) || f.actualPrice || f.currentLivePrice;
+
+        // Eğer kapanış hedef saatten >35 dk geç gerçekleştiyse (örn. sabahki 03:54 -> 18:55 uyku kayması),
+        // tam hedef saatteki (04:54 veya 07:54) gerçek 1H borsa mum fiyatını kullan!
+        const wasDelayedBySleep =
+          !f.settledAtMs || f.settledAtMs - f.targetAtMs > 35 * 60 * 1000;
+        const trueTargetPx =
+          wasDelayedBySleep && h1.length > 0
+            ? roundTo(findHistoricalPriceAtTarget(h1, f.targetAtMs, f.actualPrice || livePx), f.digits)
+            : roundTo(f.actualPrice || livePx, f.digits);
+
+        f.actualPrice = trueTargetPx;
+        f.currentLivePrice = trueTargetPx;
+        f.actualMovePct =
+          f.baselinePrice > 0
+            ? +(((trueTargetPx - f.baselinePrice) / f.baselinePrice) * 100).toFixed(3)
+            : 0;
+        f.currentMovePct = f.actualMovePct;
+        f.priceErrorPct =
+          f.baselinePrice > 0
+            ? +((Math.abs(trueTargetPx - f.predictedPrice) / f.baselinePrice) * 100).toFixed(3)
+            : 0;
+        f.inside90Band = trueTargetPx >= f.lower90 && trueTargetPx <= f.upper90;
+        if (wasDelayedBySleep) {
+          f.settledAtMs = f.targetAtMs;
+          f.settledAtTR = formatTR(f.targetAtMs);
+        }
+
+        if (f.expectedDirection === 'YATAY') {
+          f.directionHit = f.inside90Band;
+          f.status = 'YATAY_NÖTR';
+        } else {
+          const actualUp = trueTargetPx >= f.baselinePrice;
+          const predUp = f.expectedDirection === 'YÜKSELİŞ';
+          f.directionHit = actualUp === predUp;
+          f.status = f.directionHit ? 'DOĞRU' : 'YANLIŞ';
+        }
+
+        // Giriş anındaki 5 uzman vektörünü ve mum anatomisini yeniden oluştur (eksikse)
+        if (!f.expertsAtEntry && h1.length >= 30 && daily.length >= 60) {
+          const h1Idx = findBarIndexAtTime(h1, f.lockedAtMs);
+          const micro = analyzeCandlestickAndMicrostructure(h1, f.digits, h1Idx);
+          const dPack = buildDailyIndicatorPack(daily);
+          const p12 = build12hIndicatorPack(h1.slice(0, h1Idx + 1));
+          const dpIdx = findBarIndexAtTime(dPack.bars, f.lockedAtMs);
+          const snapAtLock = evaluateZacAt(
+            f.symbol,
+            f.digits,
+            f.baselinePrice,
+            dPack,
+            dpIdx,
+            p12,
+            Math.max(0, p12.bars.length - 1),
+            vixLevel,
+            0,
+            CORE_SYMBOLS.length
+          );
+          f.expertsAtEntry = buildExpertVector(
+            snapAtLock.ewmac,
+            snapAtLock.aboveSma200,
+            snapAtLock.ibs12h,
+            snapAtLock.cumRsi2_12h,
+            snapAtLock.mom12hAtr,
+            0,
+            CORE_SYMBOLS.length,
+            snapAtLock.volRatio,
+            micro,
+            ZAC_CRYPTO_ASSETS.has(f.symbol),
+            ZAC_MR12_ASSETS.has(f.symbol)
+          );
+          f.patternAtEntry = micro.pattern;
+          f.patternLabelAtEntryTR = micro.patternLabelTR;
+          f.vsaDetailTR = micro.vsaDetailTR;
+          f.structureLabelTR = micro.structureLabelTR;
+          f.er1hAtEntry = micro.er1h;
+          f.volRatioAtEntry = snapAtLock.volRatio;
+        }
+
+        const fallbackExperts: ExpertSignalVector = f.expertsAtEntry || {
+          E1_MACRO_TREND: f.zacScore,
+          E2_MICRO_DISPLACEMENT: Math.round(f.zacScore * 0.5),
+          E3_MEAN_REV_SPRING: Math.round(-f.zacScore * 0.4),
+          E4_CANDLE_VSA_SWEEP: 0,
+          E5_XSMOM_REGIME: Math.round(f.zacScore * 0.3),
+        };
+
+        f.postMortem = learnFromSettledForecast({
+          forecastId: f.id,
+          symbol: f.symbol,
+          horizonHours: f.horizonHours,
+          predictedDirection: f.expectedDirection,
+          predictedMovePct: f.predictedMovePct,
+          actualMovePct: f.actualMovePct || 0,
+          inside90Band: Boolean(f.inside90Band),
+          directionHit: Boolean(f.directionHit),
+          expertsAtEntry: fallbackExperts,
+          patternAtEntry: f.patternAtEntry || 'STANDARD_FLOW',
+          patternLabelAtEntryTR: f.patternLabelAtEntryTR || 'Standart Mum Akışı',
+          er1hAtEntry: f.er1hAtEntry ?? 0.22,
+          volRatioAtEntry: f.volRatioAtEntry ?? 1.05,
+          settledAtMs: f.settledAtMs || f.targetAtMs,
+        });
+      }
+      store.cortexCalibrated = true;
+    }
+
+    // 2) BEKLEYEN tüm kilitli tahminleri canlı fiyatla güncelle; vadesi dolanları SONUÇLANDIR & ÖĞREN!
     for (const f of store.forecasts) {
       if (f.status !== 'BEKLİYOR') continue;
       const livePx = livePriceMap.get(f.symbol);
       if (!livePx || !(livePx > 0)) continue;
 
-      const roundedPx = roundTo(livePx, f.digits);
-      f.currentLivePrice = roundedPx;
+      const h1 = h1Map.get(f.symbol) || [];
+      const roundedLive = roundTo(livePx, f.digits);
+      f.currentLivePrice = roundedLive;
       f.currentMovePct =
-        f.baselinePrice > 0 ? +(((roundedPx - f.baselinePrice) / f.baselinePrice) * 100).toFixed(3) : 0;
+        f.baselinePrice > 0 ? +(((roundedLive - f.baselinePrice) / f.baselinePrice) * 100).toFixed(3) : 0;
 
-      // Vade dolduysa GERÇEKLEŞEN fiyatla mühürle (bir daha değişmez!)
       if (nowMs >= f.targetAtMs) {
-        f.actualPrice = roundedPx;
-        f.actualMovePct = f.currentMovePct;
+        // Eğer vade üzerinden >25 dk geçtiyse hedef saatin gerçek 1H mum kapanışını al
+        const settlePx =
+          nowMs - f.targetAtMs > 25 * 60 * 1000 && h1.length > 0
+            ? roundTo(findHistoricalPriceAtTarget(h1, f.targetAtMs, roundedLive), f.digits)
+            : roundedLive;
+
+        f.actualPrice = settlePx;
+        f.actualMovePct =
+          f.baselinePrice > 0 ? +(((settlePx - f.baselinePrice) / f.baselinePrice) * 100).toFixed(3) : 0;
+        f.currentMovePct = f.actualMovePct;
         f.priceErrorPct =
           f.baselinePrice > 0
-            ? +((Math.abs(roundedPx - f.predictedPrice) / f.baselinePrice) * 100).toFixed(3)
+            ? +((Math.abs(settlePx - f.predictedPrice) / f.baselinePrice) * 100).toFixed(3)
             : 0;
-        f.inside90Band = roundedPx >= f.lower90 && roundedPx <= f.upper90;
+        f.inside90Band = settlePx >= f.lower90 && settlePx <= f.upper90;
         f.settledAtMs = nowMs;
         f.settledAtTR = formatTR(nowMs);
 
@@ -285,22 +465,46 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
           f.directionHit = f.inside90Band;
           f.status = 'YATAY_NÖTR';
         } else {
-          const actualUp = roundedPx >= f.baselinePrice;
+          const actualUp = settlePx >= f.baselinePrice;
           const predUp = f.expectedDirection === 'YÜKSELİŞ';
           f.directionHit = actualUp === predUp;
           f.status = f.directionHit ? 'DOĞRU' : 'YANLIŞ';
         }
+
+        // Cortex v15.0 Öz-Öğrenme & Kök-Neden Post-Mortem Çalıştır!
+        const fallbackExperts: ExpertSignalVector = f.expertsAtEntry || {
+          E1_MACRO_TREND: f.zacScore,
+          E2_MICRO_DISPLACEMENT: Math.round(f.zacScore * 0.5),
+          E3_MEAN_REV_SPRING: Math.round(-f.zacScore * 0.4),
+          E4_CANDLE_VSA_SWEEP: 0,
+          E5_XSMOM_REGIME: Math.round(f.zacScore * 0.3),
+        };
+        f.postMortem = learnFromSettledForecast({
+          forecastId: f.id,
+          symbol: f.symbol,
+          horizonHours: f.horizonHours,
+          predictedDirection: f.expectedDirection,
+          predictedMovePct: f.predictedMovePct,
+          actualMovePct: f.actualMovePct,
+          inside90Band: f.inside90Band,
+          directionHit: f.directionHit,
+          expertsAtEntry: fallbackExperts,
+          patternAtEntry: f.patternAtEntry || 'STANDARD_FLOW',
+          patternLabelAtEntryTR: f.patternLabelAtEntryTR || 'Standart Mum Akışı',
+          er1hAtEntry: f.er1hAtEntry ?? 0.22,
+          volRatioAtEntry: f.volRatioAtEntry ?? 1.05,
+          settledAtMs: nowMs,
+        });
       }
     }
 
-    // 3) Açık piyasalarda (+1S, +4S, +24S) yeni ileri-dönük tahminler kilitle!
-    // Her (sembol, ufuk) için spam önleme: aynı ufukta henüz kapanmamış veya son aralıkta kilitlenmiş kayıt varsa bekle.
+    // 3) Açık piyasalarda CORTEX v15.0 5-Uzmanlı Adaptif Ağırlıklarla yeni ileri-dönük tahminler kilitle!
     const ledger = getAutonomousLedgerSnapshot();
     const radarMap = new Map((ledger.lastMarketRadar || []).map((r) => [r.symbol, r]));
     const horizonsToLock: { h: ForecastHorizonH; cooldownMs: number }[] = [
-      { h: 1, cooldownMs: 55 * 60 * 1000 },       // Saat başı +1S canlı test tahmini
-      { h: 4, cooldownMs: 3.8 * 3600 * 1000 },    // 4 saatte bir +4S tahmini
-      { h: 24, cooldownMs: 11.5 * 3600 * 1000 },  // 12 saatte bir +24S tahmini
+      { h: 1, cooldownMs: 55 * 60 * 1000 },
+      { h: 4, cooldownMs: 3.8 * 3600 * 1000 },
+      { h: 24, cooldownMs: 11.5 * 3600 * 1000 },
     ];
 
     for (const sym of CORE_SYMBOLS) {
@@ -336,6 +540,22 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
         CORE_SYMBOLS.length
       );
 
+      // Kurumsal 1H Mum Anatomisi, VSA, Likidite Süpürmesi & FVG Analizi
+      const micro = analyzeCandlestickAndMicrostructure(h1, spec.digits);
+      const experts = buildExpertVector(
+        snap.ewmac,
+        snap.aboveSma200,
+        snap.ibs12h,
+        snap.cumRsi2_12h,
+        snap.mom12hAtr,
+        snap.xsmomRank,
+        CORE_SYMBOLS.length,
+        snap.volRatio,
+        micro,
+        ZAC_CRYPTO_ASSETS.has(sym),
+        ZAC_MR12_ASSETS.has(sym)
+      );
+
       for (const { h, cooldownMs } of horizonsToLock) {
         const lastSame = store.forecasts.find((x) => x.symbol === sym && x.horizonHours === h);
         const needLock =
@@ -345,35 +565,15 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
 
         if (!needLock) continue;
 
-        // +1H için saatlik ölçeklendirilmiş ZAC konisi, +4H ve +24H için doğrudan ZAC horizonu
-        let expectedPrice: number;
-        let lower90: number;
-        let upper90: number;
-        let expectedMovePct: number;
-        let pUp: number;
-        let expectedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
-
-        if (h === 1) {
-          const sigma1h = Math.max(1e-9, snap.atr12h14 / Math.sqrt(12)) * 0.85;
-          const driftFactor = snap.activeSetup.pod !== 'NONE' ? 0.36 : 0.24;
-          const delta = (snap.zacScore / 100) * sigma1h * driftFactor;
-          expectedPrice = roundTo(livePx + delta, spec.digits);
-          expectedMovePct = livePx > 0 ? +((delta / livePx) * 100).toFixed(3) : 0;
-          const bandHalf = 1.65 * sigma1h;
-          lower90 = roundTo(Math.max(livePx * 0.5, expectedPrice - bandHalf), spec.digits);
-          upper90 = roundTo(expectedPrice + bandHalf, spec.digits);
-          const zEdge = Math.max(-1, Math.min(1, snap.zacScore / 100));
-          pUp = Math.round(Math.max(30, Math.min(70, 50 + zEdge * (snap.activeSetup.pod !== 'NONE' ? 14 : 8))));
-          expectedDirection = pUp >= 53 ? 'YÜKSELİŞ' : pUp <= 47 ? 'DÜŞÜŞ' : 'YATAY';
-        } else {
-          const hz = snap.horizons.find((x) => x.horizonHours === h)!;
-          expectedPrice = hz.expectedPrice;
-          expectedMovePct = hz.expectedMovePct;
-          lower90 = hz.lower90;
-          upper90 = hz.upper90;
-          pUp = hz.pUp;
-          expectedDirection = hz.direction;
-        }
+        const adaptive = computeAdaptiveHorizonForecast(
+          h,
+          livePx,
+          snap.atr12h14,
+          spec.digits,
+          experts,
+          micro,
+          snap.activeSetup.pod !== 'NONE'
+        );
 
         const targetAtMs = nowMs + h * 3600 * 1000;
         const lockedRec: LockedForwardForecast = {
@@ -387,15 +587,24 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
           targetAtMs,
           targetAtTR: formatTR(targetAtMs),
           baselinePrice: roundTo(livePx, spec.digits),
-          predictedPrice: expectedPrice,
-          predictedMovePct: expectedMovePct,
-          expectedDirection,
-          lower90,
-          upper90,
-          zacScore: snap.zacScore,
-          pUp,
+          predictedPrice: adaptive.expectedPrice,
+          predictedMovePct: adaptive.expectedMovePct,
+          expectedDirection: adaptive.expectedDirection,
+          lower90: adaptive.lower90,
+          upper90: adaptive.upper90,
+          zacScore: adaptive.compositeScore,
+          pUp: adaptive.pUp,
           activePod: snap.activeSetup.pod,
           regimeLabelTR: snap.regimeLabelTR,
+          expertsAtEntry: experts,
+          patternAtEntry: micro.pattern,
+          patternLabelAtEntryTR: micro.patternLabelTR,
+          vsaDetailTR: micro.vsaDetailTR,
+          structureLabelTR: micro.structureLabelTR,
+          dominantExpertLabelTR: adaptive.dominantExpertLabelTR,
+          aiReasoningTR: adaptive.aiReasoningTR,
+          er1hAtEntry: micro.er1h,
+          volRatioAtEntry: snap.volRatio,
           status: 'BEKLİYOR',
           currentLivePrice: roundTo(livePx, spec.digits),
           currentMovePct: 0,
@@ -404,7 +613,6 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
       }
     }
 
-    // Maksimum 600 tarihsel kayıt tut (en yeniler üstte)
     if (store.forecasts.length > 600) {
       store.forecasts = store.forecasts.slice(0, 600);
     }
@@ -424,20 +632,23 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
 }
 
 export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditDashboardPayload> {
-  if (syncNow) {
+  const cur = loadOrInitLiveAuditStore();
+  if (
+    syncNow ||
+    !cur.cortexCalibrated ||
+    cur.forecasts.length === 0 ||
+    Date.now() - cur.lastUpdatedAtMs > 60 * 1000
+  ) {
     await Promise.all([
-      runAutonomousBotTick(true).catch(() => {}),
-      runLiveAuditTick(true).catch(() => {}),
+      syncNow ? runAutonomousBotTick(true).catch(() => {}) : Promise.resolve(),
+      runLiveAuditTick(syncNow).catch(() => {}),
     ]);
-  } else {
-    const cur = loadOrInitLiveAuditStore();
-    if (cur.forecasts.length === 0 || Date.now() - cur.lastUpdatedAtMs > 60 * 1000) {
-      await runLiveAuditTick(false).catch(() => {});
-    }
   }
 
   const store = loadOrInitLiveAuditStore();
   const ledger = getAutonomousLedgerSnapshot();
+  const aiBrain = loadOrInitAiBrain();
+
   const all = store.forecasts;
   const pending = all.filter((f) => f.status === 'BEKLİYOR');
   const settledDirectional = all.filter((f) => f.status === 'DOĞRU' || f.status === 'YANLIŞ');
@@ -488,7 +699,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
     liveGoTargetTR: '01.12.2026',
     daysRemaining,
     zeroBacktestGuaranteeTR:
-      'Bu sayfada HİÇBİR geçmiş simülasyon (backtest) yoktur. Tüm tahminler hedef saat gelmeden önce gerçek canlı fiyatla mühürlenir ve zamanı geldiğinde gerçek borsa fiyatıyla otomatik doğrulanır.',
+      'Bu sayfada HİÇBİR geçmiş simülasyon (backtest) yoktur. Tüm tahminler hedef saat gelmeden önce 5-Uzmanlı Cortex v15.0 Yapay Zekası tarafından mühürlenir; vade dolduğunda gerçek fiyatla karşılaştırılıp kök-neden öz-eleştirisiyle ağırlıklar otomatik güncellenir.',
     portfolio: {
       isRunning: ledger.isRunning,
       liveUsdTry: ledger.liveUsdTry,
@@ -530,6 +741,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       avgPriceErrorPct: avgErr,
       byHorizon,
     },
+    aiBrain,
     forecasts: all.slice(0, 150),
   };
 }

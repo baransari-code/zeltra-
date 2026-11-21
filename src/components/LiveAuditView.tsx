@@ -1,16 +1,40 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   ArrowUpRight,
+  Brain,
   CheckCircle2,
   Clock,
   Lock,
   Radio,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   TrendingDown,
   TrendingUp,
   XCircle,
 } from 'lucide-react';
+
+interface AiPostMortem {
+  id: string;
+  forecastId: string;
+  symbol: string;
+  horizonHours: 1 | 4 | 24;
+  timestampTR: string;
+  outcome: 'DOĞRU' | 'YANLIŞ' | 'YATAY_NÖTR';
+  predictedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+  actualMovePct: number;
+  predictedMovePct: number;
+  rootCauseCategory: string;
+  rootCauseTitleTR: string;
+  whyItHappenedTR: string;
+  nextTimeActionTR: string;
+  winningExpert: string;
+  winningExpertLabelTR: string;
+  misleadingExpert?: string;
+  misleadingExpertLabelTR?: string;
+  weightDeltaSummaryTR: string;
+  patternAtEntryTR: string;
+}
 
 interface LockedForecast {
   id: string;
@@ -32,6 +56,9 @@ interface LockedForecast {
   pUp: number;
   activePod: string;
   regimeLabelTR: string;
+  patternLabelAtEntryTR?: string;
+  dominantExpertLabelTR?: string;
+  aiReasoningTR?: string;
   status: 'BEKLİYOR' | 'DOĞRU' | 'YANLIŞ' | 'YATAY_NÖTR';
   currentLivePrice: number;
   currentMovePct: number;
@@ -42,6 +69,7 @@ interface LockedForecast {
   inside90Band?: boolean;
   settledAtMs?: number;
   settledAtTR?: string;
+  postMortem?: AiPostMortem;
 }
 
 interface HorizonStats {
@@ -54,6 +82,19 @@ interface HorizonStats {
   band90Hits: number;
   band90CoveragePct: number;
   avgPriceErrorPct: number;
+}
+
+interface HorizonBrainProfile {
+  horizonHours: 1 | 4 | 24;
+  weights: Record<string, number>;
+  priorWeights: Record<string, number>;
+  biasCorrectionScore: number;
+  convictionDeadzone: number;
+  bandScaleMultiplier: number;
+  totalLearnedSamples: number;
+  correctCount: number;
+  band90HitCount: number;
+  expertHitCounts: Record<string, { right: number; total: number; accuracyPct: number }>;
 }
 
 interface LiveAuditPayload {
@@ -101,12 +142,28 @@ interface LiveAuditPayload {
     avgPriceErrorPct: number;
     byHorizon: HorizonStats[];
   };
+  aiBrain?: {
+    version: string;
+    updatedAtTR: string;
+    totalPostMortems: number;
+    horizons: Record<'1' | '4' | '24', HorizonBrainProfile>;
+    rootCauseStats: Record<string, number>;
+    recentLessons: AiPostMortem[];
+  };
   forecasts: LockedForecast[];
 }
 
 interface LiveAuditViewProps {
   onInspectSymbol?: (symbol: string) => void;
 }
+
+const EXPERT_SHORT_NAMES: Record<string, string> = {
+  E1_MACRO_TREND: 'U1: Makro Trend (EWMAC)',
+  E2_MICRO_DISPLACEMENT: 'U2: Mikro İvme & FVG',
+  E3_MEAN_REV_SPRING: 'U3: Kısa Vade Yay (RSI2/IBS)',
+  E4_CANDLE_VSA_SWEEP: 'U4: Mum, VSA & Likidite Süpürmesi',
+  E5_XSMOM_REGIME: 'U5: Kesitsel Liderlik & Rejim',
+};
 
 const fmtTL = (n: number) =>
   `${n < 0 ? '-' : ''}${Math.abs(Math.round(n)).toLocaleString('tr-TR')} TL`;
@@ -131,6 +188,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'SETTLED'>('ALL');
   const [horizonFilter, setHorizonFilter] = useState<0 | 1 | 4 | 24>(0);
+  const [brainHorizonTab, setBrainHorizonTab] = useState<'1' | '4' | '24'>('1');
 
   const loadAudit = useCallback(async (sync = false) => {
     if (sync) setSyncing(true);
@@ -194,17 +252,19 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   if (loading && !data) {
     return (
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-10 text-center text-xs font-mono text-zinc-400">
-        /canli — Gerçek zamanlı kilitli tahmin ve canlı kasa defteri yükleniyor...
+        /canli — ZELTRA Cortex v15.0 Öz-Öğrenen Yapay Zeka ve Canlı Doğrulama Defteri yükleniyor...
       </div>
     );
   }
 
   const p = data?.portfolio;
   const fs = data?.forecastSummary;
+  const brain = data?.aiBrain;
+  const activeBrainProf = brain?.horizons?.[brainHorizonTab];
 
   return (
     <div className="space-y-5">
-      {/* 1. SIFIR BACKTEST GARANTİ BAŞLIĞI */}
+      {/* 1. SIFIR BACKTEST & CORTEX v15.0 ÖZ-ÖĞRENEN AI BAŞLIĞI */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-zinc-900 to-zinc-900 border border-emerald-700/40 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
@@ -212,16 +272,16 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               <Radio className="w-3.5 h-3.5 animate-pulse" />
               %100 GERÇEK ZAMANLI — SIFIR GEÇMİŞ SİMÜLASYON (/canli)
             </span>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 flex items-center gap-1">
-              <Lock className="w-3 h-3 text-cyan-400" />
-              Kayıt Başlangıcı: {data?.startedAtTR}
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 flex items-center gap-1 font-bold">
+              <Brain className="w-3.5 h-3.5" />
+              CORTEX v15.0 ÖZ-ÖĞRENEN YAPAY ZEKA ({brain?.totalPostMortems || 0} Öz-Eleştiri)
             </span>
             <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-300">
               Canlı Geçiş: {data?.liveGoTargetTR} ({data?.daysRemaining} gün)
             </span>
           </div>
           <h1 className="text-lg font-bold text-white">
-            Gerçek Zamanlı Kâr / Zarar & Mühürlü Tahmin Doğrulama Defteri
+            Gerçek Zamanlı Kâr / Zarar, Mühürlü Tahminler & Yapay Zeka Öz-Eleştiri Merkezi
           </h1>
           <p className="text-xs text-zinc-300 max-w-3xl leading-relaxed">
             {data?.zeroBacktestGuaranteeTR}
@@ -235,12 +295,12 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             className="px-3.5 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Canlı Senkronize Ediliyor...' : 'Anlık Fiyatla Güncelle & Kilitle'}
+            {syncing ? 'Canlı Senkronize Ediliyor...' : 'Anlık Fiyatla Güncelle & Öğren'}
           </button>
         </div>
       </div>
 
-      {/* 2. BÖLÜM 1 — GERÇEK ZAMANLI PARA KAZANIYOR MUYUZ? (250.000 TL CANLI KASA) */}
+      {/* 2. BÖLÜM 1 — GERÇEK ZAMANLI 250.000 TL KASA PERFORMANSI */}
       {p && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
@@ -324,7 +384,6 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             </div>
           </div>
 
-          {/* Sadece Gerçek Zamanlı Canlı Sermaye Eğrisi */}
           {equitySvg && (
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
               <div className="flex justify-between text-[11px] font-mono text-zinc-400">
@@ -346,16 +405,16 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             </div>
           )}
 
-          {/* Canlı Açık Pozisyonlar & Gerçekleşmiş Kapanan İşlemler */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {/* Açık Pozisyonlar */}
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-2">
               <div className="text-xs font-bold text-white flex justify-between">
                 <span>Şu An Açık Canlı Pozisyonlar ({p.openPositions.length})</span>
                 <span className="text-[10px] font-mono text-zinc-500">Anlık piyasa fiyatıyla değerlenir</span>
               </div>
               {p.openPositions.length === 0 ? (
-                <div className="text-xs text-zinc-500 py-4 text-center">Aktif açık pozisyon yok.</div>
+                <div className="text-xs text-zinc-500 py-4 text-center">
+                  Aktif açık pozisyon yok. Bot yalnızca yüksek olasılıklı 12H/Günlük 3-Pod sinyallerinde pozisyon açar.
+                </div>
               ) : (
                 <div className="space-y-2">
                   {p.openPositions.map((pos: any) => (
@@ -410,7 +469,6 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               )}
             </div>
 
-            {/* Gerçekleşmiş Kapanan İşlemler */}
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-2">
               <div className="text-xs font-bold text-white flex justify-between">
                 <span>Gerçekleşmiş Kapanan Canlı İşlemler ({p.closedTrades.length})</span>
@@ -452,22 +510,183 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         </div>
       )}
 
-      {/* 3. BÖLÜM 2 — MÜHÜRLÜ İLERİ-DÖNÜK TAHMİN vs GERÇEKLEŞEN FİYAT DEFTERİ */}
+      {/* 3. BÖLÜM 2 — ZELTRA CORTEX v15.0 ÖZ-ÖĞRENEN YAPAY ZEKA BEYNİ & KÖK-NEDEN ÖZ-ELEŞTİRİ DEFTERİ */}
+      {brain && activeBrainProf && (
+        <div className="bg-zinc-900 border border-cyan-800/40 rounded-lg p-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Brain className="w-4 h-4 text-cyan-400" />
+                2. ZELTRA Cortex v15.0 — Öz-Öğrenen 5-Uzmanlı Yapay Zeka Mimarisi & Kök-Neden Öz-Eleştiri
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Her tahmin sonuçlandığında yapay zeka hangi uzmanın yanıldığını tespit eder, L2-Multiplicative Weights ile uzman ağırlıklarını günceller ve öğrendiği dersi kaydeder.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1 font-mono text-xs">
+              {(['1', '4', '24'] as const).map((hk) => (
+                <button
+                  key={hk}
+                  onClick={() => setBrainHorizonTab(hk)}
+                  className={`px-3 py-1 rounded border transition-colors ${
+                    brainHorizonTab === hk
+                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold'
+                      : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                  }`}
+                >
+                  +{hk} SAAT BEYNİ
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 5 Uzman Adaptif Ağırlık & Başarı Kartları */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5 font-mono">
+            {Object.keys(EXPERT_SHORT_NAMES).map((expKey) => {
+              const curW = (activeBrainProf.weights[expKey] ?? 0.2) * 100;
+              const priorW = (activeBrainProf.priorWeights[expKey] ?? 0.2) * 100;
+              const diffW = curW - priorW;
+              const hitStat = activeBrainProf.expertHitCounts?.[expKey] || { right: 0, total: 0, accuracyPct: 50 };
+              return (
+                <div key={expKey} className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1.5">
+                  <div className="text-[11px] font-bold text-zinc-200 leading-tight">
+                    {EXPERT_SHORT_NAMES[expKey]}
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-lg font-black text-cyan-300">%{curW.toFixed(1)}</span>
+                    <span
+                      className={`text-[10px] font-bold ${
+                        diffW > 0.1 ? 'text-emerald-400' : diffW < -0.1 ? 'text-rose-400' : 'text-zinc-500'
+                      }`}
+                    >
+                      ({diffW >= 0 ? '+' : ''}
+                      {diffW.toFixed(1)}% evrim)
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-cyan-500 transition-all"
+                      style={{ width: `${Math.min(100, curW * 2)}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-zinc-400 flex justify-between pt-0.5">
+                    <span>Tekil İsabet:</span>
+                    <strong className={hitStat.accuracyPct >= 52 ? 'text-emerald-400' : 'text-zinc-300'}>
+                      %{hitStat.accuracyPct} ({hitStat.right}/{hitStat.total})
+                    </strong>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Adaptif Kalibrasyon Parametreleri */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs">
+            <div className="bg-zinc-950 border border-zinc-800 rounded px-3 py-2 flex items-center justify-between">
+              <span className="text-zinc-400">Dinamik Bias (Yön Kayması) Düzeltmesi:</span>
+              <strong
+                className={
+                  activeBrainProf.biasCorrectionScore > 0
+                    ? 'text-emerald-400'
+                    : activeBrainProf.biasCorrectionScore < 0
+                      ? 'text-rose-400'
+                      : 'text-zinc-200'
+                }
+              >
+                {activeBrainProf.biasCorrectionScore >= 0 ? '+' : ''}
+                {activeBrainProf.biasCorrectionScore} puan
+              </strong>
+            </div>
+            <div className="bg-zinc-950 border border-zinc-800 rounded px-3 py-2 flex items-center justify-between">
+              <span className="text-zinc-400">%90 Güven Bandı Adaptif Çarpanı:</span>
+              <strong className="text-violet-300">{activeBrainProf.bandScaleMultiplier}x σ</strong>
+            </div>
+            <div className="bg-zinc-950 border border-zinc-800 rounded px-3 py-2 flex items-center justify-between">
+              <span className="text-zinc-400">Yönsüz Gürültü Filtresi (Deadzone):</span>
+              <strong className="text-amber-300">±{activeBrainProf.convictionDeadzone} puan</strong>
+            </div>
+          </div>
+
+          {/* Yapay Zeka Öz-Eleştiri & Öğrenilen Dersler Akışı */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Yapay Zeka Kök-Neden Durum Analizi & Öğrenilen Dersler ({brain.recentLessons.length})
+              </span>
+              <span className="text-[11px] font-mono text-zinc-500">
+                Her sonuçlanan tahminde otomatik üretilir
+              </span>
+            </div>
+
+            {brain.recentLessons.length === 0 ? (
+              <div className="p-4 text-xs text-zinc-500 bg-zinc-950 rounded border border-zinc-800 text-center">
+                Henüz sonuçlanan tahmin yok; ilk vade dolduğunda yapay zeka öz-eleştirisi burada görünecek.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-96 overflow-y-auto pr-1">
+                {brain.recentLessons.slice(0, 12).map((pm) => {
+                  const isOk = pm.outcome === 'DOĞRU' || pm.outcome === 'YATAY_NÖTR';
+                  return (
+                    <div
+                      key={pm.id}
+                      className={`rounded p-3 border text-xs space-y-1.5 ${
+                        isOk
+                          ? 'bg-emerald-950/15 border-emerald-800/40'
+                          : 'bg-rose-950/15 border-rose-800/40'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-1 font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-white">{pm.symbol}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-cyan-300 text-[10px]">
+                            +{pm.horizonHours}S
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                              isOk
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : 'bg-rose-500/20 text-rose-300'
+                            }`}
+                          >
+                            {pm.outcome}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-zinc-400">{pm.rootCauseTitleTR}</span>
+                      </div>
+
+                      <p className="text-[11px] text-zinc-200 leading-relaxed">{pm.whyItHappenedTR}</p>
+                      <p className="text-[11px] text-cyan-300/90 leading-relaxed font-medium">
+                        ↳ {pm.nextTimeActionTR}
+                      </p>
+                      <div className="text-[10px] font-mono text-zinc-500 pt-1 border-t border-zinc-800/70 truncate">
+                        {pm.weightDeltaSummaryTR}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. BÖLÜM 3 — MÜHÜRLÜ İLERİ-DÖNÜK TAHMİN vs GERÇEKLEŞEN FİYAT DEFTERİ */}
       {fs && data && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
             <div>
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <Lock className="w-4 h-4 text-cyan-400" />
-                2. Mühürlü İleri-Dönük Tahminler vs Gerçekleşen Piyasa Fiyatları (+1S / +4S / +24S)
+                3. Mühürlü İleri-Dönük Tahminler vs Gerçekleşen Piyasa Fiyatları (+1S / +4S / +24S)
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Her tahmin vadesi gelmeden önce kilitlenir; vade dolduğunda gerçek canlı fiyatla otomatik karşılaştırılır ve değiştirilemez.
+                Her tahmin vadesi gelmeden önce kilitlenir; vade dolduğunda hedef saatin gerçek piyasa fiyatıyla otomatik karşılaştırılır.
               </p>
             </div>
           </div>
 
-          {/* Özet Metrik Şeridi */}
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5 font-mono">
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
               <div className="text-[10px] text-zinc-500">Kilitlenen Tahmin</div>
@@ -509,7 +728,6 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             </div>
           </div>
 
-          {/* Ufuk Bazlı Özet Kartları (+1S, +4S, +24S) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 font-mono text-xs">
             {fs.byHorizon.map((hs) => (
               <div key={hs.horizonHours} className="bg-zinc-950 border border-zinc-800 rounded p-3 flex items-center justify-between">
@@ -531,7 +749,6 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             ))}
           </div>
 
-          {/* Filtreler */}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
             <div className="flex items-center gap-1">
               {([
@@ -570,7 +787,6 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             </div>
           </div>
 
-          {/* Kilitli Tahmin vs Gerçekleşen Tablosu */}
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono">
               <thead>
@@ -578,9 +794,9 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                   <th className="py-2 pr-2">Varlık & Ufuk</th>
                   <th className="py-2 px-2">Kilit → Hedef Zamanı</th>
                   <th className="py-2 px-2 text-right">Kilit Fiyatı (T0)</th>
-                  <th className="py-2 px-2 text-right">Botun Tahmini (Kilitli)</th>
+                  <th className="py-2 px-2 text-right">Cortex v15 Tahmini</th>
                   <th className="py-2 px-2 text-right">Canlı / Gerçekleşen</th>
-                  <th className="py-2 pl-2 text-right">Doğrulama Sonucu</th>
+                  <th className="py-2 pl-2 text-right">Sonuç & AI Teşhisi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
@@ -616,9 +832,14 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                               +{f.horizonHours}S
                             </span>
                           </div>
-                          <div className="text-[10px] text-zinc-500">
-                            ZAC {f.zacScore >= 0 ? `+${f.zacScore}` : f.zacScore} • %{f.pUp} ↑
+                          <div className="text-[10px] text-zinc-400">
+                            Skor {f.zacScore >= 0 ? `+${f.zacScore}` : f.zacScore} • %{f.pUp} ↑
                           </div>
+                          {f.patternLabelAtEntryTR && (
+                            <div className="text-[10px] text-cyan-400/90 font-sans truncate max-w-[200px]">
+                              {f.patternLabelAtEntryTR}
+                            </div>
+                          )}
                         </td>
 
                         <td className="py-2.5 px-2 text-[11px]">
@@ -690,6 +911,11 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                               <span className="text-[10px] text-zinc-400 mt-0.5">
                                 Sapma %{f.priceErrorPct} • Bant {f.inside90Band ? '✓' : '✗'}
                               </span>
+                              {f.postMortem && (
+                                <span className="text-[10px] text-emerald-400/90 font-sans">
+                                  {f.postMortem.rootCauseTitleTR}
+                                </span>
+                              )}
                             </div>
                           ) : f.status === 'YANLIŞ' ? (
                             <div className="inline-flex flex-col items-end">
@@ -699,6 +925,11 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                               <span className="text-[10px] text-zinc-400 mt-0.5">
                                 Sapma %{f.priceErrorPct} • Bant {f.inside90Band ? '✓' : '✗'}
                               </span>
+                              {f.postMortem && (
+                                <span className="text-[10px] text-rose-300 font-sans">
+                                  {f.postMortem.rootCauseTitleTR}
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-bold">

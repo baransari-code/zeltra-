@@ -16,8 +16,11 @@ import {
   fetchRealHourlyHistory,
   type HourlyBar,
 } from './marketService';
-import { computeProChartSeries } from './quantForecastEngine';
-import { computeZacChartOverlay } from './zeltraAlphaIndicator';
+import { computeProChartSeries, computeZacChartOverlay } from './zeltraAlphaIndicator';
+import {
+  analyzeCandlestickAndMicrostructure,
+  loadOrInitAiBrain,
+} from './zeltraSelfLearningAi';
 import {
   controlAutonomousBot,
   CORE_SYMBOLS,
@@ -30,11 +33,6 @@ import {
   type WalkForwardWindow,
 } from './autonomousTrader';
 import { handleManualTestHttpRequest } from './manualTrader';
-import {
-  exportForecastLabCsv,
-  getForecastLab3mState,
-  runForecastLab3mTick,
-} from './forecastLab3m';
 import { getLiveAuditDashboard, runLiveAuditTick } from './liveAuditEngine';
 
 let lastHealthBgKickTs = 0;
@@ -234,6 +232,7 @@ export async function handleZeltraApiRequest(
       const h12 = zacOverlay.snapshot.horizons.find((h) => h.horizonHours === 12)!;
       const h24 = zacOverlay.snapshot.horizons.find((h) => h.horizonHours === 24)!;
       const h72 = zacOverlay.snapshot.horizons.find((h) => h.horizonHours === 72)!;
+      const microstructure = analyzeCandlestickAndMicrostructure(sourceBars, spec.digits);
 
       sendJson(res, 200, {
         symbol,
@@ -247,6 +246,8 @@ export async function handleZeltraApiRequest(
         candles: enrichedCandles,
         markers: zacOverlay.markers,
         zacSnapshot: zacOverlay.snapshot,
+        microstructure,
+        aiBrain: loadOrInitAiBrain(),
         oosSelfAudit: zacOverlay.oosSelfAudit,
         forecastCones: [h4, h12, h24, h72],
         newsContext,
@@ -344,41 +345,6 @@ export async function handleZeltraApiRequest(
   // 7. 250.000 TL Manuel IBKR Arena & Sen vs Bot Yarışı
   if (pathname === '/api/manual-test') {
     await handleManualTestHttpRequest(req, res);
-    return true;
-  }
-
-  // 8. 3 Dakikalık Canlı Mikro-Doğrulama Laboratuvarı
-  if (pathname === '/api/forecast-lab') {
-    try {
-      const action = urlObj.searchParams.get('action') || 'status';
-      let labState = action === 'tick' ? await runForecastLab3mTick(true) : await getForecastLab3mState();
-      if (labState.totalGeneratedCount === 0) {
-        labState = await runForecastLab3mTick(true);
-      }
-      sendJson(res, 200, labState);
-    } catch (err: any) {
-      sendJson(res, 500, { error: err?.message || '3dk tahmin laboratuvarı hatası' });
-    }
-    return true;
-  }
-
-  if (pathname === '/api/forecast-lab/export') {
-    try {
-      const format = (urlObj.searchParams.get('format') || 'csv').toLowerCase();
-      if (format === 'json') {
-        const state = await getForecastLab3mState();
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.setHeader('Content-Disposition', 'attachment; filename="zeltra_3m_forecast_lab.json"');
-        res.end(JSON.stringify(state, null, 2));
-      } else {
-        const csv = await exportForecastLabCsv();
-        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        res.setHeader('Content-Disposition', 'attachment; filename="zeltra_3m_forecast_lab.csv"');
-        res.end('\uFEFF' + csv);
-      }
-    } catch (err: any) {
-      sendJson(res, 500, { error: err?.message || 'Dışa aktarım hatası' });
-    }
     return true;
   }
 

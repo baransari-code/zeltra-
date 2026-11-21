@@ -113,6 +113,29 @@ interface ProChartPayload {
     };
     horizons: ZacHorizon[];
   };
+  microstructure?: {
+    pattern: string;
+    patternLabelTR: string;
+    structureState: string;
+    structureLabelTR: string;
+    bslPoolPrice: number;
+    sslPoolPrice: number;
+    sweptSslBullish: boolean;
+    sweptBslBearish: boolean;
+    bullishFvgActive: boolean;
+    bearishFvgActive: boolean;
+    vsaSignal: string;
+    vsaDetailTR: string;
+    orderBlockZoneTR: string;
+    upperWickRatio: number;
+    lowerWickRatio: number;
+    bodyRatio: number;
+    rvol1h: number;
+    cumRsi2_1h: number;
+    ibs1h: number;
+    candleVsaScore: number;
+    meanRev1hScore: number;
+  };
   oosSelfAudit: {
     horizonHours: number;
     sampleSize: number;
@@ -924,6 +947,55 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
           </div>
         ) : null}
       </div>
+
+      {/* 3b. KURUMSAL MUM ANATOMİSİ, VSA, LİKİDİTE HAVUZLARI (BSL/SSL) & ORDER BLOCK / FVG KOKPİTİ */}
+      {data?.microstructure && (
+        <div className="bg-zinc-900 border border-cyan-800/40 rounded-lg p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
+            <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              Kurumsal Mum Anatomisi, VSA Hacim-Yayılım & Likidite Havuzları (Smart Money)
+            </h2>
+            <span className="text-[11px] font-mono text-cyan-300">
+              Mum/VSA Skoru: {data.microstructure.candleVsaScore >= 0 ? `+${data.microstructure.candleVsaScore}` : data.microstructure.candleVsaScore} • 1H Yay: {data.microstructure.meanRev1hScore >= 0 ? `+${data.microstructure.meanRev1hScore}` : data.microstructure.meanRev1hScore}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs font-mono">
+            <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
+              <div className="text-[10px] text-zinc-500 uppercase">Aktif Mum Formasyonu</div>
+              <div className="text-zinc-100 font-bold font-sans">{data.microstructure.patternLabelTR}</div>
+              <div className="text-[10px] text-zinc-400">
+                Gövde %{Math.round(data.microstructure.bodyRatio * 100)} • Alt Fitil %{Math.round(data.microstructure.lowerWickRatio * 100)} • Üst Fitil %{Math.round(data.microstructure.upperWickRatio * 100)}
+              </div>
+            </div>
+
+            <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
+              <div className="text-[10px] text-zinc-500 uppercase">Piyasa Yapısı (BOS / ChoCH)</div>
+              <div className="text-cyan-300 font-bold font-sans">{data.microstructure.structureLabelTR}</div>
+              <div className="text-[10px] text-zinc-400">{data.microstructure.orderBlockZoneTR}</div>
+            </div>
+
+            <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
+              <div className="text-[10px] text-zinc-500 uppercase">Likidite Havuzları (BSL / SSL)</div>
+              <div className="text-zinc-200 font-bold">
+                BSL (Üst): <span className="text-rose-400">{data.microstructure.bslPoolPrice}</span>
+              </div>
+              <div className="text-zinc-200 font-bold">
+                SSL (Alt): <span className="text-emerald-400">{data.microstructure.sslPoolPrice}</span>
+              </div>
+            </div>
+
+            <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
+              <div className="text-[10px] text-zinc-500 uppercase">VSA Hacim & Yayılım (RVOL {data.microstructure.rvol1h}x)</div>
+              <div className="text-zinc-200 font-sans text-[11px] leading-snug">{data.microstructure.vsaDetailTR}</div>
+              <div className="text-[10px] text-zinc-500">
+                1H IBS: {data.microstructure.ibs1h} • 1H CumRSI2: {data.microstructure.cumRsi2_1h}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4. ZAC v14 5-SÜTUNLU KURUMSAL AYRINTI KARTLARI */}
       {snap && (

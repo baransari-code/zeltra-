@@ -1,7 +1,6 @@
 // Real Financial Market Data & Multi-Source News Engine with Dynamic News-Sentiment Adaptation
 // Connects directly to Yahoo Finance and Real Multi-Source Financial RSS Feeds
 import { analyzeArticleWithAI, synthesizeAssetNewsAI } from './newsAiEngine';
-import { computeMultiHorizonForecast } from './quantForecastEngine';
 
 export const SYMBOL_MAP: Record<string, string> = {
   // Majör
@@ -1892,54 +1891,3 @@ export function extractNewsSentimentForAsset(symbol: string, newsList: any[]): N
   };
 }
 
-// 24 Saatlik İleriye Dönük Kantitatif Tahmin Modeli (Canlı Haber Şokuna Göre Dinamik Adaptasyon)
-export interface HourlyPrediction {
-  hour: number;
-  targetTime: string;
-  targetTimestamp: number;
-  predictedPrice: number;
-  expectedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
-  upperBound: number;
-  lowerBound: number;
-  expectedMovePercent: number;
-  confidenceScore: number;
-  session: string;
-  newsAdjusted: boolean;
-  rationale: string;
-}
-
-export function generate24HourPredictions(
-  currentPrice: number,
-  candles: any[],
-  digits: number = 4,
-  totalHours: number = 24,
-  newsContext?: NewsContext,
-  hourlyBars?: HourlyBar[],
-  microBars?: HourlyBar[],
-  symbol?: string
-): HourlyPrediction[] {
-  const primaryBars =
-    hourlyBars && hourlyBars.length >= 30
-      ? hourlyBars
-      : (candles || []).map((c: any) => ({
-          timestamp: c.timestamp || Date.now(),
-          open: c.open ?? c.close,
-          high: c.high ?? c.close,
-          low: c.low ?? c.close,
-          close: c.close,
-          volume: c.volume ?? 0,
-        }));
-
-  const forecast = computeMultiHorizonForecast(
-    primaryBars,
-    microBars && microBars.length >= 25 ? microBars : null,
-    currentPrice,
-    digits,
-    newsContext,
-    1.0,
-    totalHours,
-    symbol
-  );
-
-  return forecast.hourlyPath;
-}
