@@ -4,3 +4,4 @@ dist
 .DS_Store
 *.log
 data/forecast_lab_3m.json
+data/manual_trader_ledger.json

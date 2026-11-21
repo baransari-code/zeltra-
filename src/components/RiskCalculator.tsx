@@ -1,144 +1,191 @@
-import React, { useState } from 'react';
-import { TradeSignal, Asset } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Calculator, RefreshCw } from 'lucide-react';
 
 interface RiskCalculatorProps {
-  currentSignal: TradeSignal;
-  asset: Asset;
+  symbol: string;
+  liveUsdTry: number;
+  onSelectSymbol?: (sym: string) => void;
 }
 
-export const RiskCalculator: React.FC<RiskCalculatorProps> = ({ currentSignal, asset }) => {
-  const [balance, setBalance] = useState<number>(10000);
-  const [riskPercent, setRiskPercent] = useState<number>(1.5);
-  const [entry, setEntry] = useState<number>(currentSignal.entryPrice);
-  const [stopLoss, setStopLoss] = useState<number>(currentSignal.stopLoss);
-  const [takeProfit, setTakeProfit] = useState<number>(currentSignal.takeProfit);
+const SYMBOLS = [
+  'XAU/USD', 'XAG/USD', 'COPPER', 'NAS100', 'SPX500', 'US30',
+  'NVDA', 'AAPL', 'MSFT', 'WTI', 'BRENT',
+  'EUR/USD', 'USD/JPY', 'GBP/USD', 'BTC/USD', 'ETH/USD', 'SOL/USD',
+];
 
-  const handleLoadSignal = () => {
-    setEntry(currentSignal.entryPrice);
-    setStopLoss(currentSignal.stopLoss);
-    setTakeProfit(currentSignal.takeProfit);
+export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
+  symbol,
+  liveUsdTry,
+  onSelectSymbol,
+}) => {
+  const [capitalTRY, setCapitalTRY] = useState<number>(250000);
+  const [riskPercent, setRiskPercent] = useState<number>(1.5);
+  const [entry, setEntry] = useState<number>(0);
+  const [stopLoss, setStopLoss] = useState<number>(0);
+  const [takeProfit, setTakeProfit] = useState<number>(0);
+  const [digits, setDigits] = useState<number>(2);
+  const [podNote, setPodNote] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const loadFromZac = async (sym: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/pro-chart?symbol=${encodeURIComponent(sym)}&tf=1h`);
+      if (!res.ok) return;
+      const json = await res.json();
+      const setup = json?.zacSnapshot?.activeSetup;
+      if (setup) {
+        setDigits(json.digits ?? 2);
+        setEntry(setup.entryPrice);
+        setStopLoss(setup.stopLoss);
+        setTakeProfit(setup.takeProfit > 0 ? setup.takeProfit : +(setup.entryPrice + Math.abs(setup.entryPrice - setup.stopLoss) * 2).toFixed(json.digits ?? 2));
+        setPodNote(`${setup.podLabelTR} • ZAC Skor: ${json.zacSnapshot.zacScore}`);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const riskAmount = (balance * riskPercent) / 100;
-  const priceRiskDiff = Math.abs(entry - stopLoss) || 0.0001;
-  const priceRewardDiff = Math.abs(takeProfit - entry);
+  useEffect(() => {
+    loadFromZac(symbol);
+  }, [symbol]);
 
-  let calculatedLots = 0.1;
-  const isForex = asset.category === 'MAJOR_FX' || asset.category === 'MINOR_FX' || asset.category === 'EXOTIC_FX';
-  if (isForex) {
-    const pipDifference = priceRiskDiff * (asset.digits === 4 ? 10000 : 100);
-    const pipValuePerLot = 10;
-    calculatedLots = +(riskAmount / (pipDifference * pipValuePerLot || 1)).toFixed(2);
-  } else {
-    const pointDifference = priceRiskDiff;
-    calculatedLots = +(riskAmount / (pointDifference * 100 || 1)).toFixed(2);
-  }
-
-  const safeLot = Math.max(0.01, calculatedLots);
-  const rewardAmount = +(riskAmount * (priceRewardDiff / priceRiskDiff)).toFixed(2);
+  const usdTry = liveUsdTry > 5 ? liveUsdTry : 42.5;
+  const riskTRY = (capitalTRY * riskPercent) / 100;
+  const slDist = Math.abs(entry - stopLoss);
+  const tpDist = Math.abs(takeProfit - entry);
+  const rr = slDist > 0 ? tpDist / slDist : 0;
+  const q2u = symbol === 'USD/JPY' ? 1 / (entry || 155) : 1;
+  const unitRiskTRY = slDist * q2u * usdTry;
+  const recommendedUnits = unitRiskTRY > 0 ? riskTRY / unitRiskTRY : 0;
+  const notionalTRY = recommendedUnits * entry * q2u * usdTry;
+  const effectiveLev = capitalTRY > 0 ? notionalTRY / capitalTRY : 0;
+  const expectedProfitTRY = riskTRY * rr;
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900 rounded p-4 space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
         <div>
-          <h2 className="text-base font-bold text-white">Risk & Lot Büyüklüğü Hesaplayıcı</h2>
-          <span className="text-xs text-zinc-400">Kasayı korumak için önerilen pozisyon büyüklüğü</span>
+          <h2 className="text-base font-bold text-white flex items-center gap-2">
+            <Calculator className="w-4 h-4 text-cyan-400" />
+            Kurumsal Volatilite-Hedefli Risk & Pozisyon Hesaplayıcı (TL / IBKR)
+          </h2>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            ZELTRA v14.0 canlı ATR & Stop-Loss seviyeleriyle birebir senkron pozisyon boyutlandırması (USD/TRY: {usdTry.toFixed(2)})
+          </p>
         </div>
 
-        <button
-          onClick={handleLoadSignal}
-          className="text-xs px-2.5 py-1 rounded border border-zinc-700 bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
-        >
-          {asset.symbol} Sinyal Değerlerini Yükle
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={symbol}
+            onChange={(e) => onSelectSymbol?.(e.target.value)}
+            className="bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-xs font-mono text-white"
+          >
+            {SYMBOLS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => loadFromZac(symbol)}
+            disabled={loading}
+            className="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 flex items-center gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            ZAC Seviyelerini Çek
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Inputs */}
-        <div className="space-y-3 text-xs">
-          <div>
-            <label className="text-zinc-400 block mb-1">Hesap Bakiyesi ($ USD)</label>
-            <input
-              type="number"
-              value={balance}
-              onChange={(e) => setBalance(Math.max(100, Number(e.target.value)))}
-              className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-white font-mono"
-            />
-          </div>
+      {podNote && (
+        <div className="text-xs font-mono text-cyan-300 bg-cyan-950/30 border border-cyan-800/40 rounded px-3 py-2 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 shrink-0" />
+          <span>{symbol} — {podNote}</span>
+        </div>
+      )}
 
-          <div>
-            <label className="text-zinc-400 block mb-1">Risk Oranı (%)</label>
-            <input
-              type="number"
-              step="0.5"
-              value={riskPercent}
-              onChange={(e) => setRiskPercent(Math.max(0.1, Number(e.target.value)))}
-              className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-white font-mono"
-            />
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 font-mono text-xs">
+        <div>
+          <label className="block text-[11px] text-zinc-400 mb-1">Portföy Sermayesi (TL)</label>
+          <input
+            type="number"
+            value={capitalTRY}
+            onChange={(e) => setCapitalTRY(Number(e.target.value) || 0)}
+            className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] text-zinc-400 mb-1">İşlem Riski (% — Öneri %1.2–1.5)</label>
+          <input
+            type="number"
+            step="0.1"
+            value={riskPercent}
+            onChange={(e) => setRiskPercent(Number(e.target.value) || 0)}
+            className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] text-zinc-400 mb-1">Giriş Fiyatı</label>
+          <input
+            type="number"
+            step="any"
+            value={entry}
+            onChange={(e) => setEntry(Number(e.target.value) || 0)}
+            className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] text-rose-400 mb-1">Stop-Loss</label>
+          <input
+            type="number"
+            step="any"
+            value={stopLoss}
+            onChange={(e) => setStopLoss(Number(e.target.value) || 0)}
+            className="w-full bg-zinc-950 border border-rose-800/70 rounded px-3 py-2 text-rose-300"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] text-emerald-400 mb-1">Hedef (TP)</label>
+          <input
+            type="number"
+            step="any"
+            value={takeProfit}
+            onChange={(e) => setTakeProfit(Number(e.target.value) || 0)}
+            className="w-full bg-zinc-950 border border-emerald-800/70 rounded px-3 py-2 text-emerald-300"
+          />
+        </div>
+      </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="text-zinc-400 block mb-1">Giriş</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={entry}
-                onChange={(e) => setEntry(Number(e.target.value))}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-white font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-rose-400 block mb-1">Stop Loss</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={stopLoss}
-                onChange={(e) => setStopLoss(Number(e.target.value))}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-rose-300 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-emerald-400 block mb-1">Take Profit</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={takeProfit}
-                onChange={(e) => setTakeProfit(Number(e.target.value))}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-emerald-300 font-mono"
-              />
-            </div>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 font-mono pt-2">
+        <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
+          <div className="text-[10px] text-zinc-500 uppercase">Önerilen Birim Adedi</div>
+          <div className="text-lg font-bold text-white mt-1">
+            {recommendedUnits.toFixed(digits >= 3 ? 2 : 4)}
           </div>
         </div>
-
-        {/* Results */}
-        <div className="border border-zinc-800 bg-zinc-950 p-4 rounded flex flex-col justify-between text-xs font-mono">
-          <div className="space-y-3">
-            <div className="border-b border-zinc-800 pb-2">
-              <div className="text-zinc-500 font-sans">Önerilen Güvenli Pozisyon Boyutu</div>
-              <div className="text-2xl font-bold text-white mt-1">{safeLot} LOT</div>
-              <div className="text-zinc-400 text-[11px] mt-0.5">Enstrüman: {asset.symbol}</div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-zinc-400">
-                <span>Maksimum Risk Tutarı:</span>
-                <span className="text-rose-400 font-semibold">-${riskAmount.toFixed(2)} (%{riskPercent})</span>
-              </div>
-              <div className="flex justify-between text-zinc-400">
-                <span>Hedeflenen Net Kâr:</span>
-                <span className="text-emerald-400 font-semibold">+${rewardAmount}</span>
-              </div>
-              <div className="flex justify-between text-zinc-400">
-                <span>Risk / Kazanç Oranı:</span>
-                <span className="text-white font-semibold">1 : {+(priceRewardDiff / priceRiskDiff).toFixed(2)}</span>
-              </div>
-            </div>
+        <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
+          <div className="text-[10px] text-zinc-500 uppercase">Pozisyon Büyüklüğü</div>
+          <div className="text-lg font-bold text-cyan-300 mt-1">
+            {Math.round(notionalTRY).toLocaleString('tr-TR')} TL
           </div>
-
-          <div className="text-[11px] text-zinc-500 font-sans pt-3 border-t border-zinc-800">
-            Kural: Sermayeyi korumak için tek işlemde bakiye riskini %1-%2 aralığında tutunuz.
+          <div className="text-[10px] text-zinc-500">Efektif: {effectiveLev.toFixed(2)}x</div>
+        </div>
+        <div className="bg-zinc-950 border border-rose-900/40 rounded p-3">
+          <div className="text-[10px] text-rose-400 uppercase">Maksimum Zarar (1R)</div>
+          <div className="text-lg font-bold text-rose-400 mt-1">
+            -{Math.round(riskTRY).toLocaleString('tr-TR')} TL
           </div>
+        </div>
+        <div className="bg-zinc-950 border border-emerald-900/40 rounded p-3">
+          <div className="text-[10px] text-emerald-400 uppercase">Beklenen Kâr (TP)</div>
+          <div className="text-lg font-bold text-emerald-400 mt-1">
+            +{Math.round(expectedProfitTRY).toLocaleString('tr-TR')} TL
+          </div>
+        </div>
+        <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
+          <div className="text-[10px] text-zinc-500 uppercase">Risk / Ödül (R:R)</div>
+          <div className="text-lg font-bold text-white mt-1">1 : {rr.toFixed(2)}</div>
         </div>
       </div>
     </div>

@@ -1,431 +1,90 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  RefreshCw,
-  Play,
+  Activity,
+  AlertTriangle,
+  ArrowUpRight,
+  BarChart3,
+  CheckCircle2,
+  Clock,
+  Cpu,
   Pause,
+  Play,
+  RefreshCw,
   RotateCcw,
+  ShieldCheck,
 } from 'lucide-react';
-import { ProIndicatorTerminal } from './ProIndicatorTerminal';
-
-interface GateCheckItem {
-  step: number;
-  title: string;
-  metricLabel: string;
-  metricValue: string;
-  threshold: string;
-  score: number;
-  maxScore: number;
-  passed: boolean;
-  note: string;
-}
-
-interface TradeLifecycleEvent {
-  stepNo: number;
-  timestamp: string;
-  phase: string;
-  title: string;
-  detail: string;
-  price: number;
-  pnlTRY?: number;
-}
-
-interface TradeForensicXRay {
-  confluenceScore: number;
-  auditHash: string;
-  regime: string;
-  orderType: string;
-  indicatorSnapshot: {
-    ema8: number;
-    ema21: number;
-    ema50: number;
-    ema200: number;
-    emaSpreadPct: number;
-    rsi14: number;
-    dailyAtr14: number;
-    tradeAtr: number;
-    newsScore: number;
-    newsHeadline: string;
-    newsSource: string;
-  };
-  microstructure: {
-    midQuotePrice: number;
-    fillPrice: number;
-    spreadPts: number;
-    slippagePts: number;
-    executionCostTRY: number;
-    contractSize: number;
-    lotSize: number;
-    unitLabel?: string;
-    notionalValueTRY: number;
-    effectiveLeverage: number;
-    accountLeverage?: number;
-    isLeveraged?: boolean;
-    spot1xEquivalentPnL_TRY?: number;
-    usdTryAtEntry: number;
-    sizingFormulaText: string;
-  };
-  gates: GateCheckItem[];
-  excursion: {
-    mfePrice: number;
-    mfeR: number;
-    mfeTRY: number;
-    maePrice: number;
-    maeR: number;
-    maeTRY: number;
-  };
-  lifecycleSteps: TradeLifecycleEvent[];
-}
 
 interface AutonomousTrade {
   id: string;
   symbol: string;
   name: string;
   digits: number;
+  pod?: string;
+  podLabel?: string;
   direction: 'AL (LONG)' | 'SAT (SHORT)';
-  status: 'ACIK' | 'TP2_TAM_HEDEF' | 'TP1_VE_BASABAS' | 'TRAILING_STOP_KAR' | 'STOP_LOSS' | 'MANUEL_KAPANDI';
+  status: string;
   entryTime: string;
-  entryTimestamp: number;
   closeTime?: string;
-  closeTimestamp?: number;
-  midEntryPrice?: number;
   entryPrice: number;
   currentPrice: number;
   closePrice?: number;
   takeProfit1: number;
   takeProfit2: number;
   stopLoss: number;
-  initialStopLoss: number;
   allocatedCapitalTRY: number;
-  riskAmountTRY: number;
-  positionSizeUnits: number;
-  lotSize?: number;
-  contractSize?: number;
-  unitLabel?: string;
   notionalValueTRY?: number;
   effectiveLeverage?: number;
-  accountLeverage?: number;
-  isLeveraged?: boolean;
-  spot1xEquivalentPnL_TRY?: number;
-  spreadPts?: number;
-  slippagePts?: number;
-  executionCostTRY?: number;
+  positionSizeUnits: number;
+  unitLabel?: string;
   entryCommissionTRY?: number;
   exitCommissionTRY?: number;
   financingCostTRY?: number;
-  bidAtTick?: number;
-  askAtTick?: number;
-  grossUnrealizedPnL_TRY?: number;
-  rMultiple?: number;
-  mfeTRY?: number;
-  mfeR?: number;
-  maeTRY?: number;
-  maeR?: number;
-  tp1Hit: boolean;
-  breakevenActive: boolean;
-  trailingStopActive?: boolean;
   realizedPnL_TRY: number;
   unrealizedPnL_TRY: number;
   totalPnL_TRY: number;
   totalPnL_Percent: number;
-  confluenceScore?: number;
+  rMultiple?: number;
   rationale: string;
   exitReason?: string;
-  forecastSnapshot?: {
-    horizonDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
-    pred4hPrice: number;
-    pred4hPct: number;
-    pred12hPrice: number;
-    pred12hPct: number;
-    tp1Probability: number;
-    forecastConviction: number;
-    regimePhase: string;
-    kellyMultiplier?: number;
-  };
-  forensicXRay?: TradeForensicXRay;
 }
 
-interface EquityPoint {
-  timestamp: number;
-  timeStr: string;
-  equityTRY: number;
-  cashTRY: number;
-  drawdownPercent?: number;
-}
-
-interface ActivityLogItem {
-  id: string;
-  timestamp: string;
-  type: 'ENTRY' | 'TP1_PARTIAL' | 'TP2_FULL' | 'STOP_LOSS' | 'BREAKEVEN_EXIT' | 'SYSTEM';
-  symbol: string;
-  message: string;
-  pnlImpactTRY?: number;
-  direction?: 'AL (LONG)' | 'SAT (SHORT)';
-  allocatedMarginTRY?: number;
-  notionalVolumeTRY?: number;
-  effectiveLeverage?: number;
-  accountLeverage?: number;
-  isLeveraged?: boolean;
-  lotSize?: number;
-  units?: number;
-  unitLabel?: string;
-  riskAmountTRY?: number;
-  executionCostTRY?: number;
-  entryPrice?: number;
-  exitPrice?: number;
-  stopLoss?: number;
-  tp1?: number;
-  tp2?: number;
-  rMultiple?: number;
-  spot1xPnL_TRY?: number;
-  equityAfterTRY?: number;
-}
-
-interface AssetAttributionItem {
+interface MarketRadarItem {
   symbol: string;
   name: string;
-  closedCount: number;
-  openCount: number;
-  wins: number;
-  losses: number;
-  winRatePercent: number;
-  netRealizedPnL_TRY: number;
-  floatingPnL_TRY: number;
-  totalNetPnL_TRY: number;
-  avgRMultiple: number;
-  totalRMultiple: number;
-  executionCostTRY: number;
-}
-
-interface DirectionStats {
-  direction: 'AL (LONG)' | 'SAT (SHORT)';
-  tradesCount: number;
-  wins: number;
-  losses: number;
-  winRatePercent: number;
-  netPnL_TRY: number;
-  avgRMultiple: number;
-  profitFactor: number;
-}
-
-interface MarketScannerItem {
-  symbol: string;
-  name: string;
+  cluster: string;
   digits: number;
   price: number;
-  ema8: number;
-  ema21: number;
-  ema50: number;
-  trendRegime: 'BOĞA (BULL)' | 'AYI (BEAR)' | 'YATAY';
-  rsi14: number;
-  atr14: number;
-  newsSentimentScore: number;
-  newsHeadline: string;
-  confluenceScore: number;
-  candidateDirection: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  status: 'POZİSYONDA (AÇIK)' | 'YENİ GİRİŞ' | 'TAHMİN & GÖZLEM (09:00)' | 'HABER VETOSU' | 'TAHMİN VETOSU' | 'KORELASYON KALKANI' | 'LİMİT DOLU (3/3)' | 'LİMİT DOLU (4/4)' | 'LİMİT DOLU (5/5)' | 'TEKNİK TEYİT BEKLİYOR' | 'PİYASA KAPALI (HAFTA SONU)' | 'ALTCOİN KAPALI (BORSA+BTC)' | 'RİSK KALKANI (DEVRE KESİCİ)';
-  forecastDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
-  forecastTarget4h?: number;
-  forecastTarget12h?: number;
-  forecastMove4hPct?: number;
-  forecastMove12hPct?: number;
-  forecastConviction?: number;
-  tp1Probability?: number;
-  kellyMultiplier?: number;
-  squeezeOn?: boolean;
-  regimePhase?: string;
-  candlePatternLabel?: string;
-  activeEngineType?: 'BREAKOUT' | 'CANDLE_PB';
-  newsDirection?: string;
-  dataDelaySec?: number;
-  liveDataSource?: string;
-  decisionReason: string;
-  scannedAt: string;
+  change24hPercent: number;
+  isOpen: boolean;
+  closedReason?: string;
+  zacScore: number;
+  regime: string;
+  regimeLabelTR: string;
+  ewmac: number;
+  aboveSma200: boolean;
+  volRatio: number;
+  ibs12h: number;
+  cumRsi2_12h: number;
+  xsmomRank: number;
+  activePod: string;
+  direction: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
+  conviction: number;
+  pred24hPct: number;
+  pUp24h: number;
+  status: string;
+  reason: string;
 }
 
-interface PredictionRecord3m {
-  id: string;
-  symbol: string;
-  name: string;
-  digits: number;
-  bucketTs: number;
-  target3mTs: number;
-  createdAtIso: string;
-  target3mIso: string;
-  sourceMode: 'CANLI_TICK' | 'REPLAY_1M';
-  liveSource: string;
-  dataDelaySec: number;
-  isMarketClosed: boolean;
-  sessionLabel: string;
-  entryPrice: number;
-  setupType?: 'CLEAN_TREND' | 'PULLBACK_TURN' | 'SPIKE_FADE' | 'WICK_ABSORPTION' | 'YATAY';
-  candlePatternCode?: string;
-  candlePatternLabel?: string;
-  newsDirection?: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
-  newsConviction?: number;
-  newsHeadline?: string;
-  predictedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
-  predicted15mDirection?: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
-  predictedPrice3m: number;
-  predictedMove3mPct: number;
-  predictedPrice15m: number;
-  predictedMove15mPct: number;
-  confidencePct: number;
-  rawEdgeScore: number;
-  drivers: string[];
-  features: {
-    ret3mPct: number;
-    ret15mPct: number;
-    rsi7_3m: number;
-    er3m: number;
-    vwapZScore: number;
-    volRatio3m: number;
-    h1TrendBias: number;
-    bodyRatio?: number;
-    lowerWickRatio?: number;
-    upperWickRatio?: number;
-    clv?: number;
-    dxyChg3mPct: number;
-    vixPrice: number;
-    takerBuyRatio: number;
-  };
-  status3m: 'BEKLIYOR' | 'DOGRU' | 'YANLIS' | 'PİYASA_KAPALI';
-  actualPrice3m?: number;
-  actualMove3mPct?: number;
-  errorCategory: string;
-  errorExplanation: string;
-  status15m: 'BEKLIYOR' | 'DOGRU' | 'YANLIS' | 'PİYASA_KAPALI';
-  actualPrice15m?: number;
-  actualMove15mPct?: number;
-}
-
-interface Symbol3mStats {
-  symbol: string;
-  name: string;
-  digits: number;
-  totalPredictions: number;
-  evaluated3m: number;
-  directionalCount3m: number;
-  directionalCorrect3m: number;
-  directionalAccuracy3m: number;
-  bullCount3m?: number;
-  bullCorrect3m?: number;
-  bearCount3m?: number;
-  bearCorrect3m?: number;
-  overallCorrect3m: number;
-  overallAccuracy3m: number;
-  evaluated15m: number;
-  directionalAccuracy15m: number;
-  avgAbsErrorPct3m: number;
-  topErrorCategory: string;
-  lastPrediction?: PredictionRecord3m;
-  recommendedAction: string;
-  liveDataSource: string;
-  liveDataDelaySec: number;
-  bestSetupType?: string;
-}
-
-interface ForecastLab3mState {
-  labId: string;
-  version: string;
-  startedAtIso: string;
-  calibrationDeadlineIso: string;
-  continuousLearningActive: boolean;
-  lastTickIso: string;
-  lastBucketTs: number;
-  totalGeneratedCount: number;
-  totalEvaluated3m: number;
-  liveTickEvaluated3m: number;
-  liveTickAccuracy3m: number;
-  directionalEvaluated3m: number;
-  directionalCorrect3m: number;
-  directionalAccuracy3m: number;
-  directionalCoveragePct?: number;
-  directionalBullishCount?: number;
-  directionalBullishCorrect?: number;
-  directionalBullishAccuracy?: number;
-  directionalBearishCount?: number;
-  directionalBearishCorrect?: number;
-  directionalBearishAccuracy?: number;
-  flatEvaluated3m: number;
-  flatCorrect3m: number;
-  evaluated15m: number;
-  directionalAccuracy15m: number;
-  macroPulse: {
-    dxyPrice: number;
-    dxyChg3mPct: number;
-    vixPrice: number;
-    vixChg5mPct: number;
-    us10yYield: number;
-  };
-  setupStats?: { setupType: string; label: string; evaluated: number; correct: number; accuracyPct: number }[];
-  adaptiveRules?: { symbol: string; setupType: string; evaluated: number; accuracyPct: number; status: string }[];
-  symbolStats: Symbol3mStats[];
-  errorBreakdown: { category: string; label: string; count: number; sharePct: number; fixHint: string }[];
-  hourlyHeatmap: { trHour: number; label: string; evaluated: number; correct: number; accuracyPct: number }[];
-  learningInsights: string[];
-  recentRecords: PredictionRecord3m[];
-}
-
-interface WalkForwardAuditTrade {
-  symbol: string;
-  name: string;
-  digits: number;
-  direction: 'AL (LONG)' | 'SAT (SHORT)';
-  timeframe: '1H' | '15M';
-  entryTime: string;
-  closeTime: string;
-  entryPrice: number;
-  closePrice: number;
-  stopLoss: number;
-  takeProfit1: number;
-  takeProfit2: number;
-  status: AutonomousTrade['status'];
-  netPnL_TRY: number;
-  commissionTRY: number;
-  kellyMultiplier: number;
-  confluenceScore: number;
-  tp1Prob: number;
-  pred4hPct: number;
-  rationale: string;
-}
-
-interface WalkForwardAuditResult {
-  window: '7d' | '30d';
-  strategyVersion: string;
-  generatedAt: string;
-  liveUsdTry: number;
-  initialCapitalTRY: number;
-  finalEquityTRY: number;
-  netProfitTRY: number;
-  netProfitPercent: number;
-  totalClosedTrades: number;
-  openTradesAtEnd: number;
-  winningTrades: number;
-  losingTrades: number;
-  winRatePercent: number;
-  profitFactor: number;
-  maxDrawdownPercent: number;
-  totalCommissionTRY: number;
-  engineBreakdown: {
-    engine: string;
-    tradesCount: number;
-    winRatePercent: number;
-    netPnL_TRY: number;
-  }[];
-  equityCurve: { timeStr: string; equityTRY: number; drawdownPercent: number }[];
-  closedTrades: WalkForwardAuditTrade[];
-}
-
-interface AutonomousLedgerState {
+interface AutonomousLedger {
   botId: string;
-  strategyVersion?: string;
-  observationModeActive?: boolean;
-  observationDeadlineIso?: string;
-  observationManualOverride?: 'AUTO' | 'FORCE_OBSERVE' | 'FORCE_TRADE';
+  strategyVersion: string;
   isRunning: boolean;
   startedAt: string;
   lastTickAt: string;
+  liveGoTargetIso?: string;
+  tickCount?: number;
   liveUsdTry: number;
+  vixLevel?: number;
   initialCapitalTRY: number;
   cashBalanceTRY: number;
   allocatedMarginTRY: number;
@@ -434,1325 +93,389 @@ interface AutonomousLedgerState {
   totalEquityTRY: number;
   netProfitTRY: number;
   netProfitPercent: number;
+  drawdownThrottleScale?: number;
+  openPositions: AutonomousTrade[];
+  closedTrades: AutonomousTrade[];
+  activityLog: { id: string; timestamp: string; type: string; symbol: string; pod?: string; message: string; pnlImpactTRY?: number }[];
+  lastMarketRadar?: MarketRadarItem[];
+  podStats?: { pod: string; label: string; openCount: number; maxSlots: number; closedCount: number; winRatePct: number; netPnL_TRY: number }[];
+  liveReadiness?: {
+    targetDateTR: string;
+    daysRemaining: number;
+    overallStatus: string;
+    gates: { id: string; label: string; status: string; metric: string; target: string }[];
+  };
   metrics: {
     totalClosedTrades: number;
     openPositionsCount: number;
     winningTrades: number;
     losingTrades: number;
     winRatePercent: number;
-    grossProfitTRY: number;
-    grossLossTRY: number;
     profitFactor: number;
+    avgWinTRY: number;
+    avgLossTRY: number;
+    expectancyTRY: number;
     maxDrawdownPercent: number;
-    peakEquityTRY: number;
-    avgWinTRY?: number;
-    avgLossTRY?: number;
-    payoffRatio?: number;
-    expectancyTRY?: number;
-    expectancyR?: number;
-    realizedRMultipleTotal?: number;
-    sharpeRatio?: number;
-    sortinoRatio?: number;
-    totalSpreadAndCommissionTRY?: number;
-    totalSignalsExecuted?: number;
-    directionCorrectCount?: number;
-    directionAccuracyPercent?: number;
-    netProfitableCount?: number;
-    netProfitablePercent?: number;
-    totalPredictedGrossTRY?: number;
-    totalCumulativeVolumeTRY?: number;
-    activeNotionalVolumeTRY?: number;
-    avgMarginLeverage?: number;
-    portfolioEffectiveLeverage?: number;
-    spot1xTotalNetProfitTRY?: number;
-    currentStreak?: { type: 'WIN' | 'LOSS' | 'NONE'; count: number };
-    maxWinStreak?: number;
-    maxLossStreak?: number;
-  };
-  attribution?: {
-    byAsset: AssetAttributionItem[];
-    byDirection: {
-      long: DirectionStats;
-      short: DirectionStats;
-    };
-  };
-  marketScanner?: MarketScannerItem[];
-  openPositions: AutonomousTrade[];
-  closedTrades: AutonomousTrade[];
-  equityCurve: EquityPoint[];
-  activityLog: ActivityLogItem[];
-  riskGuard?: {
-    dailyPnLPct: number;
-    currentDrawdownPct: number;
-    lossStreak: number;
-    riskScaleFactor: number;
-    throttleActive: boolean;
-    circuitBreakerActive: boolean;
-    reason: string;
-  };
-  readinessAudit?: {
-    passedCount: number;
-    totalGates: number;
-    isReadyForRealCapital: boolean;
-    summaryText: string;
-    gates: { label: string; current: string; target: string; passed: boolean }[];
+    totalSpreadAndCommissionTRY: number;
+    totalFinancingTRY?: number;
   };
 }
 
-export const AutonomousTestView: React.FC = () => {
-  const [ledger, setLedger] = useState<AutonomousLedgerState | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [scanning, setScanning] = useState<boolean>(false);
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
-  const [selectedChartSymbol, setSelectedChartSymbol] = useState<string>('NAS100');
-  const [chartSymbolManual, setChartSymbolManual] = useState<boolean>(false);
-  const [showPausedAltcoins, setShowPausedAltcoins] = useState<boolean>(false);
-  const [subView, setSubView] = useState<'all' | 'lab3m' | 'xray' | 'logs' | 'scanner' | 'attribution' | 'backtest'>('all');
-  const [logFilter, setLogFilter] = useState<'ALL' | 'ENTRY' | 'PROFIT' | 'RISK'>('ALL');
-  const [auditWindow, setAuditWindow] = useState<'7d' | '30d'>('7d');
-  const [auditData, setAuditData] = useState<WalkForwardAuditResult | null>(null);
-  const [auditLoading, setAuditLoading] = useState<boolean>(false);
-  const [lab3mData, setLab3mData] = useState<ForecastLab3mState | null>(null);
-  const [lab3mLoading, setLab3mLoading] = useState<boolean>(false);
-  const [labStatusFilter, setLabStatusFilter] = useState<'ALL' | 'YANLIS' | 'DOGRU' | 'BEKLIYOR'>('ALL');
-  const [labSymbolFilter, setLabSymbolFilter] = useState<string>('ALL');
+interface WalkForwardReport {
+  window: '30d' | '90d' | '1y' | '2y';
+  windowLabelTR: string;
+  strategyVersion: string;
+  startDate: string;
+  endDate: string;
+  initialCapitalTRY: number;
+  endingEquityTRY: number;
+  netProfitTRY: number;
+  netProfitPercent: number;
+  sharpeRatio: number;
+  sortinoRatio: number;
+  maxDrawdownPercent: number;
+  totalTrades: number;
+  winRatePercent: number;
+  profitFactor: number;
+  totalFeesTRY: number;
+  totalSwapTRY: number;
+  positiveQuarters: number;
+  totalQuarters: number;
+  podAttribution: { pod: string; label: string; trades: number; winRatePct: number; profitFactor: number; netPnL_TRY: number; feesTRY: number; swapTRY: number }[];
+  quarterlyBreakdown: { quarter: string; trades: number; winRatePct: number; profitFactor: number; netPnL_TRY: number }[];
+  equityCurve: { date: string; equityTRY: number; ddPct: number }[];
+  recentTrades: { symbol: string; pod: string; direction: string; entryDate: string; exitDate: string; entryPrice: number; exitPrice: number; netPnL_TRY: number; rMultiple: number; reason: string }[];
+  legacyComparison: {
+    oldVersion: string;
+    old2YEndingEquityTRY: number;
+    old2YReturnPct: number;
+    old2YMaxDdPct: number;
+    old2YProfitFactor: number;
+    old2YPositiveQuarters: string;
+    improvementSummaryTR: string;
+  };
+}
 
-  const fetchLab3m = useCallback(async (forceTick = false) => {
-    if (forceTick) setLab3mLoading(true);
+interface AutonomousTestViewProps {
+  onInspectSymbol?: (symbol: string) => void;
+}
+
+const fmtTL = (n: number) =>
+  `${n >= 0 ? '' : '-'}${Math.abs(Math.round(n)).toLocaleString('tr-TR')} TL`;
+
+const fmtSignedTL = (n: number) =>
+  `${n > 0 ? '+' : n < 0 ? '-' : ''}${Math.abs(Math.round(n)).toLocaleString('tr-TR')} TL`;
+
+export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspectSymbol }) => {
+  const [ledger, setLedger] = useState<AutonomousLedger | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Walk-forward kanıt durumu
+  const [wfWindow, setWfWindow] = useState<'30d' | '90d' | '1y' | '2y'>('2y');
+  const [wfReport, setWfReport] = useState<WalkForwardReport | null>(null);
+  const [wfLoading, setWfLoading] = useState<boolean>(false);
+
+  // Alt görünüm sekmesi
+  const [deskTab, setDeskTab] = useState<'positions' | 'proof' | 'radar' | 'logs'>('proof');
+
+  const fetchLedger = useCallback(async (action?: string, tradeId?: string) => {
     try {
-      const res = await fetch(`/api/forecast-lab${forceTick ? '?action=tick' : ''}`);
-      if (res.ok) {
-        const json: ForecastLab3mState = await res.json();
-        setLab3mData(json);
-      }
-    } catch (err) {
-      console.error('3dk tahmin laboratuvarı verisi alınamadı:', err);
-    } finally {
-      setLab3mLoading(false);
-    }
-  }, []);
-
-  const fetchWalkForwardAudit = useCallback(async (win: '7d' | '30d', refresh = false) => {
-    setAuditLoading(true);
-    try {
-      const res = await fetch(`/api/autonomous-backtest?window=${win}${refresh ? '&refresh=true' : ''}`);
-      if (res.ok) {
-        const json: WalkForwardAuditResult = await res.json();
-        setAuditData(json);
-      }
-    } catch (err) {
-      console.error('Walk-forward doğrulama verisi alınamadı:', err);
-    } finally {
-      setAuditLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (subView === 'backtest' && (!auditData || auditData.window !== auditWindow)) {
-      fetchWalkForwardAudit(auditWindow);
-    }
-  }, [subView, auditWindow, auditData, fetchWalkForwardAudit]);
-
-  const fetchLedgerStatus = useCallback(async (action = 'status') => {
-    if (action === 'scan') setScanning(true);
-    try {
-      const res = await fetch(`/api/autonomous-test?action=${action}`);
-      if (res.ok) {
-        const data: AutonomousLedgerState = await res.json();
-        setLedger(data);
-        setSelectedTradeId((prev) => {
-          if (prev && (data.openPositions.some((p) => p.id === prev) || data.closedTrades.some((c) => c.id === prev))) {
-            return prev;
-          }
-          return data.openPositions[0]?.id || data.closedTrades[0]?.id || null;
-        });
-        if (!chartSymbolManual && data.openPositions[0]?.symbol) {
-          setSelectedChartSymbol(data.openPositions[0].symbol);
-        }
-      }
-    } catch (err) {
-      console.error('Otonom portföy verisi alınamadı:', err);
+      if (action) setBusyAction(action);
+      const isPost = Boolean(action && action !== 'status');
+      const resp = await fetch(
+        '/api/autonomous-test',
+        isPost
+          ? {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action, tradeId }),
+            }
+          : undefined
+      );
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json: AutonomousLedger = await resp.json();
+      setLedger(json);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message || 'Otonom fon verisi alınamadı');
     } finally {
       setLoading(false);
-      setScanning(false);
+      setBusyAction(null);
+    }
+  }, []);
+
+  const fetchWalkForward = useCallback(async (win: '30d' | '90d' | '1y' | '2y', refresh = false) => {
+    setWfLoading(true);
+    try {
+      const resp = await fetch(`/api/autonomous-backtest?window=${win}${refresh ? '&refresh=1' : ''}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json: WalkForwardReport = await resp.json();
+      setWfReport(json);
+    } catch {
+      // Hata durumunda mevcut raporu koru
+    } finally {
+      setWfLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchLedgerStatus('status');
-    fetchLab3m(false);
-    const timer = setInterval(() => {
-      fetchLedgerStatus('status');
-    }, 4000);
-    const labTimer = setInterval(() => {
-      fetchLab3m(true);
-    }, 45000);
-    return () => {
-      clearInterval(timer);
-      clearInterval(labTimer);
-    };
-  }, [fetchLedgerStatus, fetchLab3m]);
+    fetchLedger();
+    const timer = setInterval(() => fetchLedger(), 20_000);
+    return () => clearInterval(timer);
+  }, [fetchLedger]);
 
-  const handleSetObservationMode = async (mode: 'AUTO' | 'FORCE_OBSERVE' | 'FORCE_TRADE') => {
-    setScanning(true);
-    try {
-      const res = await fetch(`/api/autonomous-test?action=set-observation&mode=${mode}`);
-      if (res.ok) {
-        const data = await res.json();
-        setLedger(data);
-      }
-    } finally {
-      setScanning(false);
-    }
-  };
+  useEffect(() => {
+    fetchWalkForward(wfWindow, false);
+  }, [wfWindow, fetchWalkForward]);
 
-  const handleToggleRunning = async () => {
-    if (!ledger) return;
-    setScanning(true);
-    try {
-      const nextState = !ledger.isRunning ? 'start' : 'stop';
-      const res = await fetch(`/api/autonomous-test?action=toggle&state=${nextState}`);
-      if (res.ok) {
-        const data = await res.json();
-        setLedger(data);
-      }
-    } finally {
-      setScanning(false);
-    }
-  };
+  // Walk-Forward Equity Curve SVG Geometri
+  const wfSvg = useMemo(() => {
+    if (!wfReport || !wfReport.equityCurve || wfReport.equityCurve.length < 2) return null;
+    const pts = wfReport.equityCurve;
+    const W = 900;
+    const H = 210;
+    const PAD = 24;
+    const vals = pts.map((p) => p.equityTRY);
+    const minV = Math.min(250_000, ...vals) * 0.985;
+    const maxV = Math.max(250_000, ...vals) * 1.015;
+    const xOf = (i: number) => PAD + (i / (pts.length - 1)) * (W - PAD * 2);
+    const yOf = (v: number) => PAD + ((maxV - v) / Math.max(1, maxV - minV)) * (H - PAD * 2);
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(p.equityTRY).toFixed(1)}`).join(' ');
+    const area = `${line} L${xOf(pts.length - 1).toFixed(1)},${(H - PAD).toFixed(1)} L${xOf(0).toFixed(1)},${(H - PAD).toFixed(1)} Z`;
+    const baseLineY = yOf(250_000);
+    return { W, H, PAD, line, area, baseLineY, minV, maxV, pts, xOf, yOf };
+  }, [wfReport]);
 
-  const handleResetCleanZero = async () => {
-    const confirmed = window.confirm(
-      'Geçmiş tüm işlemleri silip 250.000,00 TL nakit ile tam şu andan itibaren sıfırdan başlatmak istediğinize emin misiniz?'
-    );
-    if (!confirmed) return;
-    setScanning(true);
-    try {
-      const res = await fetch('/api/autonomous-test?action=reset-zero');
-      if (res.ok) {
-        const data = await res.json();
-        setLedger(data);
-        setSelectedTradeId(data.openPositions?.[0]?.id || null);
-      }
-    } finally {
-      setScanning(false);
-    }
-  };
-
-  if (loading || !ledger) {
+  if (loading && !ledger) {
     return (
-      <div className="p-8 border border-zinc-800 bg-zinc-900 rounded text-center space-y-2">
-        <div className="text-sm text-zinc-200">
-          250.000 TL Otonom Portföy Verileri Yükleniyor...
-        </div>
-        <div className="text-xs text-zinc-400">
-          Canlı piyasa fiyatları ve işlem kayıtları hazırlanıyor.
-        </div>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-10 text-center text-xs font-mono text-zinc-400">
+        ZELTRA v14.0 Kurumsal 3-Pod Otonom Fon Motoru yükleniyor ve 17 küresel enstrüman taranıyor...
       </div>
     );
   }
 
-  const formatTRY = (val: number) =>
-    val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
-
-  const formatDirection = (dir: 'AL (LONG)' | 'SAT (SHORT)') =>
-    dir === 'AL (LONG)' ? 'Alış (Long)' : 'Satış (Short)';
-
-  const formatStatusText = (status: AutonomousTrade['status']) => {
-    if (status === 'TP2_TAM_HEDEF') return 'Hedefe Ulaştı (Kâr Alındı)';
-    if (status === 'TRAILING_STOP_KAR') return 'Kâr Korumalı Stop ile Kapandı';
-    if (status === 'TP1_VE_BASABAS') return '1. Hedef Alındı + Başabaş Kapandı';
-    if (status === 'MANUEL_KAPANDI') return 'Olumsuz Haber Kalkanı ile Erken Kapandı';
-    if (status === 'STOP_LOSS') return 'Zarar Durdur (Stop) Oldu';
-    return 'Açık İşlem';
-  };
-
-  // Hafta sonu piyasa açık/kapalı bilgisi
-  const getMarketHoursNote = (symbol: string) => {
-    const day = new Date().getDay(); // 0 Pazar, 6 Cumartesi
-    const isWeekend = day === 0 || day === 6;
-    const isCrypto = ['BTC/', 'ETH/', 'SOL/', 'BNB/', 'XRP/', 'AVAX/', 'LINK/', 'DOGE/', 'ADA/'].some((p) =>
-      symbol.startsWith(p)
-    );
-    if (isCrypto) {
-      return '7/24 Kesintisiz Açık Piyasa';
-    }
-    if (isWeekend) {
-      return 'Hafta Sonu Kapalı (Pzt 01:00 Açılışını Bekliyor)';
-    }
-    return 'Piyasa Açık';
-  };
-
-  const isProfitable = ledger.netProfitTRY >= 0;
-  const allTrades = [...ledger.openPositions, ...ledger.closedTrades];
-  const inspectedTrade = allTrades.find((t) => t.id === selectedTradeId) || allTrades[0] || null;
-
-  // Sade ve Net Tek Katmanlı Kasa Büyüme Grafiği Hesaplamaları
-  const curve = ledger.equityCurve || [];
-  const svgW = 860;
-  const svgH = 240;
-  const padL = 78;
-  const padR = 24;
-  const padT = 22;
-  const padB = 32;
-  const plotW = svgW - padL - padR;
-  const plotH = svgH - padT - padB;
-
-  const equities = curve.map((c) => c.equityTRY);
-  const minEq = Math.min(ledger.initialCapitalTRY * 0.96, ...(equities.length ? equities : [250000]));
-  const maxEq = Math.max(ledger.initialCapitalTRY * 1.05, ...(equities.length ? equities : [250000]));
-  const eqRange = maxEq - minEq || 1;
-
-  const getX = (idx: number) => {
-    if (curve.length <= 1) return padL + plotW / 2;
-    return padL + (idx / (curve.length - 1)) * plotW;
-  };
-  const getY = (val: number) => padT + plotH - ((val - minEq) / eqRange) * plotH;
-
-  const baselineY = getY(ledger.initialCapitalTRY);
-  const linePoints = curve.map((c, i) => `${getX(i)},${getY(c.equityTRY)}`).join(' ');
-  const areaPoints =
-    curve.length > 1
-      ? `${getX(0)},${padT + plotH} ${linePoints} ${getX(curve.length - 1)},${padT + plotH}`
-      : '';
-
-  const activePoint = hoverIdx !== null && curve[hoverIdx] ? curve[hoverIdx] : curve[curve.length - 1];
-
-  // Fiyat İlerleme Çubuğu (Zarar Durdur -> Giriş -> Hedef)
-  const computePriceGaugePercent = (t: AutonomousTrade) => {
-    const refPrice = t.status === 'ACIK' ? t.currentPrice : (t.closePrice ?? t.currentPrice);
-    const totalSpan = Math.abs(t.takeProfit2 - t.initialStopLoss) || 0.0001;
-    const rawPct =
-      t.direction === 'AL (LONG)'
-        ? ((refPrice - t.initialStopLoss) / totalSpan) * 100
-        : ((t.initialStopLoss - refPrice) / totalSpan) * 100;
-    const entryPct =
-      t.direction === 'AL (LONG)'
-        ? ((t.entryPrice - t.initialStopLoss) / totalSpan) * 100
-        : ((t.initialStopLoss - t.entryPrice) / totalSpan) * 100;
-    return {
-      currentPct: Math.max(0, Math.min(100, +rawPct.toFixed(1))),
-      entryPct: Math.max(5, Math.min(95, +entryPct.toFixed(1))),
-    };
-  };
-
   return (
-    <div className="space-y-5">
-      {/* 1. SADE ÜST BAŞLIK & KONTROL PANELİ (Etiketsiz, Temiz Tasarım) */}
-      <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-          <div className="space-y-1">
-            <h1 className="text-lg sm:text-xl font-semibold text-white">
-              250.000 TL Otonom Portföy ve İşlem Kayıtları
-            </h1>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Sistemin 250.000 TL başlangıç sermayesiyle gerçek piyasa fiyatlarında kendi başına açtığı işlemler, yatırdığı ana para, kullandığı kaldıraç ve net kasa durumu.
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-zinc-400">
-              <span className="inline-flex items-center gap-1.5 text-zinc-200">
-                <span className={`w-2 h-2 rounded-full ${ledger.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                {ledger.isRunning ? 'Otonom Sistem Çalışıyor (4 Sn Canlı Akış)' : 'Duraklatıldı'}
-              </span>
-              <span className="text-zinc-700">•</span>
-              <span>Güncel Dolar Kuru: <strong className="text-zinc-200 font-mono">{ledger.liveUsdTry.toFixed(2)} TL</strong></span>
-              <span className="text-zinc-700">•</span>
-              <span>Son Kontrol: <strong className="text-zinc-200 font-mono">{new Date(ledger.lastTickAt).toLocaleTimeString('tr-TR')}</strong></span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              onClick={() => handleSetObservationMode(ledger.observationModeActive ? 'FORCE_TRADE' : 'FORCE_OBSERVE')}
-              disabled={scanning}
-              className={`inline-flex items-center space-x-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${
-                ledger.observationModeActive
-                  ? 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-200 border-amber-700/70'
-                  : 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-200 border-emerald-700/70'
+    <div className="space-y-4">
+      {/* 1. YÖNETİCİ KONTROL & CANLI DURUM ŞERİDİ */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono font-bold ${
+                ledger?.isRunning
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40'
+                  : 'bg-amber-500/15 text-amber-400 border border-amber-500/40'
               }`}
-              title="17.11.2026 09:00 TR kalibrasyon penceresi ile Canlı İşlem Açılışı arasında geçiş yap"
             >
-              <span>{ledger.observationModeActive ? 'Gözlem Modu Aktif (İşlemi Aç)' : 'Canlı İşlem Açık (Gözleme Geç)'}</span>
-            </button>
-
-            <button
-              onClick={() => fetchLedgerStatus('scan')}
-              disabled={scanning}
-              className="inline-flex items-center space-x-1.5 text-xs px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`} />
-              <span>{scanning ? 'Yenileniyor...' : 'Fiyatları Yenile'}</span>
-            </button>
-
-            <button
-              onClick={handleToggleRunning}
-              disabled={scanning}
-              className="inline-flex items-center space-x-1.5 text-xs px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition-colors"
-            >
-              {ledger.isRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              <span>{ledger.isRunning ? 'Duraklat' : 'Devam Ettir'}</span>
-            </button>
-
-            <button
-              onClick={handleResetCleanZero}
-              disabled={scanning}
-              className="inline-flex items-center space-x-1 text-xs px-2.5 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-colors"
-              title="Tüm işlemleri sıfırlayıp tam şu andan itibaren 250.000 TL ile yeniden başlat"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Sıfırdan Başlat (0 İşlem)</span>
-            </button>
+              <span className={`w-2 h-2 rounded-full ${ledger?.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              {ledger?.isRunning ? 'AKTİF TEST MODU — CANLI EMİR AÇIK' : 'DURAKLATILDI'}
+            </span>
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
+              {ledger?.strategyVersion || 'v14.0-zeltra-alpha-3pod'}
+            </span>
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-300 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              Canlı Geçiş Hedefi: {ledger?.liveReadiness?.targetDateTR || '01.12.2026'} (
+              {ledger?.liveReadiness?.daysRemaining ?? 11} gün)
+            </span>
           </div>
+          <h1 className="text-lg font-bold text-white">
+            ZELTRA Kurumsal 3-Pod Otonom Fon & Gerçek Veri Kanıt Merkezi
+          </h1>
+          <p className="text-xs text-zinc-400">
+            USD/TRY: <strong className="text-zinc-200 font-mono">{ledger?.liveUsdTry?.toFixed(2)}</strong> •
+            VIX: <strong className="text-zinc-200 font-mono">{ledger?.vixLevel?.toFixed(1) || '18.0'}</strong> •
+            Son Tarama:{' '}
+            <strong className="text-zinc-200 font-mono">
+              {ledger?.lastTickAt ? new Date(ledger.lastTickAt).toLocaleTimeString('tr-TR') : '-'}
+            </strong>{' '}
+            ({ledger?.tickCount || 0} tarama)
+          </p>
         </div>
 
-        {/* 4 ANA ÖZET KARTI (En Önemli Rakamlar, Büyük ve Çok Net) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-3.5 space-y-1">
-            <div className="text-xs text-zinc-400">Başlangıç Kasası</div>
-            <div className="text-lg font-semibold font-mono text-white tabular-nums">
-              {formatTRY(ledger.initialCapitalTRY)}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Başlangıç: {new Date(ledger.startedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-3.5 space-y-1">
-            <div className="text-xs text-zinc-400">Şu Anki Toplam Kasa (Özsermaye)</div>
-            <div className={`text-lg font-semibold font-mono tabular-nums ${isProfitable ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {formatTRY(ledger.totalEquityTRY)}
-            </div>
-            <div className="text-[11px] text-zinc-400">
-              Başlangıca göre <span className={isProfitable ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>{isProfitable ? '+' : ''}%{ledger.netProfitPercent}</span> büyüme
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-3.5 space-y-1">
-            <div className="text-xs text-zinc-400">Toplam Net Kâr / Zarar</div>
-            <div className={`text-lg font-semibold font-mono tabular-nums ${isProfitable ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {isProfitable ? '+' : ''}{formatTRY(ledger.netProfitTRY)}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Nakit: {formatTRY(ledger.cashBalanceTRY)} • IBKR Komisyon: -{formatTRY(ledger.metrics.totalSpreadAndCommissionTRY ?? 0)}
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-800/90 rounded p-3.5 space-y-1">
-            <div className="text-xs text-zinc-400">Tahmin Doğruluğu &amp; Kârlılık</div>
-            <div className="text-lg font-semibold font-mono text-white tabular-nums">
-              {ledger.metrics.totalClosedTrades > 0 ? (
-                <>
-                  %{ledger.metrics.winRatePercent}{' '}
-                  <span className="text-xs text-zinc-400 font-normal">
-                    ({ledger.metrics.winningTrades}K / {ledger.metrics.losingTrades}Z) • Yön: %{ledger.metrics.directionAccuracyPercent ?? 0}
-                  </span>
-                </>
-              ) : (
-                <>
-                  Yön: %{ledger.metrics.directionAccuracyPercent ?? 0}{' '}
-                  <span className="text-xs text-zinc-400 font-normal">
-                    ({ledger.metrics.directionCorrectCount ?? 0}/{ledger.metrics.totalSignalsExecuted ?? 0} doğru tahmin)
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Net kâra geçen: <span className="text-zinc-300 font-medium">{ledger.metrics.netProfitableCount ?? 0}/{ledger.metrics.totalSignalsExecuted ?? 0}</span> (%{ledger.metrics.netProfitablePercent ?? 0}) • Brüt: <span className={(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? '+' : ''}{formatTRY(ledger.metrics.totalPredictedGrossTRY ?? 0)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 YARDIMCI ŞEFFAFLIK KARTI (Basılan Ana Para, Kaldıraç, İşlem Hacmi, Kaldıraçsız Karşılaştırma) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Şu An İşlemlere Basılı Ana Para</div>
-            <div className="text-sm font-semibold font-mono text-zinc-100">
-              {formatTRY(ledger.allocatedMarginTRY)}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Boşta bekleyen nakit: {formatTRY(ledger.availableCashTRY)} (Her işleme %20 teminat)
-            </div>
-          </div>
-
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Kaldıraç Kullanımı</div>
-            <div className="text-sm font-semibold font-mono text-zinc-100">
-              {(ledger.metrics.avgMarginLeverage ?? 0) > 1 ? `Evet • Ortalama ${ledger.metrics.avgMarginLeverage}x` : 'Kaldıraçsız (1x)'}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Her işlemde IBKR başlangıç teminatı sınırı &amp; maks. %1,5 risk korunur
-            </div>
-          </div>
-
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Açık İşlemlerin Kaldıraçlı Hacmi</div>
-            <div className="text-sm font-semibold font-mono text-zinc-100">
-              {formatTRY(ledger.metrics.activeNotionalVolumeTRY ?? 0)}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Toplam hacim: {formatTRY(ledger.metrics.totalCumulativeVolumeTRY ?? 0)} ({ledger.metrics.portfolioEffectiveLeverage ?? 0}x kasa)
-            </div>
-          </div>
-
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Kaldıraçsız (1x Spot) Oynansaydı</div>
-            <div className="text-sm font-semibold font-mono text-zinc-200">
-              {(ledger.metrics.spot1xTotalNetProfitTRY ?? 0) >= 0 ? '+' : ''}
-              {formatTRY(ledger.metrics.spot1xTotalNetProfitTRY ?? 0)}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Kaldıraçlı (%1,5 sabit riskli) gerçek kazanç: <span className={ledger.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{ledger.netProfitTRY >= 0 ? '+' : ''}{formatTRY(ledger.netProfitTRY)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 TAHMİN DOĞRULUĞU & GERÇEK PARA KAZANMA KARNESİ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Yön Tahmin Doğruluğu (Tüm İşlemler)</div>
-            <div className="text-sm font-semibold font-mono text-white">
-              %{ledger.metrics.directionAccuracyPercent ?? 0}{' '}
-              <span className="text-xs font-normal text-zinc-400">
-                ({ledger.metrics.directionCorrectCount ?? 0} / {ledger.metrics.totalSignalsExecuted ?? 0} İşlem Doğru Yön)
-              </span>
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Açık + kapalı tüm işlemlerde fiyatın öngörülen yöne gitme oranı
-            </div>
-          </div>
-
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Komisyon Üstü Net Kazanan Oranı</div>
-            <div className="text-sm font-semibold font-mono text-white">
-              %{ledger.metrics.netProfitablePercent ?? 0}{' '}
-              <span className="text-xs font-normal text-zinc-400">
-                ({ledger.metrics.netProfitableCount ?? 0} / {ledger.metrics.totalSignalsExecuted ?? 0} İşlem Kârlı)
-              </span>
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Kapanan kesin başarı: %{ledger.metrics.winRatePercent} ({ledger.metrics.winningTrades}K / {ledger.metrics.losingTrades}Z)
-            </div>
-          </div>
-
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Tahminlerden Para Kazandık mı?</div>
-            <div className={`text-sm font-semibold font-mono ${(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              Brüt: {(ledger.metrics.totalPredictedGrossTRY ?? 0) >= 0 ? '+' : ''}{formatTRY(ledger.metrics.totalPredictedGrossTRY ?? 0)}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Komisyon &amp; çıkış kesintisi sonrası net: <span className={ledger.netProfitTRY >= 0 ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>{ledger.netProfitTRY >= 0 ? '+' : ''}{formatTRY(ledger.netProfitTRY)}</span>
-            </div>
-          </div>
-
-          <div className="bg-zinc-950/60 border border-zinc-800/70 rounded p-3 space-y-1">
-            <div className="text-xs text-zinc-400">Kâr Çarpanı &amp; İşlem Başı Beklenti</div>
-            <div className="text-sm font-semibold font-mono text-white">
-              {ledger.metrics.totalClosedTrades > 0 ? (
-                <>
-                  {ledger.metrics.profitFactor}x Çarpan •{' '}
-                  <span className={(ledger.metrics.expectancyTRY ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                    {(ledger.metrics.expectancyTRY ?? 0) >= 0 ? '+' : ''}{formatTRY(ledger.metrics.expectancyTRY ?? 0)}
-                  </span>
-                </>
-              ) : (
-                <span className="text-zinc-300 font-normal">İlk kapanış bekleniyor ({ledger.openPositions.length} açık)</span>
-              )}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              Ort. Kazanç: +{formatTRY(ledger.metrics.avgWinTRY ?? 0)} • Ort. Kayıp: -{formatTRY(ledger.metrics.avgLossTRY ?? 0)}
-            </div>
-          </div>
-        </div>
-
-        {/* SADE SEKME SEÇİCİSİ */}
-        {ledger.observationModeActive && (
-          <div className="rounded border border-sky-800/70 bg-sky-950/35 px-3.5 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-2 text-xs">
-            <div className="space-y-0.5">
-              <div className="font-semibold text-sky-200 flex flex-wrap items-center gap-2">
-                <span>17.11.2026 09:00 TR Kalibrasyon &amp; Sadece Tahmin Modu Aktif (İşlem Açılışı Kilitli · 0 TL Risk)</span>
-                {lab3mData && (
-                  <span className="px-2 py-0.5 rounded bg-sky-900/70 text-sky-100 font-mono text-[11px]">
-                    3dk Yön Doğruluğu: %{lab3mData.directionalAccuracy3m} ({lab3mData.directionalCorrect3m}/{lab3mData.directionalEvaluated3m}) • Toplam Kayıt: {lab3mData.totalGeneratedCount}
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-zinc-400">
-                Sistem şu an 9 varlıkta her 3 dakikada bir kesintisiz tahmin üretip 3dk &amp; 15dk sonuçlarını hata kök-nedeniyle kaydeder ve 09:00 sonrası da öğrenmeye devam eder. Harici keep-alive (uyku önleme) cron URL: <code className="text-sky-300 select-all">https://zeltra-ru7m.onrender.com/api/forecast-lab?action=tick</code>
-              </div>
-            </div>
-            <button
-              onClick={() => setSubView('lab3m')}
-              className="shrink-0 px-3 py-1.5 rounded bg-sky-700 hover:bg-sky-600 text-white font-medium transition-colors"
-            >
-              3dk Tahmin &amp; Hata Teşhisini Gör →
-            </button>
-          </div>
-        )}
-
-        {/* GERÇEK SERMAYE HAZIRLIK KARNESİ & KURUMSAL DEVRE KESİCİ */}
-        {ledger.readinessAudit && (
-          <div
-            className={`rounded border px-3.5 py-2.5 space-y-2 text-xs ${
-              ledger.readinessAudit.isReadyForRealCapital
-                ? 'border-emerald-800/70 bg-emerald-950/25'
-                : ledger.riskGuard?.circuitBreakerActive
-                ? 'border-rose-800/70 bg-rose-950/30'
-                : 'border-zinc-800 bg-zinc-950/70'
-            }`}
+        {/* Kontrol Butonları */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => fetchLedger('tick')}
+            disabled={busyAction !== null}
+            className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
           >
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-white">
-                  Gerçek Sermaye Hazırlık Karnesi ({ledger.readinessAudit.passedCount}/{ledger.readinessAudit.totalGates} Onay)
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded font-mono text-[10px] border ${
-                    ledger.readinessAudit.isReadyForRealCapital
-                      ? 'bg-emerald-950/80 border-emerald-700 text-emerald-300'
-                      : 'bg-amber-950/70 border-amber-800/70 text-amber-300'
-                  }`}
-                >
-                  {ledger.readinessAudit.isReadyForRealCapital ? 'GERÇEK PARAYA HAZIR' : 'SANAL KANIT AŞAMASI'}
-                </span>
-                {ledger.riskGuard && (
-                  <span className="text-[11px] font-mono text-zinc-400">
-                    • {ledger.riskGuard.reason}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[11px]">
-              {ledger.readinessAudit.gates.map((g) => (
-                <div
-                  key={g.label}
-                  className={`rounded border px-2 py-1.5 ${
-                    g.passed ? 'border-emerald-800/60 bg-emerald-950/30' : 'border-zinc-800 bg-zinc-900/70'
-                  }`}
-                >
-                  <div className="text-zinc-400 truncate">{g.label}</div>
-                  <div className="font-mono font-semibold text-white flex items-center justify-between mt-0.5">
-                    <span className={g.passed ? 'text-emerald-400' : 'text-amber-300'}>{g.current}</span>
-                    <span className="text-[10px] text-zinc-500">{g.target}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+            <RefreshCw className={`w-3.5 h-3.5 ${busyAction === 'tick' ? 'animate-spin' : ''}`} />
+            Canlı Tara
+          </button>
 
-        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-zinc-800 text-xs">
-          {[
-            { key: 'all', label: 'Genel Görünüm' },
-            {
-              key: 'lab3m',
-              label: `3dk Tahmin Lab & Hata Teşhisi${lab3mData ? ` (%${lab3mData.directionalAccuracy3m} · ${lab3mData.totalGeneratedCount})` : ''}`,
-            },
-            { key: 'xray', label: 'İşlem Detayı (Nasıl & Neden Açıldı?)' },
-            { key: 'logs', label: `Tüm İşlem Kayıtları (${ledger.activityLog.length})` },
-            { key: 'scanner', label: 'Piyasa Taraması (Borsa + BTC)' },
-            { key: 'attribution', label: 'Varlık Bazlı Kazanç Özeti' },
-            { key: 'backtest', label: 'Gerçek Veri Testi (7.5G / 30G)' },
-          ].map((tab) => (
+          {ledger?.isRunning ? (
             <button
-              key={tab.key}
-              onClick={() => setSubView(tab.key as any)}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                subView === tab.key
-                  ? 'bg-zinc-800 text-white font-medium'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-950'
-              }`}
+              onClick={() => fetchLedger('pause')}
+              disabled={busyAction !== null}
+              className="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium flex items-center gap-1.5"
             >
-              {tab.label}
+              <Pause className="w-3.5 h-3.5" /> Duraklat
             </button>
-          ))}
+          ) : (
+            <button
+              onClick={() => fetchLedger('start')}
+              disabled={busyAction !== null}
+              className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5"
+            >
+              <Play className="w-3.5 h-3.5" /> Aktifleştir
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              if (window.confirm('Test fonu 250.000 TL başlangıç sermayesi ile sıfırlansın mı?')) {
+                fetchLedger('reset');
+              }
+            }}
+            disabled={busyAction !== null}
+            className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1.5"
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> 250K Sıfırla
+          </button>
         </div>
       </div>
 
-      {/* 2. SADE VE NET KASA BÜYÜME GRAFİĞİ */}
-      {subView === 'all' && (
-        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-semibold text-white">
-                Kasa Büyüme Grafiği (250.000 TL → {formatTRY(ledger.totalEquityTRY)})
-              </h2>
-              <p className="text-xs text-zinc-400">
-                Grafik üzerinde gezerek her işlem sonrasında kasanın ulaştığı tutarı görebilirsiniz.
-              </p>
-            </div>
+      {error && (
+        <div className="bg-rose-950/40 border border-rose-800 text-rose-300 rounded p-3 text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-            {activePoint && (
-              <div className="flex items-center space-x-3 text-xs font-mono bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded">
-                <span className="text-zinc-400">{activePoint.timeStr}</span>
-                <span className="text-zinc-700">|</span>
-                <span className="text-white font-semibold">{formatTRY(activePoint.equityTRY)}</span>
-                <span className="text-zinc-700">|</span>
-                <span className={activePoint.equityTRY >= ledger.initialCapitalTRY ? 'text-emerald-400' : 'text-rose-400'}>
-                  {activePoint.equityTRY >= ledger.initialCapitalTRY ? '+' : ''}
-                  {formatTRY(activePoint.equityTRY - ledger.initialCapitalTRY)}
-                </span>
-              </div>
-            )}
+      {/* 2. CANLI 250.000 TL FON KPI ŞERİDİ */}
+      {ledger && (
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5 font-mono">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+            <div className="text-[10px] text-zinc-500 uppercase">Canlı Toplam Varlık</div>
+            <div className="text-base font-bold text-white mt-1">{fmtTL(ledger.totalEquityTRY)}</div>
+            <div className={`text-[11px] font-semibold mt-0.5 ${ledger.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {fmtSignedTL(ledger.netProfitTRY)} ({ledger.netProfitPercent >= 0 ? '+' : ''}
+              {ledger.netProfitPercent}%)
+            </div>
           </div>
 
-          <div className="w-full overflow-x-auto">
-            <svg
-              viewBox={`0 0 ${svgW} ${svgH}`}
-              className="w-full h-52 sm:h-60 select-none bg-zinc-950 border border-zinc-800/80 rounded"
-              onMouseLeave={() => setHoverIdx(null)}
-            >
-              <defs>
-                <linearGradient id="eqGradClean" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={isProfitable ? '#10b981' : '#f43f5e'} stopOpacity="0.20" />
-                  <stop offset="100%" stopColor={isProfitable ? '#10b981' : '#f43f5e'} stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+            <div className="text-[10px] text-zinc-500 uppercase">Boş Nakit / Teminat</div>
+            <div className="text-base font-bold text-zinc-100 mt-1">{fmtTL(ledger.availableCashTRY)}</div>
+            <div className="text-[11px] text-zinc-400 mt-0.5">Bağlı: {fmtTL(ledger.allocatedMarginTRY)}</div>
+          </div>
 
-              {/* Yatay Kılavuz Çizgileri */}
-              {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                const y = padT + ratio * plotH;
-                const val = maxEq - ratio * eqRange;
-                return (
-                  <g key={idx}>
-                    <line x1={padL} y1={y} x2={svgW - padR} y2={y} stroke="#27272a" strokeDasharray="3 3" strokeWidth="1" />
-                    <text x={padL - 8} y={y + 3} textAnchor="end" fill="#a1a1aa" fontSize="10" fontFamily="monospace">
-                      {Math.round(val).toLocaleString('tr-TR')} ₺
-                    </text>
-                  </g>
-                );
-              })}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+            <div className="text-[10px] text-zinc-500 uppercase">Açık / Kapalı İşlem</div>
+            <div className="text-base font-bold text-cyan-300 mt-1">
+              {ledger.openPositions.length} Açık <span className="text-zinc-500 text-xs">/ {ledger.closedTrades.length}</span>
+            </div>
+            <div className="text-[11px] text-zinc-400 mt-0.5">
+              Açık K/Z: <span className={ledger.openFloatingPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{fmtSignedTL(ledger.openFloatingPnL_TRY)}</span>
+            </div>
+          </div>
 
-              {/* 250.000 TL Başlangıç Çizgisi */}
-              <line x1={padL} y1={baselineY} x2={svgW - padR} y2={baselineY} stroke="#52525b" strokeDasharray="4 4" strokeWidth="1" />
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+            <div className="text-[10px] text-zinc-500 uppercase">Canlı WR / PF</div>
+            <div className="text-base font-bold text-white mt-1">
+              %{ledger.metrics.winRatePercent} <span className="text-zinc-500 text-xs">PF {ledger.metrics.profitFactor}</span>
+            </div>
+            <div className="text-[11px] text-zinc-400 mt-0.5">MaxDD: %{ledger.metrics.maxDrawdownPercent}</div>
+          </div>
 
-              {areaPoints && <polygon points={areaPoints} fill="url(#eqGradClean)" />}
-              {linePoints && (
-                <polyline
-                  fill="none"
-                  stroke={isProfitable ? '#10b981' : '#f43f5e'}
-                  strokeWidth="2"
-                  points={linePoints}
-                />
-              )}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+            <div className="text-[10px] text-zinc-500 uppercase">IBKR Komisyon & Swap</div>
+            <div className="text-base font-bold text-amber-300 mt-1">
+              {fmtTL(ledger.metrics.totalSpreadAndCommissionTRY)}
+            </div>
+            <div className="text-[11px] text-zinc-400 mt-0.5">
+              Swap: {fmtTL(ledger.metrics.totalFinancingTRY || 0)}
+            </div>
+          </div>
 
-              {/* Noktalar ve Etkileşim Alanları */}
-              {curve.map((c, i) => {
-                const cx = getX(i);
-                const cy = getY(c.equityTRY);
-                const isHovered = hoverIdx === i;
-                return (
-                  <g key={i}>
-                    {isHovered && (
-                      <line x1={cx} y1={padT} x2={cx} y2={svgH - padB} stroke="#71717a" strokeDasharray="2 2" strokeWidth="1" />
-                    )}
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={isHovered ? 4.5 : 2.5}
-                      fill={c.equityTRY >= ledger.initialCapitalTRY ? '#10b981' : '#f43f5e'}
-                      stroke="#09090b"
-                      strokeWidth="1.2"
-                    />
-                    <rect
-                      x={cx - plotW / Math.max(curve.length, 2) / 2}
-                      y={0}
-                      width={plotW / Math.max(curve.length, 2)}
-                      height={svgH}
-                      fill="transparent"
-                      className="cursor-pointer"
-                      onMouseEnter={() => setHoverIdx(i)}
-                      onTouchStart={() => setHoverIdx(i)}
-                    />
-                  </g>
-                );
-              })}
-            </svg>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+            <div className="text-[10px] text-zinc-500 uppercase">Risk Kalkanı</div>
+            <div className="text-base font-bold text-emerald-400 mt-1">
+              {((ledger.drawdownThrottleScale ?? 1) * 100).toFixed(0)}% Lot Gücü
+            </div>
+            <div className="text-[11px] text-zinc-400 mt-0.5 truncate">
+              {ledger.liveReadiness?.overallStatus || 'AKTİF'}
+            </div>
           </div>
         </div>
       )}
 
-      {/* 3. ŞU ANDA AÇIK OLAN İŞLEMLER TABLOSU */}
-      {(subView === 'all' || subView === 'xray') && (
-        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-white">
-                Şu Anda Açık Olan İşlemler ({ledger.openPositions.length} Adet)
+      {/* 3. 3-POD SERMAYE MİMARİSİ & 01.12.2026 CANLIYA HAZIRLIK KAPILARI */}
+      {ledger && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* 3-Pod Canlı Slot Durumu */}
+          <div className="lg:col-span-6 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Cpu className="w-4 h-4 text-cyan-400" />
+                Citadel Tarzı 3-Pod Ayrık Sermaye Mimarisi
               </h2>
-              <p className="text-xs text-zinc-400">
-                Satıra tıkladığınızda o işlemin nasıl hesaplandığını ve neden açıldığını hemen altında görebilirsiniz.
-              </p>
+              <span className="text-[11px] font-mono text-zinc-500">Maks 8 Eşzamanlı Slot</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {(ledger.podStats || []).map((ps) => (
+                <div key={ps.pod} className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1.5 font-mono">
+                  <div className="text-[11px] font-bold text-cyan-300 truncate">{ps.pod}</div>
+                  <div className="text-[10px] text-zinc-400 leading-tight min-h-[26px]">{ps.label}</div>
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-800/80">
+                    <span className="text-zinc-400">Slot:</span>
+                    <span className="text-white font-bold">
+                      {ps.openCount} / {ps.maxSlots}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">Canlı K/Z:</span>
+                    <span className={ps.netPnL_TRY >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                      {fmtSignedTL(ps.netPnL_TRY)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {ledger.openPositions.length === 0 ? (
-            <div className="p-4 bg-zinc-950 rounded border border-zinc-800 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="text-xs text-zinc-300 leading-relaxed">
-                  <strong className="text-white">Nakit Kalkanı Aktif ({formatTRY(ledger.availableCashTRY)} Boşta):</strong>{' '}
-                  Hafta içi Borsa + Yüksek İnançlı BTC | Hafta sonu Yalnızca BTC modunda 15dk/1S mum kapanışı teyitli saatlik kırılım bekleniyor; aktif odak adayları aşağıdadır.
-                </div>
-                <button
-                  onClick={() => setSubView('backtest')}
-                  className="shrink-0 px-3 py-1.5 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-700/60 text-sky-300 text-xs font-medium transition-colors"
+          {/* 01.12.2026 Canlıya Geçiş Kapıları */}
+          <div className="lg:col-span-6 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-2.5">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                01.12.2026 Canlıya Geçiş Kanıt Kapıları
+              </h2>
+              <span className="text-[11px] font-mono text-emerald-400">
+                {ledger.liveReadiness?.overallStatus}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {(ledger.liveReadiness?.gates || []).map((g) => (
+                <div
+                  key={g.id}
+                  className="bg-zinc-950 border border-zinc-800/80 rounded px-3 py-2 flex items-center justify-between gap-2 text-xs"
                 >
-                  7.5G / 30G Gerçek Veri Testini Gör →
-                </button>
-              </div>
-
-              {ledger.marketScanner && ledger.marketScanner.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                  {ledger.marketScanner
-                    .filter((m) => m.status !== 'PİYASA KAPALI (HAFTA SONU)' && m.status !== 'ALTCOİN KAPALI (BORSA+BTC)')
-                    .slice()
-                    .sort((a, b) => b.confluenceScore - a.confluenceScore)
-                    .slice(0, 3)
-                    .map((cand) => (
-                      <div
-                        key={cand.symbol}
-                        onClick={() => {
-                          setChartSymbolManual(true);
-                          setSelectedChartSymbol(cand.symbol);
-                        }}
-                        className="p-2.5 rounded bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 cursor-pointer transition-colors space-y-1 text-xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-white font-mono">
-                            {cand.symbol}{' '}
-                            <span className="text-zinc-400 font-normal">({cand.price.toFixed(cand.digits)})</span>
-                          </span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-zinc-200">
-                            Skor {cand.confluenceScore}/100
-                          </span>
-                        </div>
-                        <div className="text-[11px] font-mono text-zinc-300 flex items-center justify-between">
-                          <span>
-                            +4S:{' '}
-                            <strong className={(cand.forecastMove4hPct ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                              {(cand.forecastTarget4h ?? cand.price).toFixed(cand.digits)} (
-                              {(cand.forecastMove4hPct ?? 0) >= 0 ? '+' : ''}
-                              {cand.forecastMove4hPct ?? 0}%)
-                            </strong>
-                          </span>
-                          <span className="text-sky-400">Kelly {cand.kellyMultiplier ?? 1.0}x</span>
-                        </div>
-                        <div className="text-[10px] text-zinc-500 truncate" title={cand.decisionReason}>
-                          {cand.decisionReason}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              <div className="text-[11px] text-zinc-500 border-t border-zinc-800/70 pt-2">
-                Sunucu Notu: Render ücretsiz planda trafik kesilince (~15 dk) sunucu uykuya geçip diski sıfırlayabilir; açık sekmede her 25 saniyede otomatik canlı tutma sinyali gönderilir.
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-zinc-800 text-zinc-400">
-                    <th className="py-2.5 px-2 font-medium">Varlık & Piyasa Durumu</th>
-                    <th className="py-2.5 px-2 font-medium">İşlem Yönü</th>
-                    <th className="py-2.5 px-2 font-medium text-right">Basılan Ana Para</th>
-                    <th className="py-2.5 px-2 font-medium text-right">Kaldıraç & İşlem Hacmi</th>
-                    <th className="py-2.5 px-2 font-medium">Giriş ve Anlık Fiyat</th>
-                    <th className="py-2.5 px-2 font-medium w-48">Zarar Durdur ve Hedef Seviyeleri</th>
-                    <th className="py-2.5 px-2 font-medium text-right">Anlık Kâr / Zarar</th>
-                    <th className="py-2.5 px-2 font-medium text-right">Detay</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/70">
-                  {ledger.openPositions.map((pos) => {
-                    const isPosProfit = pos.totalPnL_TRY >= 0;
-                    const isSelected = inspectedTrade?.id === pos.id;
-                    const gauge = computePriceGaugePercent(pos);
-                    const marketNote = getMarketHoursNote(pos.symbol);
-                    const paidFees = (pos.entryCommissionTRY ?? 0) + (pos.exitCommissionTRY ?? 0) + (pos.financingCostTRY ?? 0);
-                    const posGrossTotal = +(pos.realizedPnL_TRY + paidFees + (pos.grossUnrealizedPnL_TRY ?? pos.unrealizedPnL_TRY ?? 0)).toFixed(2);
-                    return (
-                      <tr
-                        key={pos.id}
-                        onClick={() => {
-                          setSelectedTradeId(pos.id);
-                          setChartSymbolManual(true);
-                          setSelectedChartSymbol(pos.symbol);
-                        }}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/30'
-                        }`}
-                      >
-                        <td className="py-3 px-2">
-                          <div className="font-semibold text-white">{pos.symbol} <span className="text-zinc-400 font-normal">({pos.name})</span></div>
-                          <div className="text-[11px] text-zinc-500 mt-0.5">{marketNote}</div>
-                        </td>
-                        <td className="py-3 px-2">
-                          <div className={`font-semibold ${pos.direction === 'AL (LONG)' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {formatDirection(pos.direction)}
-                          </div>
-                          <div className="text-[11px] text-zinc-400 font-mono">
-                            {pos.positionSizeUnits} {pos.unitLabel || 'Birim'} ({pos.lotSize ?? 0.05} Lot)
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-right font-mono">
-                          <div className="font-semibold text-white">{formatTRY(pos.allocatedCapitalTRY)}</div>
-                          <div className="text-[11px] text-zinc-400">
-                            Stop Riski: {formatTRY(pos.riskAmountTRY)}
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-right font-mono">
-                          <div className="font-semibold text-zinc-200">
-                            {pos.effectiveLeverage ?? 5.65}x Kaldıraç
-                          </div>
-                          <div className="text-[11px] text-zinc-400">
-                            Hacim: {formatTRY(pos.notionalValueTRY ?? pos.allocatedCapitalTRY * 5)}
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 font-mono">
-                          <div className="text-zinc-300">Giriş: <strong className="text-white">{pos.entryPrice.toFixed(pos.digits)}</strong></div>
-                          <div className="text-zinc-400">Anlık ({pos.direction === 'AL (LONG)' ? 'Bid' : 'Ask'}): <strong className="text-white">{pos.currentPrice.toFixed(pos.digits)}</strong></div>
-                        </td>
-                        <td className="py-3 px-2 font-mono">
-                          <div className="space-y-1.5">
-                            <div className="flex justify-between text-[10px] text-zinc-400">
-                              <span>SL: {pos.stopLoss.toFixed(pos.digits)}</span>
-                              <span>Hedef: {pos.takeProfit2.toFixed(pos.digits)}</span>
-                            </div>
-                            <div className="relative h-1.5 bg-zinc-950 border border-zinc-800 rounded overflow-hidden">
-                              <div
-                                className={`h-full ${isPosProfit ? 'bg-emerald-500/70' : 'bg-rose-500/70'}`}
-                                style={{ width: `${gauge.currentPct}%` }}
-                              />
-                              <div
-                                className="absolute top-0 bottom-0 w-0.5 bg-zinc-300"
-                                style={{ left: `${gauge.entryPct}%` }}
-                                title="Giriş Noktası"
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className={`py-3 px-2 text-right font-mono font-semibold ${isPosProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          <div>{isPosProfit ? '+' : ''}{formatTRY(pos.totalPnL_TRY)}</div>
-                          <div className="text-[10px] font-normal text-zinc-400">
-                            Brüt: {posGrossTotal >= 0 ? '+' : ''}{formatTRY(posGrossTotal)} ({posGrossTotal > 0 ? 'Yön Doğru' : 'Yön Ters'}) • Kom: -{formatTRY(pos.executionCostTRY ?? 0)}
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTradeId(pos.id);
-                            }}
-                            className={`px-2.5 py-1 rounded text-xs border transition-colors ${
-                              isSelected
-                                ? 'bg-zinc-800 border-zinc-600 text-white font-medium'
-                                : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-white'
-                            }`}
-                          >
-                            {isSelected ? 'Açık' : 'İncele'}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 4. SEÇİLİ İŞLEMİN SADE VE ANLAŞILIR DETAY RAPORU */}
-      {(subView === 'all' || subView === 'xray') && inspectedTrade && inspectedTrade.forensicXRay && (
-        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-            <div>
-              <h3 className="text-base font-semibold text-white">
-                {inspectedTrade.symbol} ({inspectedTrade.name}) — {formatDirection(inspectedTrade.direction)} İşlemi Nasıl ve Neden Yapıldı?
-              </h3>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                {inspectedTrade.rationale}
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2 text-xs">
-              <span className="text-zinc-400 shrink-0">Başka İşlem Seç:</span>
-              <select
-                value={inspectedTrade.id}
-                onChange={(e) => setSelectedTradeId(e.target.value)}
-                className="bg-zinc-950 border border-zinc-800 text-white rounded px-2.5 py-1.5 text-xs focus:outline-none"
-              >
-                {allTrades.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    [{t.status === 'ACIK' ? 'Açık' : 'Kapalı'}] {t.symbol} ({formatDirection(t.direction)}) — {t.totalPnL_TRY >= 0 ? '+' : ''}{t.totalPnL_TRY.toLocaleString('tr-TR')} TL
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* 6 Kutulu Sade Hesaplama Özeti */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
-            <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
-              <div className="text-zinc-400 text-[11px]">1. Yatırılan Ana Para</div>
-              <div className="text-white font-semibold font-mono">{formatTRY(inspectedTrade.allocatedCapitalTRY)}</div>
-              <div className="text-[10px] text-zinc-500">Kasanın %20 teminatı</div>
-            </div>
-
-            <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
-              <div className="text-zinc-400 text-[11px]">2. Oynanan Kaldıraç</div>
-              <div className="text-white font-semibold font-mono">{inspectedTrade.forensicXRay.microstructure.effectiveLeverage}x Kaldıraç</div>
-              <div className="text-[10px] text-zinc-500">Toplam kasaya göre {inspectedTrade.accountLeverage ?? 1.5}x</div>
-            </div>
-
-            <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
-              <div className="text-zinc-400 text-[11px]">3. Açılan Toplam Hacim</div>
-              <div className="text-white font-semibold font-mono">{formatTRY(inspectedTrade.forensicXRay.microstructure.notionalValueTRY)}</div>
-              <div className="text-[10px] text-zinc-500">{inspectedTrade.positionSizeUnits} {inspectedTrade.unitLabel || 'Birim'} ({inspectedTrade.forensicXRay.microstructure.lotSize} Lot)</div>
-            </div>
-
-            <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
-              <div className="text-zinc-400 text-[11px]">4. Giriş Fiyatı &amp; IBKR Maliyeti</div>
-              <div className="text-white font-semibold font-mono">{inspectedTrade.entryPrice.toFixed(inspectedTrade.digits)}</div>
-              <div className="text-[10px] text-zinc-500">Ödenen Kom/Swap: -{formatTRY(inspectedTrade.executionCostTRY ?? inspectedTrade.forensicXRay.microstructure.executionCostTRY)}</div>
-            </div>
-
-            <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
-              <div className="text-zinc-400 text-[11px]">5. Maksimum Zarar Riski</div>
-              <div className="text-rose-400 font-semibold font-mono">-{formatTRY(inspectedTrade.riskAmountTRY)}</div>
-              <div className="text-[10px] text-zinc-500">SL: {inspectedTrade.initialStopLoss.toFixed(inspectedTrade.digits)} (%1,5 Risk)</div>
-            </div>
-
-            <div className="bg-zinc-950 border border-zinc-800/80 p-3 rounded space-y-1">
-              <div className="text-zinc-400 text-[11px]">6. Hedef Seviyeleri</div>
-              <div className="text-emerald-400 font-semibold font-mono">TP2: {inspectedTrade.takeProfit2.toFixed(inspectedTrade.digits)}</div>
-              <div className="text-[10px] text-zinc-500">1. Hedef (TP1): {inspectedTrade.takeProfit1.toFixed(inspectedTrade.digits)}</div>
-            </div>
-          </div>
-
-          {/* Matematiksel Formül Satırı */}
-          <div className="text-xs text-zinc-300 bg-zinc-950 border border-zinc-800/80 px-3.5 py-2.5 rounded">
-            <strong className="text-white">Nasıl Hesaplandı?</strong> {inspectedTrade.forensicXRay.microstructure.sizingFormulaText}
-          </div>
-
-          {/* Giriş Sebepleri ve Adım Adım Geçmiş */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
-            <div className="lg:col-span-7 space-y-2.5">
-              <div className="text-xs font-semibold text-white">
-                İşleme Girmeden Önce Kontrol Edilen Kurumsal &amp; Tahmin Kriterleri
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {inspectedTrade.forensicXRay.gates.map((gate) => (
-                  <div key={gate.step} className="bg-zinc-950 border border-zinc-800/80 rounded p-3 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-white">{gate.title}</span>
-                      <span className="text-[11px] font-mono text-emerald-400 shrink-0">
-                        {gate.score}/{gate.maxScore}
-                      </span>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-zinc-200 flex items-center gap-1.5">
+                      {g.status === 'GEÇTİ' ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      ) : (
+                        <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      )}
+                      <span className="truncate">{g.label}</span>
                     </div>
-                    <div className="text-[11px] font-mono text-zinc-300">
-                      {gate.metricValue}
-                    </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
-                      {gate.note}
-                    </p>
+                    <div className="text-[11px] font-mono text-zinc-400 pl-5">{g.metric}</div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="lg:col-span-5 space-y-2.5">
-              <div className="text-xs font-semibold text-white">
-                Adım Adım İşlem Geçmişi
-              </div>
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded p-3.5 space-y-3">
-                {inspectedTrade.forensicXRay.lifecycleSteps.map((step) => (
-                  <div key={step.stepNo} className="pl-3 border-l border-zinc-700 space-y-1">
-                    <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                      <span className="font-medium text-zinc-200">{step.stepNo}. {step.title}</span>
-                      <span className="font-mono">
-                        {new Date(step.timestamp).toLocaleString('tr-TR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">{step.detail}</p>
-                    {step.pnlTRY !== undefined && (
-                      <div className={`text-[11px] font-mono font-semibold ${step.pnlTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        Kasa Etkisi: {step.pnlTRY >= 0 ? '+' : ''}{formatTRY(step.pnlTRY)}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. PROFESYONEL İNDİKATÖR TERMİNALİ & BORSA + BTC ODak PİYASA TARAMA LİSTESİ */}
-      {(() => {
-        const allScanner = ledger.marketScanner || [];
-        const hiddenAltCount = allScanner.filter((m) => m.status === 'ALTCOİN KAPALI (BORSA+BTC)').length;
-        const baseScanner = showPausedAltcoins
-          ? allScanner
-          : allScanner.filter((m) => m.status !== 'ALTCOİN KAPALI (BORSA+BTC)');
-        const visibleScanner = baseScanner.slice().sort((a, b) => {
-          const rank = (x: MarketScannerItem) =>
-            x.status === 'POZİSYONDA (AÇIK)' ? 0 :
-            x.status === 'YENİ GİRİŞ' ? 1 :
-            x.status === 'PİYASA KAPALI (HAFTA SONU)' ? 4 :
-            x.symbol === 'BTC/USD' ? 3 :
-            x.status === 'ALTCOİN KAPALI (BORSA+BTC)' ? 5 : 2;
-          return rank(a) - rank(b);
-        });
-        return (
-          <>
-            {(subView === 'all' || subView === 'scanner') && (
-              <ProIndicatorTerminal
-                symbol={selectedChartSymbol}
-                availableSymbols={visibleScanner.map((m) => m.symbol)}
-                onSymbolChange={(sym) => {
-                  setChartSymbolManual(true);
-                  setSelectedChartSymbol(sym);
-                }}
-              />
-            )}
-
-            {(subView === 'all' || subView === 'scanner') && visibleScanner.length > 0 && (
-              <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
-                  <div>
-                    <h2 className="text-sm font-semibold text-white">
-                      {visibleScanner.length} Varlık Canlı Piyasa &amp; Tahmin Tarama Listesi ({showPausedAltcoins ? 'Tüm 16 Varlık' : 'Küresel Borsa + BTC Odak'})
-                    </h2>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Hafta içi Küresel Borsa + Yüksek İnançlı BTC; hafta sonu yalnızca BTC taranır ve altcoin gürültüsü gizlenir.
-                    </p>
-                  </div>
-                  {hiddenAltCount > 0 && (
-                    <button
-                      onClick={() => setShowPausedAltcoins((v) => !v)}
-                      className="shrink-0 px-2.5 py-1 rounded border border-zinc-700 bg-zinc-950 text-[11px] text-zinc-300 hover:text-white transition-colors"
-                    >
-                      {showPausedAltcoins ? 'Altcoinleri Gizle' : `Pasif Altcoinleri Göster (${hiddenAltCount})`}
-                    </button>
-                  )}
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-zinc-800 text-zinc-400">
-                        <th className="py-2 px-2 font-medium">Varlık</th>
-                        <th className="py-2 px-2 font-medium text-right">Fiyat</th>
-                        <th className="py-2 px-2 font-medium">Trend Yönü</th>
-                        <th className="py-2 px-2 font-medium">+4S &amp; Canlı +3dk Tahmin</th>
-                        <th className="py-2 px-2 font-medium text-right">RSI Gücü</th>
-                        <th className="py-2 px-2 font-medium text-center">Sinyal Puanı</th>
-                        <th className="py-2 px-2 font-medium">Mevcut Durum</th>
-                        <th className="py-2 px-2 font-medium">Açıklama</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800/70">
-                      {visibleScanner.map((item) => {
-                  const isChartActive = item.symbol === selectedChartSymbol;
-                  const fcDir = item.forecastDirection || 'YATAY';
-                  const fcColor =
-                    fcDir === 'YÜKSELİŞ' ? 'text-emerald-400' : fcDir === 'DÜŞÜŞ' ? 'text-rose-400' : 'text-zinc-400';
-                  const symLab = lab3mData?.symbolStats?.find((s) => s.symbol === item.symbol);
-                  const last3m = symLab?.lastPrediction;
-                  const delaySec = item.dataDelaySec ?? symLab?.liveDataDelaySec;
-                  return (
-                    <tr
-                      key={item.symbol}
-                      onClick={() => {
-                        setChartSymbolManual(true);
-                        setSelectedChartSymbol(item.symbol);
-                      }}
-                      className={`cursor-pointer transition-colors ${
-                        isChartActive ? 'bg-sky-950/30' : 'hover:bg-zinc-800/30'
-                      }`}
-                    >
-                      <td className="py-2.5 px-2">
-                        <div className="font-semibold text-white flex items-center gap-1.5">
-                          <span>{item.symbol}</span>
-                          {item.squeezeOn && (
-                            <span className="text-[9px] font-mono px-1 rounded bg-amber-950/70 text-amber-300 border border-amber-800/60">
-                              SQZ
-                            </span>
-                          )}
-                          {delaySec !== undefined && (
-                            <span
-                              className={`text-[9px] font-mono px-1 rounded border ${
-                                delaySec <= 90
-                                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                                  : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
-                              }`}
-                              title={item.liveDataSource || symLab?.liveDataSource || ''}
-                            >
-                              {delaySec <= 90 ? '0sn' : `${delaySec}sn`}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-zinc-500">{item.name}</div>
-                        {item.candlePatternLabel && (
-                          <div className="text-[10px] font-mono text-sky-400/90 mt-0.5">
-                            1S Mum: {item.candlePatternLabel}
-                            {item.activeEngineType === 'CANDLE_PB' ? ' · PB Motoru' : ''}
-                            {item.newsDirection && item.newsDirection !== 'BEKLE' ? ` · Haber: ${item.newsDirection}` : ''}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-2 text-right font-mono font-semibold text-white">
-                        {item.price.toFixed(item.digits)}
-                      </td>
-                      <td className="py-2.5 px-2">
-                        <span className={item.trendRegime === 'BOĞA (BULL)' ? 'text-emerald-400 font-medium' : item.trendRegime === 'AYI (BEAR)' ? 'text-rose-400 font-medium' : 'text-zinc-300'}>
-                          {item.trendRegime === 'BOĞA (BULL)' ? 'Yükseliş Trendi' : item.trendRegime === 'AYI (BEAR)' ? 'Düşüş Trendi' : 'Yatay'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-2 font-mono text-[11px] space-y-1">
-                        {item.forecastTarget4h ? (
-                          <div>
-                            <div className={fcColor}>
-                              +4S {fcDir}: <strong>{item.forecastTarget4h.toFixed(item.digits)}</strong>{' '}
-                              <span>({(item.forecastMove4hPct ?? 0) >= 0 ? '+' : ''}{item.forecastMove4hPct ?? 0}%)</span>
-                            </div>
-                            <div className="text-[10px] text-zinc-500">
-                              TP1 İhtimali: %{item.tp1Probability ?? 50} • Güven %{item.forecastConviction ?? 60}
-                              {item.kellyMultiplier !== undefined && (
-                                <span className="ml-1.5 text-sky-400">• Kelly {item.kellyMultiplier}x</span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-zinc-500">-</span>
-                        )}
-                        {last3m && (
-                          <div className="pt-0.5 border-t border-zinc-800/70 text-[10px]">
-                            <span
-                              className={
-                                last3m.predictedDirection === 'YÜKSELİŞ'
-                                  ? 'text-emerald-300 font-semibold'
-                                  : last3m.predictedDirection === 'DÜŞÜŞ'
-                                  ? 'text-rose-300 font-semibold'
-                                  : 'text-zinc-400'
-                              }
-                            >
-                              +3dk {last3m.predictedDirection} → {last3m.predictedPrice3m.toFixed(item.digits)} (%{last3m.confidencePct})
-                              {last3m.setupType && last3m.setupType !== 'YATAY' ? ` [${last3m.setupType}]` : ''}
-                            </span>
-                            {last3m.predicted15mDirection && last3m.predicted15mDirection !== 'YATAY' && (
-                              <span className="ml-1.5 text-zinc-400">
-                                · +15dk {last3m.predicted15mDirection}
-                              </span>
-                            )}
-                            {symLab && symLab.directionalCount3m > 0 && (
-                              <span className="ml-1.5 text-sky-300">
-                                • Başarı: %{symLab.directionalAccuracy3m} ({symLab.directionalCorrect3m}/{symLab.directionalCount3m})
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-2 text-right font-mono text-zinc-200">
-                        {item.rsi14.toFixed(1)}
-                      </td>
-                      <td className="py-2.5 px-2 text-center font-mono text-zinc-200">
-                        {item.confluenceScore}/100
-                      </td>
-                      <td className="py-2.5 px-2 font-medium text-zinc-200">
-                        {item.status}
-                      </td>
-                      <td className="py-2.5 px-2 text-zinc-400 leading-relaxed max-w-md">
-                        {item.decisionReason}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-          </>
-        );
-      })()}
-
-      {/* 6. VARLIK BAZLI KAZANÇ ÖZETİ */}
-      {(subView === 'all' || subView === 'attribution') && ledger.attribution && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-8 border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-            <div className="border-b border-zinc-800 pb-3">
-              <h2 className="text-sm font-semibold text-white">
-                Hangi Varlık Ne Kadar Kazandırdı?
-              </h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-zinc-800 text-zinc-400">
-                    <th className="py-2 px-2 font-medium">Varlık</th>
-                    <th className="py-2 px-2 font-medium text-center">İşlem Sayısı</th>
-                    <th className="py-2 px-2 font-medium text-center">Başarı Oranı</th>
-                    <th className="py-2 px-2 font-medium text-right">Kapanan Kâr/Zarar</th>
-                    <th className="py-2 px-2 font-medium text-right">Toplam Net Katkı</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/70">
-                  {ledger.attribution.byAsset
-                    .filter((a) => a.closedCount > 0 || a.openCount > 0)
-                    .map((a) => (
-                      <tr key={a.symbol} className="hover:bg-zinc-800/30">
-                        <td className="py-2.5 px-2 font-semibold text-white">
-                          {a.symbol} <span className="text-[11px] text-zinc-500 font-normal">({a.name})</span>
-                        </td>
-                        <td className="py-2.5 px-2 text-center text-zinc-300">
-                          {a.closedCount} Kapanan ({a.wins}K / {a.losses}Z) • {a.openCount} Açık
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-mono text-zinc-200">
-                          %{a.winRatePercent}
-                        </td>
-                        <td className={`py-2.5 px-2 text-right font-mono ${a.netRealizedPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {a.netRealizedPnL_TRY >= 0 ? '+' : ''}{formatTRY(a.netRealizedPnL_TRY)}
-                        </td>
-                        <td className={`py-2.5 px-2 text-right font-mono font-semibold ${a.totalNetPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {a.totalNetPnL_TRY >= 0 ? '+' : ''}{formatTRY(a.totalNetPnL_TRY)}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="lg:col-span-4 border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-            <div className="border-b border-zinc-800 pb-3">
-              <h2 className="text-sm font-semibold text-white">
-                Alış (Long) ve Satış (Short) Başarısı
-              </h2>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              {[ledger.attribution.byDirection.long, ledger.attribution.byDirection.short].map((d) => (
-                <div key={d.direction} className="bg-zinc-950 border border-zinc-800/80 rounded p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className={`font-semibold ${d.direction === 'AL (LONG)' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {formatDirection(d.direction)} İşlemleri
-                    </span>
-                    <span className="text-zinc-400">{d.tradesCount} Kapanan İşlem</span>
-                  </div>
-                  <div className="flex justify-between text-zinc-400 pt-1">
-                    <span>Başarı Oranı: <strong className="text-white">%{d.winRatePercent}</strong> ({d.wins}K / {d.losses}Z)</span>
-                    <span className={`font-mono font-semibold ${d.netPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {d.netPnL_TRY >= 0 ? '+' : ''}{formatTRY(d.netPnL_TRY)}
-                    </span>
-                  </div>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
+                      g.status === 'GEÇTİ'
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : g.status === 'UYARI'
+                          ? 'bg-rose-500/15 text-rose-400'
+                          : 'bg-amber-500/15 text-amber-300'
+                    }`}
+                  >
+                    {g.status}
+                  </span>
                 </div>
               ))}
             </div>
@@ -1760,857 +483,507 @@ export const AutonomousTestView: React.FC = () => {
         </div>
       )}
 
-      {/* 6b. GERÇEK VERİ WALK-FORWARD PERFORMANS DOĞRULAMASI (7.5G / 30G) */}
-      {subView === 'backtest' && (
-        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-white">
-                Gerçek Borsa Verisiyle Sıfır Gelecek Sızıntılı Walk-Forward Doğrulaması ({auditWindow === '7d' ? 'Son 7.5 Gün' : 'Son 30 Gün'})
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Hafta İçi Küresel Borsa + Yüksek İnançlı BTC | Hafta Sonu BTC Modu ({auditData?.strategyVersion || 'v13.0-institutional-live-ready'}) — Gerçek Kraken &amp; CME Vadeli/Yahoo barlarında IBKR kesintili Walk-Forward sonucu.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <button
-                onClick={() => setAuditWindow('7d')}
-                className={`px-3 py-1.5 rounded border transition-colors ${
-                  auditWindow === '7d'
-                    ? 'bg-sky-950/70 border-sky-700 text-sky-300 font-medium'
-                    : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                7.5 Gün (1S + 15dk Tahmin)
-              </button>
-              <button
-                onClick={() => setAuditWindow('30d')}
-                className={`px-3 py-1.5 rounded border transition-colors ${
-                  auditWindow === '30d'
-                    ? 'bg-sky-950/70 border-sky-700 text-sky-300 font-medium'
-                    : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                30 Gün (1S Makro)
-              </button>
-              <button
-                onClick={() => fetchWalkForwardAudit(auditWindow, true)}
-                disabled={auditLoading}
-                className="px-2.5 py-1.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white flex items-center gap-1 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
-                <span>Yenile</span>
-              </button>
-            </div>
-          </div>
+      {/* 4. ANA ÇALIŞMA SEKMELERİ */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 pb-2 text-xs font-semibold">
+        {[
+          { id: 'proof', label: 'Gerçek Veri Kanıtı (30G / 90G / 1Y / 2Y)' },
+          { id: 'positions', label: `Canlı Pozisyonlar (${ledger?.openPositions.length || 0}) & Defter (${ledger?.closedTrades.length || 0})` },
+          { id: 'radar', label: `17 Varlık ZAC v14 Radarı` },
+          { id: 'logs', label: `Sistem Günlüğü (${ledger?.activityLog.length || 0})` },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setDeskTab(t.id as any)}
+            className={`px-3.5 py-2 rounded transition-colors ${
+              deskTab === t.id
+                ? 'bg-white text-zinc-950 font-bold'
+                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-          {auditLoading && !auditData ? (
-            <div className="p-8 text-center text-xs text-zinc-400 font-mono">
-              16 varlık için gerçek borsa geçmişi çekiliyor ve bar bar Walk-Forward testi çalıştırılıyor...
+      {/* SEKME A: GERÇEK VERİ WALK-FORWARD KANIT MOTORU */}
+      {deskTab === 'proof' && (
+        <div className="space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-emerald-400" />
+                  Gerçek Saatlik Borsa Verisi Walk-Forward Denetimi (Sıfır Look-Ahead)
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Her saatlik mumda en kötü durum Stop-Loss, spread, kayma, gerçek IBKR komisyonu ve %6.8/yıl gecelik finansman dahildir.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 font-mono text-xs">
+                {(['30d', '90d', '1y', '2y'] as const).map((w) => (
+                  <button
+                    key={w}
+                    onClick={() => setWfWindow(w)}
+                    className={`px-3 py-1.5 rounded transition-colors ${
+                      wfWindow === w
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
+                        : 'bg-zinc-950 text-zinc-400 border border-zinc-800 hover:text-white'
+                    }`}
+                  >
+                    {w === '30d' ? '30 GÜN' : w === '90d' ? '90 GÜN' : w === '1y' ? '1 YIL' : '2 YIL'}
+                  </button>
+                ))}
+                <button
+                  onClick={() => fetchWalkForward(wfWindow, true)}
+                  disabled={wfLoading}
+                  className="p-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                  title="Taze veriyle yeniden hesapla"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${wfLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
-          ) : auditData ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                  <div className="text-zinc-400">Simüle Final Kasa</div>
-                  <div className={`text-lg font-bold font-mono ${auditData.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {formatTRY(auditData.finalEquityTRY)}
+
+            {wfLoading && !wfReport ? (
+              <div className="py-12 text-center text-xs font-mono text-zinc-400">
+                17 küresel enstrümanın gerçek 2 yıllık saatlik mum verisi simüle ediliyor...
+              </div>
+            ) : wfReport ? (
+              <div className="space-y-4">
+                {/* Özet Metrik Kartları */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 font-mono">
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                    <div className="text-[10px] text-zinc-500">Bitiş Sermayesi</div>
+                    <div className="text-sm font-bold text-white mt-0.5">{fmtTL(wfReport.endingEquityTRY)}</div>
+                    <div className={`text-[11px] font-bold ${wfReport.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {wfReport.netProfitPercent >= 0 ? '+' : ''}
+                      {wfReport.netProfitPercent}%
+                    </div>
                   </div>
-                  <div className="text-[11px] font-mono text-zinc-400">
-                    Net: <span className={auditData.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                      {auditData.netProfitTRY >= 0 ? '+' : ''}{formatTRY(auditData.netProfitTRY)} ({auditData.netProfitPercent >= 0 ? '+' : ''}%{auditData.netProfitPercent})
-                    </span>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                    <div className="text-[10px] text-zinc-500">Profit Factor</div>
+                    <div className="text-sm font-bold text-emerald-400 mt-0.5">{wfReport.profitFactor}</div>
+                    <div className="text-[10px] text-zinc-500">{wfReport.totalTrades} işlem</div>
+                  </div>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                    <div className="text-[10px] text-zinc-500">Sharpe / Sortino</div>
+                    <div className="text-sm font-bold text-cyan-300 mt-0.5">
+                      {wfReport.sharpeRatio} / {wfReport.sortinoRatio}
+                    </div>
+                    <div className="text-[10px] text-zinc-500">Yıllıklandırılmış</div>
+                  </div>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                    <div className="text-[10px] text-zinc-500">Max Drawdown</div>
+                    <div className="text-sm font-bold text-amber-300 mt-0.5">%{wfReport.maxDrawdownPercent}</div>
+                    <div className="text-[10px] text-zinc-500">Tek haneli risk</div>
+                  </div>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                    <div className="text-[10px] text-zinc-500">Kazanma Oranı</div>
+                    <div className="text-sm font-bold text-white mt-0.5">%{wfReport.winRatePercent}</div>
+                    <div className="text-[10px] text-zinc-500">Net kârlı oran</div>
+                  </div>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                    <div className="text-[10px] text-zinc-500">Pozitif Çeyrek</div>
+                    <div className="text-sm font-bold text-emerald-400 mt-0.5">
+                      {wfReport.positiveQuarters} / {wfReport.totalQuarters}
+                    </div>
+                    <div className="text-[10px] text-zinc-500">Tutarlılık</div>
+                  </div>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                    <div className="text-[10px] text-zinc-500">Ödenen Masraf</div>
+                    <div className="text-sm font-bold text-zinc-200 mt-0.5">{fmtTL(wfReport.totalFeesTRY)}</div>
+                    <div className="text-[10px] text-zinc-500">Swap: {fmtTL(wfReport.totalSwapTRY)}</div>
                   </div>
                 </div>
 
-                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                  <div className="text-zinc-400">İşlem &amp; Başarı Oranı</div>
-                  <div className="text-lg font-bold font-mono text-white">
-                    %{auditData.winRatePercent} <span className="text-xs font-normal text-zinc-400">({auditData.winningTrades}K / {auditData.losingTrades}Z)</span>
+                {/* Sermaye Eğrisi SVG + Eski Yönetici v13.2 Kıyaslama */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                  <div className="lg:col-span-8 bg-zinc-950 border border-zinc-800 rounded p-3 space-y-2">
+                    <div className="flex justify-between text-[11px] font-mono text-zinc-400">
+                      <span>{wfReport.windowLabelTR} ({wfReport.startDate} → {wfReport.endDate})</span>
+                      <span className="text-emerald-400 font-bold">250.000 TL → {fmtTL(wfReport.endingEquityTRY)}</span>
+                    </div>
+                    {wfSvg && (
+                      <svg viewBox={`0 0 ${wfSvg.W} ${wfSvg.H}`} className="w-full h-48 block">
+                        <defs>
+                          <linearGradient id="wfGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.32" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+                        <line
+                          x1={wfSvg.PAD}
+                          y1={wfSvg.baseLineY}
+                          x2={wfSvg.W - wfSvg.PAD}
+                          y2={wfSvg.baseLineY}
+                          stroke="#52525b"
+                          strokeDasharray="4 4"
+                          strokeWidth="1"
+                        />
+                        <text x={wfSvg.PAD + 4} y={wfSvg.baseLineY - 4} fill="#71717a" fontSize="10" fontFamily="monospace">
+                          250.000 TL Başlangıç
+                        </text>
+                        <path d={wfSvg.area} fill="url(#wfGrad)" />
+                        <path d={wfSvg.line} fill="none" stroke="#10b981" strokeWidth="2.2" />
+                      </svg>
+                    )}
                   </div>
-                  <div className="text-[11px] text-zinc-500">
-                    Kapanan: {auditData.totalClosedTrades} • Pencere Sonu Açık: {auditData.openTradesAtEnd}
+
+                  {/* Eski Yönetici v13.2 vs Yeni ZELTRA v14.0 Kıyaslama */}
+                  <div className="lg:col-span-4 bg-zinc-950 border border-zinc-800 rounded p-3.5 flex flex-col justify-between space-y-3">
+                    <div className="space-y-2">
+                      <div className="text-xs font-bold text-white border-b border-zinc-800 pb-1.5">
+                        Eski Sistem (v13.2) vs Yeni ZELTRA (v14.0)
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                        <div className="bg-rose-950/30 border border-rose-900/50 rounded p-2.5 space-y-1">
+                          <div className="text-[10px] text-rose-300 font-bold">ESKİ (v13.2) — 2Y</div>
+                          <div className="text-sm font-black text-rose-400">24.300 TL</div>
+                          <div className="text-[11px] text-rose-300">-90.3% | DD %90.9</div>
+                          <div className="text-[10px] text-zinc-400">PF 0.58 • 0/9 Çeyrek</div>
+                        </div>
+                        <div className="bg-emerald-950/30 border border-emerald-800/50 rounded p-2.5 space-y-1">
+                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v14.0) — {wfWindow.toUpperCase()}</div>
+                          <div className="text-sm font-black text-emerald-400">{fmtTL(wfReport.endingEquityTRY)}</div>
+                          <div className="text-[11px] text-emerald-300">
+                            {wfReport.netProfitPercent >= 0 ? '+' : ''}{wfReport.netProfitPercent}% | DD %{wfReport.maxDrawdownPercent}
+                          </div>
+                          <div className="text-[10px] text-zinc-300">
+                            PF {wfReport.profitFactor} • {wfReport.positiveQuarters}/{wfReport.totalQuarters} Çeyrek
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      {wfReport.legacyComparison.improvementSummaryTR}
+                    </p>
                   </div>
                 </div>
 
-                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                  <div className="text-zinc-400">Profit Factor &amp; Max DD</div>
-                  <div className="text-lg font-bold font-mono text-white">
-                    {auditData.profitFactor}x Çarpan
+                {/* Pod Katkısı & Çeyreklik İstikrar */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
+                    <div className="text-xs font-bold text-white mb-2">Pod Bazlı Gerçek Kâr Katkısı</div>
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-zinc-800 text-zinc-500 text-[10px]">
+                          <th className="py-1.5 text-left">Pod</th>
+                          <th className="py-1.5 text-right">İşlem</th>
+                          <th className="py-1.5 text-right">WR</th>
+                          <th className="py-1.5 text-right">PF</th>
+                          <th className="py-1.5 text-right">Net K/Z</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/60">
+                        {wfReport.podAttribution.map((pa) => (
+                          <tr key={pa.pod}>
+                            <td className="py-2 text-zinc-200 font-semibold">{pa.pod}</td>
+                            <td className="py-2 text-right text-zinc-400">{pa.trades}</td>
+                            <td className="py-2 text-right text-zinc-300">%{pa.winRatePct}</td>
+                            <td className="py-2 text-right text-cyan-300 font-bold">{pa.profitFactor}</td>
+                            <td className={`py-2 text-right font-bold ${pa.netPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {fmtSignedTL(pa.netPnL_TRY)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="text-[11px] text-zinc-400 font-mono">
-                    Maksimum Geri Çekilme: <span className="text-amber-300">%{auditData.maxDrawdownPercent}</span>
-                  </div>
-                </div>
 
-                <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                  <div className="text-zinc-400">Kesilen Gerçek IBKR Komisyonu</div>
-                  <div className="text-lg font-bold font-mono text-rose-400">
-                    -{formatTRY(auditData.totalCommissionTRY)}
-                  </div>
-                  <div className="text-[11px] text-zinc-500">
-                    USD/TRY: {auditData.liveUsdTry.toFixed(2)} TL bazlı net sonuç
+                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
+                    <div className="text-xs font-bold text-white mb-2">Çeyreklik İstikrar Tablosu</div>
+                    <div className="grid grid-cols-3 gap-2 font-mono text-xs">
+                      {wfReport.quarterlyBreakdown.map((q) => (
+                        <div
+                          key={q.quarter}
+                          className={`rounded p-2 border ${
+                            q.netPnL_TRY >= 0
+                              ? 'bg-emerald-950/25 border-emerald-800/40'
+                              : 'bg-rose-950/25 border-rose-800/40'
+                          }`}
+                        >
+                          <div className="flex justify-between text-[10px] text-zinc-400">
+                            <span className="font-bold text-zinc-200">{q.quarter}</span>
+                            <span>n={q.trades}</span>
+                          </div>
+                          <div className={`text-xs font-bold mt-0.5 ${q.netPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {fmtSignedTL(q.netPnL_TRY)}
+                          </div>
+                          <div className="text-[10px] text-zinc-400">PF {q.profitFactor} • WR %{q.winRatePct}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
+            ) : null}
+          </div>
+        </div>
+      )}
 
-              {/* Motor Katkı Dağılımı */}
-              {auditData.engineBreakdown.length > 0 && (
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {auditData.engineBreakdown.map((eng) => (
-                    <div key={eng.engine} className="bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 font-mono flex items-center gap-2">
-                      <span className="text-zinc-300 font-semibold">{eng.engine}</span>
-                      <span className="text-zinc-500">{eng.tradesCount} İşlem • %{eng.winRatePercent} WR</span>
-                      <span className={eng.netPnL_TRY >= 0 ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-                        {eng.netPnL_TRY >= 0 ? '+' : ''}{formatTRY(eng.netPnL_TRY)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Walk-Forward Kasa Eğrisi (SVG) */}
-              {auditData.equityCurve.length > 1 && (() => {
-                const ac = auditData.equityCurve;
-                const aVals = ac.map((p) => p.equityTRY);
-                const aMin = Math.min(250000 * 0.96, ...aVals);
-                const aMax = Math.max(250000 * 1.03, ...aVals);
-                const aSpan = Math.max(1, aMax - aMin);
-                const w = 860;
-                const h = 190;
-                const pL = 78;
-                const pR = 20;
-                const pT = 16;
-                const pB = 22;
-                const pw = w - pL - pR;
-                const ph = h - pT - pB;
-                const gx = (i: number) => pL + (i / (ac.length - 1)) * pw;
-                const gy = (v: number) => pT + ph - ((v - aMin) / aSpan) * ph;
-                const pts = ac.map((p, i) => `${gx(i).toFixed(1)},${gy(p.equityTRY).toFixed(1)}`).join(' ');
-                const aColor = auditData.netProfitTRY >= 0 ? '#10b981' : '#f43f5e';
-                return (
-                  <div className="w-full overflow-x-auto bg-zinc-950 border border-zinc-800 rounded p-2">
-                    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-44 select-none">
-                      {[0, 0.5, 1].map((r, i) => {
-                        const y = pT + r * ph;
-                        const val = aMax - r * aSpan;
-                        return (
-                          <g key={i}>
-                            <line x1={pL} y1={y} x2={w - pR} y2={y} stroke="#27272a" strokeDasharray="3 3" strokeWidth="1" />
-                            <text x={pL - 6} y={y + 3} textAnchor="end" fill="#a1a1aa" fontSize="10" fontFamily="monospace">
-                              {Math.round(val).toLocaleString('tr-TR')} ₺
-                            </text>
-                          </g>
-                        );
-                      })}
-                      <line x1={pL} y1={gy(250000)} x2={w - pR} y2={gy(250000)} stroke="#52525b" strokeDasharray="4 4" strokeWidth="1" />
-                      <polyline fill="none" stroke={aColor} strokeWidth="2.2" points={pts} />
-                    </svg>
-                  </div>
-                );
-              })()}
-
-              {/* Walk-Forward Kapanan İşlemler Tablosu */}
+      {/* SEKME B: CANLI AÇIK POZİSYONLAR & KAPANAN İŞLEMLER DEFTERİ */}
+      {deskTab === 'positions' && ledger && (
+        <div className="space-y-4">
+          {/* Açık Pozisyonlar */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+            <h2 className="text-sm font-bold text-white">
+              Canlı Açık Pod Pozisyonları ({ledger.openPositions.length})
+            </h2>
+            {ledger.openPositions.length === 0 ? (
+              <div className="p-6 text-center text-xs text-zinc-400 bg-zinc-950 rounded border border-zinc-800">
+                Şu an aktif açık pozisyon yok. Bot 17 küresel varlıkta 3-Pod eşiklerini 60 saniyede bir canlı tarıyor; koşul oluştuğunda otomatik pozisyon açacaktır.
+              </div>
+            ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-xs font-mono">
                   <thead>
-                    <tr className="border-b border-zinc-800 text-zinc-400">
-                      <th className="py-2 px-2 font-medium">Tarih (Giriş → Çıkış)</th>
-                      <th className="py-2 px-2 font-medium">Varlık &amp; Yön</th>
-                      <th className="py-2 px-2 font-medium">Motor &amp; Kelly</th>
-                      <th className="py-2 px-2 font-medium text-right">Giriş → Çıkış</th>
-                      <th className="py-2 px-2 font-medium">Durum &amp; +4S Tahmin</th>
-                      <th className="py-2 px-2 font-medium text-right">Net Kâr / Zarar</th>
+                    <tr className="border-b border-zinc-800 text-zinc-500 text-[11px] text-left">
+                      <th className="py-2 pr-2">Varlık / Pod</th>
+                      <th className="py-2 px-2">Yön</th>
+                      <th className="py-2 px-2 text-right">Giriş</th>
+                      <th className="py-2 px-2 text-right">Anlık</th>
+                      <th className="py-2 px-2 text-right">Stop-Loss</th>
+                      <th className="py-2 px-2 text-right">Hedef</th>
+                      <th className="py-2 px-2 text-right">Teminat</th>
+                      <th className="py-2 px-2 text-right">Net K/Z</th>
+                      <th className="py-2 pl-2 text-right">İşlem</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
-                    {auditData.closedTrades.slice(0, 45).map((ct, idx) => (
-                      <tr key={`${ct.symbol}-${idx}`} className="hover:bg-zinc-800/30">
-                        <td className="py-2 px-2 font-mono text-[11px] text-zinc-400 whitespace-nowrap">
-                          {new Date(ct.entryTime).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          {' → '}
-                          {new Date(ct.closeTime).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    {ledger.openPositions.map((p) => (
+                      <tr key={p.id} className="hover:bg-zinc-800/30">
+                        <td className="py-2.5 pr-2">
+                          <button
+                            onClick={() => onInspectSymbol?.(p.symbol)}
+                            className="font-bold text-white hover:text-cyan-300 flex items-center gap-1"
+                          >
+                            {p.symbol} <ArrowUpRight className="w-3 h-3" />
+                          </button>
+                          <div className="text-[10px] text-cyan-400">{p.pod || 'POD'}</div>
                         </td>
-                        <td className="py-2 px-2">
-                          <span className="font-semibold text-white">{ct.symbol}</span>{' '}
-                          <span className={`text-[11px] font-mono ${ct.direction === 'AL (LONG)' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {ct.direction}
+                        <td className="py-2.5 px-2">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              p.direction === 'AL (LONG)'
+                                ? 'bg-emerald-500/15 text-emerald-400'
+                                : 'bg-rose-500/15 text-rose-400'
+                            }`}
+                          >
+                            {p.direction}
                           </span>
                         </td>
-                        <td className="py-2 px-2 font-mono text-[11px] text-zinc-300">
-                          {ct.timeframe} • <span className="text-sky-400">Kelly {ct.kellyMultiplier}x</span> ({ct.confluenceScore}/100)
+                        <td className="py-2.5 px-2 text-right text-zinc-300">{p.entryPrice.toFixed(p.digits)}</td>
+                        <td className="py-2.5 px-2 text-right text-white font-bold">{p.currentPrice.toFixed(p.digits)}</td>
+                        <td className="py-2.5 px-2 text-right text-rose-400">{p.stopLoss.toFixed(p.digits)}</td>
+                        <td className="py-2.5 px-2 text-right text-emerald-400">
+                          {p.takeProfit2 > 0 ? p.takeProfit2.toFixed(p.digits) : 'Trailing'}
                         </td>
-                        <td className="py-2 px-2 text-right font-mono text-zinc-200 whitespace-nowrap">
-                          {ct.entryPrice.toFixed(ct.digits)} → {ct.closePrice.toFixed(ct.digits)}
+                        <td className="py-2.5 px-2 text-right text-zinc-300">{fmtTL(p.allocatedCapitalTRY)}</td>
+                        <td
+                          className={`py-2.5 px-2 text-right font-bold ${
+                            p.totalPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          }`}
+                        >
+                          {fmtSignedTL(p.totalPnL_TRY)}
+                          <div className="text-[10px] font-normal">
+                            ({p.totalPnL_Percent >= 0 ? '+' : ''}
+                            {p.totalPnL_Percent}%)
+                          </div>
                         </td>
-                        <td className="py-2 px-2 text-[11px] text-zinc-400">
-                          {formatStatusText(ct.status)} • +4S: {ct.pred4hPct >= 0 ? '+' : ''}{ct.pred4hPct}% (TP1 %{ct.tp1Prob})
-                        </td>
-                        <td className={`py-2 px-2 text-right font-mono font-semibold whitespace-nowrap ${ct.netPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {ct.netPnL_TRY >= 0 ? '+' : ''}{formatTRY(ct.netPnL_TRY)}
+                        <td className="py-2.5 pl-2 text-right">
+                          <button
+                            onClick={() => fetchLedger('close_position', p.id)}
+                            disabled={busyAction !== null}
+                            className="px-2 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 text-[10px]"
+                          >
+                            Kapat
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
-          ) : null}
-        </div>
-      )}
+            )}
+          </div>
 
-      {/* 6c. 9-VARLIK 3 DAKİKALIK TAHMİN LABORATUVARI & HATA TEŞHİSİ (SÜREKLİ ÖĞRENME) */}
-      {subView === 'lab3m' && (
-        <div className="space-y-4">
-          <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-              <div>
-                <h2 className="text-sm font-semibold text-white flex flex-wrap items-center gap-2">
-                  <span>3 Dakikalık Kalibrasyon &amp; Sürekli Öğrenme Laboratuvarı (9 Varlık)</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[10px]">
-                    7/24 SÜREKLİ ÖĞRENME AKTİF
-                  </span>
-                </h2>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Her 3 dakikada tüm 9 varlık için ileri tahmin üretir, 3 dakika ve 15 dakika sonra gerçekleşen fiyata göre puanlar; her hatanın kök nedenini sınıflandırarak kalibrasyon verisi sunar.
-                </p>
+          {/* Kapanan İşlemler */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+            <h2 className="text-sm font-bold text-white">
+              Kapanan Test İşlemleri Defteri ({ledger.closedTrades.length})
+            </h2>
+            {ledger.closedTrades.length === 0 ? (
+              <div className="p-5 text-center text-xs text-zinc-500 bg-zinc-950 rounded border border-zinc-800">
+                Henüz kapanan canlı test işlemi yok. Açılan pozisyonlar hedef veya iz süren stop ile kapandığında net IBKR komisyon ve swap kesilmiş sonuçlar burada listelenir.
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <button
-                  onClick={() => fetchLab3m(true)}
-                  disabled={lab3mLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-sky-900/60 hover:bg-sky-800/70 text-sky-100 border border-sky-700/70 transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${lab3mLoading ? 'animate-spin' : ''}`} />
-                  <span>{lab3mLoading ? 'Analiz Ediliyor...' : 'Şimdi +3dk Turu Üret'}</span>
-                </button>
-                <a
-                  href="/api/forecast-lab/export?format=csv"
-                  download="zeltra_3m_forecast_lab.csv"
-                  className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition-colors"
-                >
-                  CSV İndir
-                </a>
-                <a
-                  href="/api/forecast-lab/export?format=json"
-                  download="zeltra_3m_forecast_lab.json"
-                  className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 transition-colors"
-                >
-                  JSON İndir
-                </a>
-              </div>
-            </div>
-
-            {lab3mData ? (
-              <>
-                {/* ÜST ÖZET KARTLARI & MAKRO NABIZ */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                    <div className="text-zinc-400">3dk Yön Tahmin Doğruluğu ({lab3mData.version})</div>
-                    <div className={`text-lg font-mono font-semibold ${lab3mData.directionalAccuracy3m >= 58 ? 'text-emerald-400' : lab3mData.directionalAccuracy3m >= 50 ? 'text-sky-300' : 'text-rose-400'}`}>
-                      %{lab3mData.directionalAccuracy3m}{' '}
-                      <span className="text-xs font-normal text-zinc-400">
-                        ({lab3mData.directionalCorrect3m}/{lab3mData.directionalEvaluated3m})
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-zinc-400 font-mono">
-                      Yön Al/Sat: <span className="text-emerald-400">↑ %{lab3mData.directionalBullishAccuracy ?? 0} ({lab3mData.directionalBullishCount ?? 0})</span>
-                      {' · '}
-                      <span className="text-rose-400">↓ %{lab3mData.directionalBearishAccuracy ?? 0} ({lab3mData.directionalBearishCount ?? 0})</span>
-                    </div>
-                    <div className="text-[11px] text-zinc-500">
-                      Yön oranı: %{lab3mData.directionalCoveragePct ?? 0} • Yatay: {lab3mData.flatCorrect3m}/{lab3mData.flatEvaluated3m} • +15dk: %{lab3mData.directionalAccuracy15m}
-                    </div>
-                  </div>
-
-                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                    <div className="text-zinc-400">Canlı Tick vs Toplam Kayıt</div>
-                    <div className="text-lg font-mono font-semibold text-white">
-                      {lab3mData.totalGeneratedCount} Kayıt
-                    </div>
-                    <div className="text-[11px] text-zinc-500">
-                      Canlı akış başarısı: %{lab3mData.liveTickAccuracy3m} ({lab3mData.liveTickEvaluated3m} sonuç)
-                    </div>
-                  </div>
-
-                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                    <div className="text-zinc-400">Canlı Makro Öncü Akış</div>
-                    <div className="text-sm font-mono font-semibold text-zinc-100">
-                      DXY: {lab3mData.macroPulse.dxyPrice.toFixed(2)} ({lab3mData.macroPulse.dxyChg3mPct >= 0 ? '+' : ''}{lab3mData.macroPulse.dxyChg3mPct}%)
-                    </div>
-                    <div className="text-[11px] text-zinc-500 font-mono">
-                      VIX: {lab3mData.macroPulse.vixPrice.toFixed(2)} • US10Y: %{lab3mData.macroPulse.us10yYield.toFixed(2)}
-                    </div>
-                  </div>
-
-                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                    <div className="text-zinc-400">Kalibrasyon Penceresi &amp; Durum</div>
-                    <div className="text-sm font-mono font-semibold text-sky-300">
-                      17.11.2026 09:00 TR+
-                    </div>
-                    <div className="text-[11px] text-zinc-500">
-                      Son güncelleme: {new Date(lab3mData.lastTickIso).toLocaleTimeString('tr-TR')} (Durmaz)
-                    </div>
-                  </div>
-                </div>
-
-                {/* SİSTEMİN ÖĞRENME ÇIKARIMLARI & KURULUM STRATEJİ KARNESİ */}
-                {lab3mData.setupStats && lab3mData.setupStats.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                    {lab3mData.setupStats.map((ss) => (
-                      <div key={ss.setupType} className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-white">{ss.label}</span>
-                          <span
-                            className={`font-mono font-semibold ${
-                              ss.accuracyPct >= 58 ? 'text-emerald-400' : ss.accuracyPct >= 50 ? 'text-sky-300' : 'text-rose-400'
-                            }`}
-                          >
-                            %{ss.accuracyPct}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-zinc-500 font-mono">
-                          {ss.correct} / {ss.evaluated} Doğru Tahmin [{ss.setupType}]
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {lab3mData.learningInsights.length > 0 && (
-                  <div className="bg-zinc-950/70 border border-zinc-800 rounded p-3.5 space-y-1.5 text-xs">
-                    <div className="font-semibold text-zinc-200">Otomatik Kalibrasyon ve Hata Öğrenme Notları:</div>
-                    <ul className="space-y-1 text-zinc-400 list-disc list-inside">
-                      {lab3mData.learningInsights.map((ins, i) => (
-                        <li key={i}>{ins}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 9 VARLIK CANLI +3dk TAHMİN VE DOĞRULUK KARNESİ */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-zinc-800 text-zinc-400">
-                        <th className="py-2 px-2 font-medium">Varlık &amp; Akış</th>
-                        <th className="py-2 px-2 font-medium">Son +3dk Tahmini</th>
-                        <th className="py-2 px-2 font-medium text-center">Yön Doğruluğu (3dk)</th>
-                        <th className="py-2 px-2 font-medium text-center">+15dk Uyum</th>
-                        <th className="py-2 px-2 font-medium">En Sık Hata Kök-Nedeni</th>
-                        <th className="py-2 px-2 font-medium">Sistem Tavsiyesi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800/70">
-                      {lab3mData.symbolStats.map((st) => {
-                        const lp = st.lastPrediction;
-                        return (
-                          <tr key={st.symbol} className="hover:bg-zinc-800/30">
-                            <td className="py-2.5 px-2">
-                              <div className="font-semibold text-white flex items-center gap-1.5">
-                                <span>{st.symbol}</span>
-                                <span
-                                  className={`text-[9px] font-mono px-1 rounded border ${
-                                    st.liveDataDelaySec <= 90
-                                      ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                                      : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
-                                  }`}
-                                >
-                                  {st.liveDataDelaySec <= 90 ? '0sn CANLI' : `${st.liveDataDelaySec}sn`}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-zinc-500">{st.liveDataSource}</div>
-                            </td>
-                            <td className="py-2.5 px-2 font-mono text-[11px]">
-                              {lp ? (
-                                <div>
-                                  <div
-                                    className={
-                                      lp.predictedDirection === 'YÜKSELİŞ'
-                                        ? 'text-emerald-400 font-semibold'
-                                        : lp.predictedDirection === 'DÜŞÜŞ'
-                                        ? 'text-rose-400 font-semibold'
-                                        : 'text-zinc-400'
-                                    }
-                                  >
-                                    {lp.predictedDirection} → {lp.predictedPrice3m.toFixed(st.digits)} (%{lp.confidencePct})
-                                    {lp.setupType && lp.setupType !== 'YATAY' ? ` [${lp.setupType}]` : ''}
-                                  </div>
-                                    <div className="text-[10px] text-zinc-400">
-                                      Giriş: {lp.entryPrice.toFixed(st.digits)}
-                                      {lp.candlePatternLabel ? ` · Mum: ${lp.candlePatternLabel}` : ''}
-                                      {lp.newsDirection && lp.newsDirection !== 'BEKLE' ? ` · Haber: ${lp.newsDirection} (%${lp.newsConviction ?? 0})` : ''}
-                                    </div>
-                                    <div className="text-[10px] text-zinc-500">
-                                      {lp.predicted15mDirection && lp.predicted15mDirection !== 'YATAY' ? `+15dk: ${lp.predicted15mDirection} • ` : ''}
-                                      {lp.status3m === 'BEKLIYOR'
-                                        ? `⏳ ${new Date(lp.target3mTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} bekleniyor`
-                                        : lp.status3m === 'DOGRU'
-                                        ? `✓ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
-                                        : lp.status3m === 'YANLIS'
-                                        ? `✗ Gerçek: ${lp.actualPrice3m?.toFixed(st.digits)}`
-                                        : 'Piyasa Kapalı'}
-                                    </div>
-                                </div>
-                              ) : (
-                                '-'
-                              )}
-                            </td>
-                            <td className="py-2.5 px-2 text-center font-mono">
-                              <span className={st.directionalAccuracy3m >= 58 ? 'text-emerald-400 font-semibold' : st.directionalAccuracy3m >= 50 ? 'text-sky-300' : 'text-rose-400'}>
-                                %{st.directionalAccuracy3m}
-                              </span>{' '}
-                              <span className="text-zinc-500 text-[11px]">
-                                ({st.directionalCorrect3m}/{st.directionalCount3m})
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-2 text-center font-mono text-zinc-300">
-                              %{st.directionalAccuracy15m}
-                            </td>
-                            <td className="py-2.5 px-2 text-[11px] font-mono text-amber-300">
-                              {st.topErrorCategory}
-                            </td>
-                            <td className="py-2.5 px-2 text-[11px] text-zinc-400 max-w-xs">
-                              {st.recommendedAction}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {lab3mData.adaptiveRules && lab3mData.adaptiveRules.length > 0 && (
-                  <div className="bg-zinc-950 border border-zinc-800 rounded p-3.5 space-y-2 text-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-semibold text-white">Adaptif Öğrenme Kurulum Kapıları (Canlı Performansa Göre Kendi Kapanır / Güçlenir)</span>
-                      <span className="text-[11px] text-zinc-400">12+ örnekte &lt;%44 başarısızlıkta otomatik filtrelenir · ≥%60’ta güven artırılır</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 font-mono text-[10px]">
-                      {lab3mData.adaptiveRules.map((ar) => (
-                        <span
-                          key={`${ar.symbol}-${ar.setupType}`}
-                          className={`px-2 py-1 rounded border ${
-                            ar.status === 'AKTİF_GÜÇLÜ'
-                              ? 'bg-emerald-950/50 border-emerald-800/70 text-emerald-300'
-                              : ar.status === 'ÖĞRENİLMİŞ_FİLTRE_KAPALI'
-                              ? 'bg-rose-950/50 border-rose-800/70 text-rose-300'
-                              : 'bg-zinc-900 border-zinc-800 text-zinc-300'
-                          }`}
-                        >
-                          {ar.symbol} [{ar.setupType}]: %{ar.accuracyPct} ({ar.evaluated}) · {ar.status}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* HATA KÖK-NEDEN DAĞILIMI VE SAATLİK BAŞARI HARİTASI */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-2">
-                  <div className="lg:col-span-7 bg-zinc-950 border border-zinc-800 rounded p-4 space-y-2.5">
-                    <h3 className="text-xs font-semibold text-white">Yanlış Tahminlerin Kök Nedenleri &amp; Çözüm Kuralları</h3>
-                    {lab3mData.errorBreakdown.length === 0 ? (
-                      <div className="text-xs text-zinc-500">Henüz sonuçlanan hatalı tahmin bulunmuyor.</div>
-                    ) : (
-                      <div className="space-y-2 text-xs">
-                        {lab3mData.errorBreakdown.map((errItem) => (
-                          <div key={errItem.category} className="p-2.5 rounded bg-zinc-900 border border-zinc-800/80 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-amber-300">{errItem.label}</span>
-                              <span className="font-mono text-zinc-200">{errItem.count} Hata (%{errItem.sharePct})</span>
-                            </div>
-                            <div className="text-[11px] text-zinc-400">{errItem.fixHint}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="lg:col-span-5 bg-zinc-950 border border-zinc-800 rounded p-4 space-y-2.5">
-                    <h3 className="text-xs font-semibold text-white">Saatlik Doğruluk Haritası (TR Saati)</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs font-mono">
-                      {lab3mData.hourlyHeatmap.map((h) => (
-                        <div
-                          key={h.trHour}
-                          className={`p-2 rounded border text-center ${
-                            h.accuracyPct >= 60
-                              ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-                              : h.accuracyPct >= 48
-                              ? 'bg-zinc-900 border-zinc-800 text-zinc-200'
-                              : 'bg-rose-950/40 border-rose-800/60 text-rose-300'
-                          }`}
-                        >
-                          <div className="text-[10px] text-zinc-400">{h.label}</div>
-                          <div className="font-semibold">%{h.accuracyPct}</div>
-                          <div className="text-[9px] text-zinc-500">
-                            {h.correct}/{h.evaluated}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* FİLTRELENEBİLİR CANLI 3DK TAHMİN & POST-MORTEM KAYIT DEFTERİ */}
-                <div className="bg-zinc-950 border border-zinc-800 rounded p-4 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
-                    <h3 className="text-xs font-semibold text-white">
-                      Canlı 3 Dakikalık Tahmin &amp; Sonuç Defteri (Son {lab3mData.recentRecords.length} Kayıt)
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      {(['ALL', 'YANLIS', 'DOGRU', 'BEKLIYOR'] as const).map((st) => (
-                        <button
-                          key={st}
-                          onClick={() => setLabStatusFilter(st)}
-                          className={`px-2 py-1 rounded border transition-colors ${
-                            labStatusFilter === st
-                              ? 'bg-zinc-800 border-zinc-600 text-white'
-                              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
-                          }`}
-                        >
-                          {st === 'ALL' ? 'Tümü' : st === 'YANLIS' ? 'Sadece Hatalılar' : st === 'DOGRU' ? 'Doğrular' : 'Bekleyenler'}
-                        </button>
-                      ))}
-                      <select
-                        value={labSymbolFilter}
-                        onChange={(e) => setLabSymbolFilter(e.target.value)}
-                        className="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-200"
-                      >
-                        <option value="ALL">Tüm Varlıklar (9)</option>
-                        {lab3mData.symbolStats.map((s) => (
-                          <option key={s.symbol} value={s.symbol}>
-                            {s.symbol}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="sticky top-0 bg-zinc-950 border-b border-zinc-800 text-zinc-400">
-                        <tr>
-                          <th className="py-2 px-2 font-medium">Zaman → +3dk</th>
-                          <th className="py-2 px-2 font-medium">Varlık</th>
-                          <th className="py-2 px-2 font-medium">Tahmin</th>
-                          <th className="py-2 px-2 font-medium text-right">Giriş → Gerçek (+3dk)</th>
-                          <th className="py-2 px-2 font-medium text-center">Sonuç</th>
-                          <th className="py-2 px-2 font-medium">Özellikler &amp; Teşhis Nedeni</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-800/60">
-                        {lab3mData.recentRecords
-                          .filter((r) => (labStatusFilter === 'ALL' ? true : r.status3m === labStatusFilter))
-                          .filter((r) => (labSymbolFilter === 'ALL' ? true : r.symbol === labSymbolFilter))
-                          .slice(0, 120)
-                          .map((r) => (
-                            <tr key={r.id} className="hover:bg-zinc-900/50">
-                              <td className="py-2 px-2 font-mono text-[10px] text-zinc-400 whitespace-nowrap">
-                                <div>
-                                  {new Date(r.bucketTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                  {' → '}
-                                  {new Date(r.target3mTs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                                <div className="text-[9px] text-zinc-600">{r.sourceMode === 'CANLI_TICK' ? 'CANLI' : '1M TELAFİ'} · {r.sessionLabel}</div>
-                              </td>
-                              <td className="py-2 px-2 font-semibold text-white whitespace-nowrap">{r.symbol}</td>
-                              <td className="py-2 px-2 font-mono text-[11px] whitespace-nowrap">
-                                <span
-                                  className={
-                                    r.predictedDirection === 'YÜKSELİŞ'
-                                      ? 'text-emerald-400'
-                                      : r.predictedDirection === 'DÜŞÜŞ'
-                                      ? 'text-rose-400'
-                                      : 'text-zinc-400'
-                                  }
-                                >
-                                  {r.predictedDirection}
-                                </span>{' '}
-                                <span className="text-zinc-500">(%{r.confidencePct})</span>
-                                {r.setupType && r.setupType !== 'YATAY' && (
-                                  <div className="text-[9px] text-sky-400">
-                                    {r.setupType}{r.predicted15mDirection && r.predicted15mDirection !== 'YATAY' ? ` · 15m:${r.predicted15mDirection}` : ''}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="py-2 px-2 text-right font-mono text-[11px] text-zinc-200 whitespace-nowrap">
-                                {r.entryPrice.toFixed(r.digits)} →{' '}
-                                <strong>{r.actualPrice3m ? r.actualPrice3m.toFixed(r.digits) : r.predictedPrice3m.toFixed(r.digits)}</strong>{' '}
-                                {r.actualMove3mPct !== undefined && (
-                                  <span className={r.actualMove3mPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                                    ({r.actualMove3mPct >= 0 ? '+' : ''}{r.actualMove3mPct}%)
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2 px-2 text-center font-mono text-[11px] whitespace-nowrap">
-                                {r.status3m === 'DOGRU' ? (
-                                  <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/60">DOĞRU</span>
-                                ) : r.status3m === 'YANLIS' ? (
-                                  <span className="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800/60">YANLIŞ</span>
-                                ) : r.status3m === 'BEKLIYOR' ? (
-                                  <span className="px-1.5 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/60">BEKLİYOR</span>
-                                ) : (
-                                  <span className="text-zinc-500">KAPALI</span>
-                                )}
-                              </td>
-                              <td className="py-2 px-2 text-[11px] text-zinc-400 max-w-md">
-                                <div className="font-mono text-[10px] text-zinc-500">
-                                  {r.candlePatternLabel ? `Mum:${r.candlePatternLabel} · ` : ''}
-                                  {r.features.bodyRatio !== undefined ? `Gövde:%${Math.round(r.features.bodyRatio * 100)} · ` : ''}
-                                  {r.newsDirection && r.newsDirection !== 'BEKLE' ? `Haber:${r.newsDirection}(%${r.newsConviction ?? 0}) · ` : ''}
-                                  RSI7:{r.features.rsi7_3m} · ER:{r.features.er3m} · VWAPz:{r.features.vwapZScore} · 1H:{r.features.h1TrendBias}
-                                </div>
-                                <div className={r.status3m === 'YANLIS' ? 'text-amber-200' : 'text-zinc-300'}>
-                                  {r.errorCategory !== 'YOK' && <strong className="text-amber-400">[{r.errorCategory}] </strong>}
-                                  {r.errorExplanation}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
             ) : (
-              <div className="text-xs text-zinc-400 py-8 text-center">3 dakikalık tahmin verisi yükleniyor...</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-zinc-500 text-[11px] text-left">
+                      <th className="py-2 pr-2">Varlık / Pod</th>
+                      <th className="py-2 px-2">Yön</th>
+                      <th className="py-2 px-2 text-right">Giriş → Çıkış</th>
+                      <th className="py-2 px-2">Çıkış Nedeni</th>
+                      <th className="py-2 pl-2 text-right">Net K/Z</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/60">
+                    {ledger.closedTrades.slice(0, 40).map((t) => (
+                      <tr key={t.id}>
+                        <td className="py-2 pr-2">
+                          <span className="font-bold text-white">{t.symbol}</span>{' '}
+                          <span className="text-[10px] text-cyan-400">{t.pod}</span>
+                        </td>
+                        <td className="py-2 px-2">{t.direction}</td>
+                        <td className="py-2 px-2 text-right text-zinc-300">
+                          {t.entryPrice.toFixed(t.digits)} → {(t.closePrice || t.currentPrice).toFixed(t.digits)}
+                        </td>
+                        <td className="py-2 px-2 text-zinc-400">{t.exitReason || t.status}</td>
+                        <td
+                          className={`py-2 pl-2 text-right font-bold ${
+                            t.realizedPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          }`}
+                        >
+                          {fmtSignedTL(t.realizedPnL_TRY)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {/* 7. KAPANMIŞ İŞLEMLERİN TAM LİSTESİ */}
-      {(subView === 'all' || subView === 'logs' || subView === 'xray') && (
-        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-white">
-                Tamamlanan (Kapanmış) İşlemler ({ledger.closedTrades.length} İşlem)
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Her işlemde ne kadar ana para yatırıldığı, kaç kaldıraç kullanıldığı, kaldıraçsız (1x) karşılığı ve net kâr/zarar tutarı.
-              </p>
-            </div>
+      {/* SEKME C: 17 VARLIK ZAC v14 CANLI PİYASA RADARI */}
+      {deskTab === 'radar' && ledger && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-cyan-400" />
+              17 Küresel Enstrüman — ZAC v14 Canlı Tarama Radarı
+            </h2>
+            <span className="text-[11px] font-mono text-zinc-400">
+              İndikatörde incelemek için satıra tıklayın
+            </span>
           </div>
-
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-xs font-mono">
               <thead>
-                <tr className="border-b border-zinc-800 text-zinc-400">
-                  <th className="py-2.5 px-2 font-medium">Açılış ve Kapanış</th>
-                  <th className="py-2.5 px-2 font-medium">Varlık & Yön</th>
-                  <th className="py-2.5 px-2 font-medium text-right">Basılan Ana Para</th>
-                  <th className="py-2.5 px-2 font-medium text-right">Kaldıraç</th>
-                  <th className="py-2.5 px-2 font-medium text-right">Toplam İşlem Hacmi</th>
-                  <th className="py-2.5 px-2 font-medium text-right">Giriş → Çıkış</th>
-                  <th className="py-2.5 px-2 font-medium">Kapanış Sebebi</th>
-                  <th className="py-2.5 px-2 font-medium text-right">1x Spot Karşılığı</th>
-                  <th className="py-2.5 px-2 font-medium text-right">Net Kâr / Zarar</th>
+                <tr className="border-b border-zinc-800 text-zinc-500 text-[10px] text-left">
+                  <th className="py-2 pr-2">Varlık</th>
+                  <th className="py-2 px-2 text-right">Fiyat (24S)</th>
+                  <th className="py-2 px-2 text-right">ZAC v14</th>
+                  <th className="py-2 px-2 text-right">XSMOM</th>
+                  <th className="py-2 px-2 text-right">EWMAC</th>
+                  <th className="py-2 px-2 text-right">IBS12 / CR2</th>
+                  <th className="py-2 px-2 text-right">+24S Olasılık</th>
+                  <th className="py-2 px-2">Durum / Pod Tetiği</th>
+                  <th className="py-2 pl-2 text-right">Grafik</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
-                {ledger.closedTrades.map((t) => {
-                  const isWin = t.realizedPnL_TRY >= 0;
-                  const isSelected = inspectedTrade?.id === t.id;
-                  const spot1x = t.spot1xEquivalentPnL_TRY ?? +(t.realizedPnL_TRY / Math.max(1, t.effectiveLeverage || 1)).toFixed(2);
-                  return (
-                    <tr
-                      key={t.id}
-                      onClick={() => setSelectedTradeId(t.id)}
-                      className={`cursor-pointer transition-colors ${
-                        isSelected ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/30'
-                      }`}
-                    >
-                      <td className="py-3 px-2 text-[11px] text-zinc-400 font-mono whitespace-nowrap">
-                        <div>
-                          {new Date(t.entryTime).toLocaleString('tr-TR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                          {' → '}
-                          {t.closeTime
-                            ? new Date(t.closeTime).toLocaleString('tr-TR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : '-'}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2">
-                        <div className="font-semibold text-white">{t.symbol}</div>
-                        <div className={`text-[11px] font-medium ${t.direction === 'AL (LONG)' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {formatDirection(t.direction)}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono whitespace-nowrap">
-                        <div className="font-semibold text-white">{formatTRY(t.allocatedCapitalTRY)}</div>
-                        <div className="text-[10px] text-zinc-500">Risk: {formatTRY(t.riskAmountTRY)}</div>
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono whitespace-nowrap">
-                        <div className="text-zinc-200 font-medium">{t.effectiveLeverage ?? 8.5}x</div>
-                        <div className="text-[10px] text-zinc-500">Kasa: {t.accountLeverage ?? 1.7}x</div>
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono whitespace-nowrap">
-                        <div className="text-zinc-200">{formatTRY(t.notionalValueTRY ?? t.allocatedCapitalTRY * 8.5)}</div>
-                        <div className="text-[10px] text-zinc-500">{t.positionSizeUnits} {t.unitLabel || 'Birim'} ({t.lotSize ?? 0.1} Lot)</div>
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono text-zinc-300 whitespace-nowrap">
-                        <div>{t.entryPrice.toFixed(t.digits)} → <strong className="text-white">{(t.closePrice ?? t.currentPrice).toFixed(t.digits)}</strong></div>
-                      </td>
-                      <td className="py-3 px-2 text-zinc-300">
-                        {formatStatusText(t.status)}
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono text-zinc-400 whitespace-nowrap">
-                        {spot1x >= 0 ? '+' : ''}{formatTRY(spot1x)}
-                      </td>
-                      <td className={`py-3 px-2 text-right font-mono font-semibold whitespace-nowrap ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        <div>{isWin ? '+' : ''}{formatTRY(t.realizedPnL_TRY)}</div>
-                        <div className="text-[10px] font-normal text-zinc-500">
-                          IBKR Kom: -{formatTRY(t.executionCostTRY ?? 0)}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {(ledger.lastMarketRadar || []).map((r) => (
+                  <tr key={r.symbol} className="hover:bg-zinc-800/40 transition-colors">
+                    <td className="py-2.5 pr-2">
+                      <div className="font-bold text-white flex items-center gap-1.5">
+                        {r.symbol}
+                        {!r.isOpen && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-500">KAPALI</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-500">{r.name}</div>
+                    </td>
+                    <td className="py-2.5 px-2 text-right">
+                      <div className="text-white font-semibold">{r.price.toFixed(r.digits)}</div>
+                      <div className={`text-[10px] ${r.change24hPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {r.change24hPercent >= 0 ? '+' : ''}
+                        {r.change24hPercent}%
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-2 text-right">
+                      <span
+                        className={`px-2 py-0.5 rounded font-bold ${
+                          r.zacScore >= 30
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : r.zacScore <= -30
+                              ? 'bg-rose-500/20 text-rose-300'
+                              : 'bg-zinc-800 text-zinc-300'
+                        }`}
+                      >
+                        {r.zacScore >= 0 ? `+${r.zacScore}` : r.zacScore}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-2 text-right text-zinc-300">#{r.xsmomRank || '-'}</td>
+                    <td className={`py-2.5 px-2 text-right ${r.ewmac >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {r.ewmac >= 0 ? '+' : ''}
+                      {r.ewmac}
+                    </td>
+                    <td className="py-2.5 px-2 text-right text-zinc-300">
+                      {r.ibs12h.toFixed(2)} / {Math.round(r.cumRsi2_12h)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right">
+                      <span className={r.pUp24h >= 54 ? 'text-emerald-400' : r.pUp24h <= 46 ? 'text-rose-400' : 'text-zinc-400'}>
+                        %{r.pUp24h} ↑
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <span
+                        className={`text-[11px] font-sans ${
+                          r.activePod !== 'NONE'
+                            ? 'text-cyan-300 font-bold'
+                            : r.aboveSma200
+                              ? 'text-zinc-300'
+                              : 'text-zinc-500'
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pl-2 text-right">
+                      <button
+                        onClick={() => onInspectSymbol?.(r.symbol)}
+                        className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-cyan-600 text-zinc-200 hover:text-white text-[10px] font-sans font-semibold transition-colors"
+                      >
+                        ZAC Aç
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* 8. GENİŞLETİLMİŞ İŞLEM VE KALDIRAÇ GÜNLÜĞÜ (LOGLAR) */}
-      {(subView === 'all' || subView === 'logs') && (
-        <div className="border border-zinc-800 bg-zinc-900 rounded-md p-5 space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-white">
-                Adım Adım Tüm İşlem Kayıtları ({ledger.activityLog.length} Kayıt)
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Her işlemin açılış ve kapanışında yatırılan ana para, kaldıraç oranı, işlem hacmi ve işlem sonrası kasa bakiyesi.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              {[
-                { key: 'ALL', label: `Tümü (${ledger.activityLog.length})` },
-                { key: 'ENTRY', label: 'Açılan İşlemler' },
-                { key: 'PROFIT', label: 'Kâr Alımlar' },
-                { key: 'RISK', label: 'Zarar Durdur & Haber Kalkanı' },
-              ].map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => setLogFilter(f.key as any)}
-                  className={`px-2.5 py-1 rounded transition-colors ${
-                    logFilter === f.key
-                      ? 'bg-zinc-800 text-white font-medium'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-950'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
-            {ledger.activityLog
-              .filter((log) => {
-                if (logFilter === 'ALL') return true;
-                if (logFilter === 'ENTRY') return log.type === 'ENTRY';
-                if (logFilter === 'PROFIT') return log.type === 'TP1_PARTIAL' || log.type === 'TP2_FULL' || log.type === 'BREAKEVEN_EXIT';
-                if (logFilter === 'RISK') return log.type === 'STOP_LOSS' || log.type === 'SYSTEM';
-                return true;
-              })
-              .map((log) => {
-                const isEntry = log.type === 'ENTRY';
-                return (
-                  <div
-                    key={log.id}
-                    className="p-3.5 rounded bg-zinc-950 border border-zinc-800/80 space-y-2.5"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/70 pb-2 text-xs">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-white">{log.symbol}</span>
-                        {log.direction && (
-                          <span className={log.direction === 'AL (LONG)' ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
-                            • {formatDirection(log.direction)}
-                          </span>
-                        )}
-                        <span className="text-zinc-400">
-                          • {isEntry ? 'İşlem Açıldı' : log.type === 'TP2_FULL' ? 'Hedefe Ulaştı (Kâr Alındı)' : log.type === 'STOP_LOSS' ? 'Zarar Durdur Oldu' : 'Sistem Kaydı'}
-                        </span>
-                        <span className="text-zinc-500 font-mono">
-                          ({new Date(log.timestamp).toLocaleString('tr-TR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })})
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3 font-mono">
-                        {log.pnlImpactTRY !== undefined && log.pnlImpactTRY !== 0 && (
-                          <span className={`font-semibold ${log.pnlImpactTRY > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {log.pnlImpactTRY > 0 ? '+' : ''}{formatTRY(log.pnlImpactTRY)}
-                          </span>
-                        )}
-                        {log.equityAfterTRY !== undefined && (
-                          <span className="text-zinc-400">
-                            Kasa: <strong className="text-white">{formatTRY(log.equityAfterTRY)}</strong>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {log.allocatedMarginTRY !== undefined && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
-                        <div className="bg-zinc-900/90 border border-zinc-800/70 p-2 rounded">
-                          <div className="text-[10px] text-zinc-400">Basılan Ana Para</div>
-                          <div className="text-white font-semibold font-mono">{formatTRY(log.allocatedMarginTRY)}</div>
-                        </div>
-
-                        <div className="bg-zinc-900/90 border border-zinc-800/70 p-2 rounded">
-                          <div className="text-[10px] text-zinc-400">Kaldıraç Oranı</div>
-                          <div className="text-white font-semibold font-mono">{log.effectiveLeverage}x <span className="text-zinc-500 font-normal">(Kasa: {log.accountLeverage}x)</span></div>
-                        </div>
-
-                        <div className="bg-zinc-900/90 border border-zinc-800/70 p-2 rounded">
-                          <div className="text-[10px] text-zinc-400">Toplam İşlem Hacmi</div>
-                          <div className="text-white font-semibold font-mono">{formatTRY(log.notionalVolumeTRY || 0)}</div>
-                        </div>
-
-                        <div className="bg-zinc-900/90 border border-zinc-800/70 p-2 rounded">
-                          <div className="text-[10px] text-zinc-400">Miktar (Lot / Birim)</div>
-                          <div className="text-zinc-200 font-mono">{log.units} {log.unitLabel || 'Birim'} ({log.lotSize} Lot)</div>
-                        </div>
-
-                        <div className="bg-zinc-900/90 border border-zinc-800/70 p-2 rounded">
-                          <div className="text-[10px] text-zinc-400">Maksimum Risk (%1,5)</div>
-                          <div className="text-rose-400 font-mono font-medium">-{formatTRY(log.riskAmountTRY || 0)}</div>
-                        </div>
-
-                        <div className="bg-zinc-900/90 border border-zinc-800/70 p-2 rounded">
-                          <div className="text-[10px] text-zinc-400">1x Spot Karşılığı</div>
-                          <div className="text-zinc-300 font-mono">
-                            {log.spot1xPnL_TRY !== undefined
-                              ? `${log.spot1xPnL_TRY >= 0 ? '+' : ''}${formatTRY(log.spot1xPnL_TRY)}`
-                              : 'Açık İşlem'}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="text-xs text-zinc-400 leading-relaxed">{log.message}</p>
-                  </div>
-                );
-              })}
+      {/* SEKME D: SİSTEM AKTİVİTE GÜNLÜĞÜ */}
+      {deskTab === 'logs' && ledger && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-2">
+          <h2 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
+            Gerçek Zamanlı Emir & Tarama Günlüğü
+          </h2>
+          <div className="space-y-1.5 max-h-[420px] overflow-y-auto font-mono text-xs">
+            {ledger.activityLog.map((log) => (
+              <div
+                key={log.id}
+                className="bg-zinc-950 border border-zinc-800/80 rounded px-3 py-2 flex flex-wrap items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-zinc-500 shrink-0">{log.timestamp}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-cyan-300 text-[10px] font-bold shrink-0">
+                    {log.symbol}
+                  </span>
+                  <span className="text-zinc-200 font-sans text-xs">{log.message}</span>
+                </div>
+                {typeof log.pnlImpactTRY === 'number' && (
+                  <span className={log.pnlImpactTRY >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                    {fmtSignedTL(log.pnlImpactTRY)}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

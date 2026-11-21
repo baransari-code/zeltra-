@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { InstitutionalEntity, NewsNotification } from '../types';
+import { NewsNotification } from '../types';
 import { ExternalLink } from 'lucide-react';
 
 interface InstitutionTrackerProps {
-  institutions: InstitutionalEntity[];
   news: NewsNotification[];
   onSelectAsset?: (symbol: string) => void;
 }
@@ -20,11 +19,9 @@ interface SynthesizedOpportunity {
 }
 
 export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
-  institutions,
   news,
   onSelectAsset,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'news' | 'institutions'>('news');
   const [sourceFilter, setSourceFilter] = useState<string>('TÜMÜ');
 
   const availableSources = ['TÜMÜ', ...new Set(news.map((n) => n.source))];
@@ -190,44 +187,20 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
         )}
       </div>
 
-      {/* 2. SON 24 SAAT HABER AKIŞI & KURUMLAR */}
+      {/* 2. SON 24 SAAT CANLI HABER AKIŞI */}
       <div className="border border-zinc-800 bg-zinc-900 rounded p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
           <div>
             <h2 className="text-base font-bold text-white">
-              Son 24 Saat Canlı Haber Akışı ({news.length} Haber)
+              Son 24 Saat Canlı Küresel Haber Akışı ({news.length} Haber)
             </h2>
             <span className="text-xs text-zinc-400">
-              Her haberin altında yapay zekanın çıkardığı neden-sonuç özeti ve etkilenen varlık kararları yer alır
+              Gerçek RSS kaynaklarından çekilir; her haberin altında yapay zeka neden-sonuç özeti ve etkilenen varlık kararları yer alır
             </span>
-          </div>
-
-          <div className="flex items-center space-x-1.5 text-xs">
-            <button
-              onClick={() => setActiveSubTab('news')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                activeSubTab === 'news'
-                  ? 'bg-zinc-800 text-white font-medium'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Canlı Haberler ({news.length})
-            </button>
-            <button
-              onClick={() => setActiveSubTab('institutions')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                activeSubTab === 'institutions'
-                  ? 'bg-zinc-800 text-white font-medium'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Merkez Bankaları & Şirketler ({institutions.length})
-            </button>
           </div>
         </div>
 
-        {activeSubTab === 'news' && (
-          <div className="space-y-3">
+        <div className="space-y-3">
             {/* Source Filter */}
             <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
               <span className="text-zinc-500 text-[11px] mr-1">Kaynak:</span>
@@ -341,40 +314,7 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
                 ))
               )}
             </div>
-          </div>
-        )}
-
-        {activeSubTab === 'institutions' && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-zinc-800 text-zinc-400 font-medium">
-                  <th className="py-2 px-2 w-48">Kurum / Şirket</th>
-                  <th className="py-2 px-2 w-32">Kategori</th>
-                  <th className="py-2 px-2 w-24">Not</th>
-                  <th className="py-2 px-2 w-48">Makro Duruş</th>
-                  <th className="py-2 px-2">Son Şirket Olayı / Rapor</th>
-                  <th className="py-2 px-2 w-24 text-right">Zaman</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
-                {institutions.map((inst) => (
-                  <tr key={inst.code} className="hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-2 font-semibold text-white">
-                      <div>{inst.name}</div>
-                      <div className="text-[10px] text-zinc-500 font-mono">{inst.code}</div>
-                    </td>
-                    <td className="py-2.5 px-2 text-zinc-400">{inst.type}</td>
-                    <td className="py-2.5 px-2 font-mono text-white">{inst.creditScore}</td>
-                    <td className="py-2.5 px-2 text-zinc-300">{inst.macroTrend}</td>
-                    <td className="py-2.5 px-2 text-zinc-300 leading-relaxed">{inst.lastNews}</td>
-                    <td className="py-2.5 px-2 text-right font-mono text-zinc-500">{inst.lastUpdated}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

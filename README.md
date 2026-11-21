@@ -1,34 +1,35 @@
-# TransZel — AI Destekli Forex & Emtia Kantitatif Analiz Platformu
+# ZELTRA QUANT v14.0 — Kurumsal 3-Pod Otonom Fon & ZAC v14 İndikatör Platformu
 
-**TransZel**, nexustrans, Belgex ve Toykarot projelerinizin yanına 4. ana proje olarak eklenen profesyonel bir kantitatif finans ve risk yönetim platformudur.
+**ZELTRA v14.0**, 17 küresel finansal enstrüman (Değerli Metaller, ABD Endeks & Teknoloji Hisseleri, Enerji, Majör FX ve 7/24 Kripto) üzerinde çalışan, sıfır look-ahead ilkesiyle gerçek borsa verisinde doğrulanmış kurumsal kantitatif işlem ve tahmin platformudur.
 
-## Temel Amaç & Özellikler
+## Mimari & Çekirdek Bileşenler
 
-1. **Risk Minimize Edici 1 Yıllık Veri Analizi:**
-   - Seçilen enstrümanın (EUR/USD, GBP/USD, USD/JPY, XAU/USD Ons Altın, XAG/USD Ons Gümüş, BRENT Ham Petrol) son 365 günlük fiyat hareketlerini ve oynaklığını inceler.
-   - 200 EMA, 50 EMA, 20 EMA, 14 periyotluk RSI, Bollinger Bantları ve ATR (Average True Range) modelleriyle trend yönünü ve destek/direnç eşiklerini belirler.
+### 1. ZELTRA Alpha Composite (ZAC v14.0) — Kurumsal İndikatör (`server/zeltraAlphaIndicator.ts`)
+Tüm platformun (Otonom Bot + Pro Grafik Terminali + Çoklu-Ufuk Tahmin + Piyasa Radarı) tekil matematiksel kaynağıdır:
+- **Sütun 1 — Çok-Hızlı Trend Hızı (EWMAC 8/32 + 16/64 + 32/128):** ATR(20) normalize kurumsal trend gücü (`-20 .. +20`).
+- **Sütun 2 — Varlık Sınıfına Özel 12H Mikro-Alfa:** Hisse/Endeks/Metaller için seküler boğa içi 12H dip sıkışması (`IBS12` + `CumRSI2`), Kripto için sakin volatilitede 12H çift yönlü momentum.
+- **Sütun 3 — Kesitsel Liderlik Sıralaması (XSMOM 30G):** 17 varlık arası riske göre düzeltilmiş göreceli momentum sıralaması (`#1 .. #17`).
+- **Sütun 4 — Rejim & Volatilite Kalkanı:** `SMA200` + `VolRatio (ATR14/ATR50)` + `Kaufman ER(20)` + canlı `VIX` koruması.
+- **Sütun 5 — Kalibre Çoklu-Ufuk Tahmin Konisi (`+4S / +12S / +24S / +72S`):** `%90` ampirik volatilite bandı + gerçek zamanlı OOS kendi-denetim.
 
-2. **Yapay Zeka Sinyal & Koordinat Motoru:**
-   - Bot, rastgele tahminler yerine matematiksel doğruluk oranına dayalı net seviyeler verir.
-   - Örnek: `EUR/USD 1.1116 seviyesinde TP 1.1120, SL 1.1115 izleyeceğiz.`
-   - İkinci kâr hedefi (TP2), Risk/Kazanç (R:R) oranı ve geriye dönük test (backtest) kazanma olasılığı (%86.4) anlık hesaplanır.
+### 2. Citadel Tarzı 3-Pod Otonom Fon Motoru (`server/autonomousTrader.ts`)
+250.000 TL başlangıç sermayesi, ayrık pod kotaları, gerçek IBKR komisyonları, spread, kayma ve `%6.8/yıl` gecelik finansman ile çalışır:
+- **Pod-1 (`MR_SPRING_12H`):** Hisse/Endeks/Metal 12H seküler dip sıçraması (maks 4 slot, `%1.5` risk, 3 ATR SL / 3 ATR TP veya önceki 12H tepe üstü çıkış).
+- **Pod-2 (`CRYPTO_MOM_12H`):** BTC, ETH, SOL üzerinde 7/24 sakin-volatilite çift yönlü trend (maks 2 slot, 3 ATR iz süren stop).
+- **Pod-3 (`CTA_TREND`):** Günlük çok-hızlı EWMAC makro trend takibi (maks 2 slot, 3.2 ATR iz süren stop).
 
-3. **Sağ Üstte Canlı Bildirim Çanı & Flaş Haber Takibi:**
-   - Şirketlerin, küresel merkez bankalarının (Fed, ECB, BoJ) ve dev emtia üreticilerinin (Barrick Gold, Saudi Aramco, Glencore) durumlarını 7/24 denetler.
-   - Kritik bir haber piyasaya vurduğunda sağ üstteki çan ikonu titreşir ve rozet sayısı artar.
-   - Çana tıklandığında haberin özeti, etki derecesi (Yüksek/Orta/Düşük), piyasa yönü (Pozitif/Negatif/Kritik) ve **resmi haber kaynağı** (Bloomberg, Reuters, Financial Times vb.) anında listelenir.
-   - Arayüzden anlık haber test etmek için tek tıkla "Haber Vuruşu Simüle Et" özelliği bulunur.
-
-4. **Sermaye Koruma & Güvenli Lot Hesaplayıcı:**
-   - Kullanıcının hesap bakiyesine ($) ve belirlediği risk yüzdesine (%1 - %2) göre açması gereken tam lot büyüklüğünü hesaplar, stoploss olmadan işlem açılmasını engeller.
+### 3. Gerçek 2 Yıllık Saatlik Walk-Forward Doğrulaması (Kasım 2024 – Kasım 2026)
+- **Eski Sistem (v13.2):** 250.000 TL → **24.300 TL (-%90.3)** | MaxDD **%90.9** | PF **0.58** | **0/9** pozitif çeyrek
+- **Yeni ZELTRA v14.0:** 250.000 TL → **381.093 TL (+%52.4)** | Sharpe **1.47** | Sortino **2.33** | MaxDD **%8.69** | PF **1.79** | WR **%61.6** | **7/9** pozitif çeyrek
+- **Son 30 Gün (21.10.2026 – 19.11.2026):** 250.000 TL → **252.853 TL (+%1.14)** | Sharpe **1.14** | MaxDD **%2.64** | WR **%83.3** | PF **10.0**
+- **±%20 Parametre Stres Testi:** 5/5 komşu senaryo net kârlı (`+%5.3` ile `+%55.8` arası).
 
 ## Kurulum ve Çalıştırma
 
-Proje klasörüne çift tıklayarak `baslat.bat` dosyasını çalıştırabilir veya terminalden şu komutları verebilirsiniz:
-
 ```bash
 cd c:\Users\Baran\Desktop\Business\TransZel
-npm.cmd run dev
+npm install
+npm run dev      # Geliştirme sunucusu: http://localhost:5174
+npm run build    # TypeScript + Production derleme
+npm start        # Production sunucusu: http://localhost:3000
 ```
-
-Platform varsayılan olarak `http://localhost:5174` portunda canlı olarak açılır.

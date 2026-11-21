@@ -544,6 +544,173 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<HourlyBar[
   }
 }
 
+// =========================================================================
+// ZELTRA v14 KURUMSAL UZUN DÖNEM VERİ KATMANI (2Y SAATLİK + TEMİZ GÜNLÜK)
+// Yahoo Finance FX günlük gece yarısı OHLC bozulmasını 1H agregasyonla sıfırlar.
+// =========================================================================
+const extendedHourlyCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
+const inFlightExtendedHourly = new Map<string, Promise<HourlyBar[]>>();
+const cleanDailyCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
+const inFlightCleanDaily = new Map<string, Promise<HourlyBar[]>>();
+
+const EXTENDED_CACHE_TTL = 10 * 60 * 1000; // 10 dk (tarihsel 2Y veri + canlı son bar bindirmeli)
+const FX_SYMBOLS_SET = new Set([
+  'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'USD/CAD', 'AUD/USD', 'NZD/USD',
+  'EUR/GBP', 'EUR/JPY', 'GBP/JPY', 'USD/TRY', 'EUR/TRY', 'GBP/TRY',
+]);
+
+export function aggregateBarsByHours(bars1h: HourlyBar[], bucketHours: number): HourlyBar[] {
+  const map = new Map<number, HourlyBar>();
+  const ms = bucketHours * 3600 * 1000;
+  for (const b of bars1h) {
+    if (!b || !(b.close > 0)) continue;
+    const k = Math.floor(b.timestamp / ms) * ms;
+    const prev = map.get(k);
+    const o = b.open ?? b.close;
+    const h = b.high ?? Math.max(o, b.close);
+    const l = b.low ?? Math.min(o, b.close);
+    if (!prev) {
+      map.set(k, { timestamp: k, open: o, high: h, low: l, close: b.close, volume: b.volume ?? 0 });
+    } else {
+      prev.high = Math.max(prev.high ?? prev.close, h);
+      prev.low = Math.min(prev.low ?? prev.close, l);
+      prev.close = b.close;
+      prev.volume = (prev.volume ?? 0) + (b.volume ?? 0);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.timestamp - b.timestamp);
+}
+
+async function fetchYahooChartBars(symbol: string, range: string, interval: string, timeoutMs = 12000): Promise<HourlyBar[]> {
+  const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'application/json',
+      },
+    });
+    if (!resp.ok) return [];
+    const data: any = await resp.json();
+    const result = data?.chart?.result?.[0];
+    if (!result?.timestamp || !result?.indicators?.quote?.[0]) return [];
+    const ts: number[] = result.timestamp;
+    const q = result.indicators.quote[0];
+    const out: HourlyBar[] = [];
+    for (let i = 0; i < ts.length; i++) {
+      const c = q.close?.[i];
+      if (c !== null && c !== undefined && Number.isFinite(c) && c > 0) {
+        const o = Number.isFinite(q.open?.[i]) && q.open[i] > 0 ? +q.open[i] : +c;
+        const h = Number.isFinite(q.high?.[i]) && q.high[i] > 0 ? Math.max(+q.high[i], o, +c) : Math.max(o, +c);
+        const l = Number.isFinite(q.low?.[i]) && q.low[i] > 0 ? Math.min(+q.low[i], o, +c) : Math.min(o, +c);
+        out.push({
+          timestamp: ts[i] * 1000,
+          open: o,
+          high: h,
+          low: l,
+          close: +c,
+          volume: Number(q.volume?.[i]) || 0,
+        });
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function fetchExtendedHourlyHistory(symbol: string, range: '90d' | '1y' | '730d' = '730d'): Promise<HourlyBar[]> {
+  const key = `${symbol}:${range}`;
+  const now = Date.now();
+  const cached = extendedHourlyCache.get(key);
+  if (cached && now - cached.timestamp < EXTENDED_CACHE_TTL && cached.data.length > 0) {
+    // Canlı kripto/son saat fiyatını tazele
+    if (KRAKEN_PAIR_MAP[symbol]) {
+      const liveQ = await fetchLiveCryptoQuotes();
+      const q = liveQ[symbol];
+      if (q && q.mid > 0) {
+        const copy = cached.data.slice();
+        const last = copy[copy.length - 1];
+        copy[copy.length - 1] = { ...last, close: q.mid, high: Math.max(last.high ?? q.mid, q.mid), low: Math.min(last.low ?? q.mid, q.mid) };
+        return copy;
+      }
+    }
+    return cached.data;
+  }
+  if (inFlightExtendedHourly.has(key)) return inFlightExtendedHourly.get(key)!;
+
+  const p = (async () => {
+    const base = await fetchYahooChartBars(symbol, range, '1h', 14000);
+    // Son 30 gün canlı Kraken/Yahoo verisiyle son kuyruğu birleştir
+    const recent = await fetchRealHourlyHistory(symbol).catch(() => [] as HourlyBar[]);
+    let merged = base;
+    if (recent.length > 0) {
+      if (base.length === 0) {
+        merged = recent;
+      } else {
+        const recentStart = recent[0].timestamp;
+        merged = [...base.filter((b) => b.timestamp < recentStart - 1800 * 1000), ...recent];
+      }
+    }
+    if (merged.length > 0) {
+      extendedHourlyCache.set(key, { timestamp: Date.now(), data: merged });
+      return merged;
+    }
+    return cached?.data || [];
+  })();
+
+  inFlightExtendedHourly.set(key, p);
+  try {
+    return await p;
+  } finally {
+    inFlightExtendedHourly.delete(key);
+  }
+}
+
+export async function fetchCleanDailyHistory(symbol: string): Promise<HourlyBar[]> {
+  const now = Date.now();
+  const cached = cleanDailyCache.get(symbol);
+  if (cached && now - cached.timestamp < EXTENDED_CACHE_TTL && cached.data.length > 0) {
+    return cached.data;
+  }
+  if (inFlightCleanDaily.has(symbol)) return inFlightCleanDaily.get(symbol)!;
+
+  const p = (async () => {
+    const [h2y, d5y] = await Promise.all([
+      fetchExtendedHourlyHistory(symbol, '730d'),
+      FX_SYMBOLS_SET.has(symbol) ? Promise.resolve([] as HourlyBar[]) : fetchYahooChartBars(symbol, '5y', '1d', 12000),
+    ]);
+    const clean2y = aggregateBarsByHours(h2y, 24);
+    let out: HourlyBar[];
+    if (FX_SYMBOLS_SET.has(symbol)) {
+      out = clean2y.length >= 220 ? clean2y : await fetchYahooChartBars(symbol, '2y', '1d', 10000);
+    } else if (d5y.length > 0 && clean2y.length > 0) {
+      const firstClean = clean2y[0].timestamp;
+      out = [...d5y.filter((b) => b.timestamp < firstClean - 12 * 3600 * 1000), ...clean2y];
+    } else {
+      out = clean2y.length > 0 ? clean2y : d5y;
+    }
+    if (out.length > 0) {
+      cleanDailyCache.set(symbol, { timestamp: Date.now(), data: out });
+      return out;
+    }
+    return cached?.data || [];
+  })();
+
+  inFlightCleanDaily.set(symbol, p);
+  try {
+    return await p;
+  } finally {
+    inFlightCleanDaily.delete(symbol);
+  }
+}
+
 // 15 Dakikalık Yüksek Hassasiyetli Mikro-Zamanlama Verisi (Kripto: Kraken 15m / TradFi: Yahoo 5d 15m)
 export async function fetchReal15mHistory(symbol: string): Promise<HourlyBar[]> {
   const now = Date.now();

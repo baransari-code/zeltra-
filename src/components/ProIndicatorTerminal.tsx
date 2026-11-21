@@ -1,906 +1,1085 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Activity, RefreshCw, Compass, Layers, TrendingUp, TrendingDown } from 'lucide-react';
-import type { MultiHorizonForecast, ProChartCandle } from '../../server/quantForecastEngine';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Compass,
+  Crosshair,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
 
-export interface ProChartResponse {
+interface ProCandle {
+  timestamp: number;
+  timeStr: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  rvol: number;
+  ema8: number;
+  ema21: number;
+  ema50: number;
+  rsi14: number;
+  adx14: number;
+  fairValue: number;
+  sma200: number;
+  zacUpper: number;
+  zacLower: number;
+  zacScore: number;
+  regime: string;
+}
+
+interface ZacMarker {
+  index: number;
+  timestamp: number;
+  price: number;
+  pod: 'MR_SPRING_12H' | 'CRYPTO_MOM_12H' | 'CTA_TREND';
+  direction: 'LONG' | 'SHORT';
+  label: string;
+}
+
+interface ZacPillar {
+  id: string;
+  label: string;
+  score: number;
+  rawValue: string;
+  status: 'POZİTİF' | 'NEGATİF' | 'NÖTR' | 'UYARI';
+  detail: string;
+}
+
+interface ZacHorizon {
+  horizonHours: 4 | 12 | 24 | 72;
+  label: string;
+  expectedPrice: number;
+  expectedMovePct: number;
+  lower90: number;
+  upper90: number;
+  pUp: number;
+  pDown: number;
+  direction: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+}
+
+interface ProChartPayload {
   symbol: string;
-  tf: '15m' | '1h' | '1d';
+  name: string;
+  cluster: string;
+  tf: '15m' | '1h' | '4h' | '12h' | '1d';
   digits: number;
   currentPrice: number;
   change24h: number;
   changePercent24h: number;
-  candles: ProChartCandle[];
-  forecast: MultiHorizonForecast;
+  candles: ProCandle[];
+  markers: ZacMarker[];
+  zacSnapshot: {
+    symbol: string;
+    price: number;
+    digits: number;
+    zacScore: number;
+    regime: string;
+    regimeLabelTR: string;
+    aboveSma200: boolean;
+    sma200: number;
+    fairValueEma50: number;
+    ewmac: number;
+    volRatio: number;
+    efficiencyRatio: number;
+    ibs12h: number;
+    cumRsi2_12h: number;
+    mom12hAtr: number;
+    dailyAtr14: number;
+    atr12h14: number;
+    xsmomScore30d: number;
+    xsmomRank: number;
+    xsmomTotal: number;
+    vixLevel: number;
+    pillars: ZacPillar[];
+    activeSetup: {
+      pod: string;
+      podLabelTR: string;
+      direction: 'AL (LONG)' | 'SAT (SHORT)' | 'BEKLE';
+      entryPrice: number;
+      stopLoss: number;
+      takeProfit: number;
+      trailingAtrMult: number;
+      riskReward: number;
+      maxHoldHours: number;
+      convictionPercent: number;
+      rationaleTR: string;
+    };
+    horizons: ZacHorizon[];
+  };
+  oosSelfAudit: {
+    horizonHours: number;
+    sampleSize: number;
+    allBarHitRatePct: number;
+    highConvictionHitRatePct: number;
+    highConvictionCount: number;
+    cone90CoveragePct: number;
+    methodologyNoteTR: string;
+  };
+  forecastCones: ZacHorizon[];
   newsContext?: {
     sentimentScore: number;
     shockLevel: number;
     impactingHeadline: string;
     source: string;
     biasDescription: string;
+    newsTimeAgo: string;
   };
-  activeTrade?: {
-    direction: 'AL (LONG)' | 'SAT (SHORT)';
+  activeTrade: {
+    id: string;
+    pod?: string;
+    direction: string;
     entryPrice: number;
     stopLoss: number;
     takeProfit1: number;
     takeProfit2: number;
     totalPnL_TRY: number;
-    entryTimeframe: string;
   } | null;
-  scannerRow?: {
-    status: string;
-    decisionReason: string;
-    confluenceScore: number;
-  } | null;
+  universe?: { symbol: string; name: string; cluster: string }[];
   generatedAt: string;
 }
 
 interface ProIndicatorTerminalProps {
   symbol: string;
-  availableSymbols?: string[];
-  onSymbolChange?: (symbol: string) => void;
-  defaultTimeframe?: '15m' | '1h' | '1d';
-  refreshIntervalMs?: number;
+  onSelectSymbol?: (sym: string) => void;
 }
 
-const REGIME_LABELS: Record<string, { label: string; color: string }> = {
-  TREND_KIRILIM: { label: 'TREND KIRILIMI', color: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/70' },
-  SIKIŞMA_PATLAMA: { label: 'SIKIŞMA / PATLAMA HAZIR', color: 'text-amber-300 bg-amber-950/60 border-amber-800/70' },
-  İVME_SÜREKLİLİK: { label: 'İVME SÜREKLİLİĞİ', color: 'text-sky-300 bg-sky-950/60 border-sky-800/70' },
-  ORTALAMAYA_DÖNÜŞ: { label: 'ORTALAMAYA DÖNÜŞ', color: 'text-violet-300 bg-violet-950/60 border-violet-800/70' },
-  YATAY_DENGE: { label: 'YATAY DENGE / TESTERE', color: 'text-zinc-300 bg-zinc-900 border-zinc-700' },
+const DEFAULT_UNIVERSE = [
+  'XAU/USD', 'XAG/USD', 'COPPER', 'NAS100', 'SPX500', 'US30',
+  'NVDA', 'AAPL', 'MSFT', 'WTI', 'BRENT',
+  'EUR/USD', 'USD/JPY', 'GBP/USD', 'BTC/USD', 'ETH/USD', 'SOL/USD',
+];
+
+const REGIME_COLORS: Record<string, string> = {
+  BULL_TREND: '#10b981',
+  DIP_SPRING: '#38bdf8',
+  CRYPTO_CALM_MOM: '#a855f7',
+  BEAR_DEFENSE: '#f43f5e',
+  VOL_SHOCK: '#f59e0b',
+  NEUTRAL_CHOP: '#52525b',
 };
 
 export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
   symbol,
-  availableSymbols,
-  onSymbolChange,
-  defaultTimeframe = '1h',
-  refreshIntervalMs = 30000,
+  onSelectSymbol,
 }) => {
-  const [tf, setTf] = useState<'15m' | '1h' | '1d'>(defaultTimeframe);
-  const [data, setData] = useState<ProChartResponse | null>(null);
+  const [tf, setTf] = useState<'15m' | '1h' | '4h' | '12h' | '1d'>('1h');
+  const [data, setData] = useState<ProChartPayload | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [showEma, setShowEma] = useState<boolean>(true);
-  const [showBands, setShowBands] = useState<boolean>(true);
-  const [showForecastCone, setShowForecastCone] = useState<boolean>(true);
-  const [showOscillators, setShowOscillators] = useState<boolean>(true);
-  const [oscTab, setOscTab] = useState<'ALL' | 'RSI' | 'MACD' | 'ADX'>('ALL');
-  const [hoverSlot, setHoverSlot] = useState<{ kind: 'candle' | 'forecast'; idx: number } | null>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  const loadChart = useCallback(async () => {
+  // Katman anahtarları
+  const [showCloud, setShowCloud] = useState(true);
+  const [showSma200, setShowSma200] = useState(true);
+  const [showMarkers, setShowMarkers] = useState(true);
+  const [showCone, setShowCone] = useState(true);
+
+  const loadChart = useCallback(async (sym: string, timeframe: string) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`/api/pro-chart?symbol=${encodeURIComponent(symbol)}&tf=${tf}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: ProChartResponse = await res.json();
+      const resp = await fetch(
+        `/api/pro-chart?symbol=${encodeURIComponent(sym)}&tf=${encodeURIComponent(timeframe)}`
+      );
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json: ProChartPayload = await resp.json();
       setData(json);
-      setHoverSlot(null);
     } catch (e: any) {
-      setError(e?.message || 'Grafik verisi alınamadı');
+      setError(e?.message || 'ZAC v14 grafik verisi alınamadı.');
     } finally {
       setLoading(false);
     }
-  }, [symbol, tf]);
+  }, []);
 
   useEffect(() => {
-    loadChart();
-    const t = setInterval(loadChart, refreshIntervalMs);
-    return () => clearInterval(t);
-  }, [loadChart, refreshIntervalMs]);
+    loadChart(symbol, tf);
+  }, [symbol, tf, loadChart]);
 
-  const candles = data?.candles || [];
-  const forecast = data?.forecast;
-  const hourlyPath = forecast?.hourlyPath || [];
-  const digits = data?.digits ?? 2;
-  const activeTrade = data?.activeTrade;
+  // SVG Geometri Hesabı
+  const chartGeom = useMemo(() => {
+    if (!data || !data.candles || data.candles.length < 5) return null;
+    const candles = data.candles;
+    const n = candles.length;
+    const coneCols = showCone ? 14 : 2;
+    const W = 1040;
+    const H_MAIN = 360;
+    const H_OSC = 115;
+    const PAD_L = 14;
+    const PAD_R = 76;
+    const PAD_T = 22;
+    const PAD_B = 18;
+    const plotW = W - PAD_L - PAD_R;
+    const totalCols = n + coneCols;
+    const stepX = plotW / Math.max(1, totalCols);
 
-  // Layout geometry
-  const svgW = 860;
-  const padL = 12;
-  const padR = 72;
-  const padT = 18;
-  const priceH = 290;
-  const candlesCount = candles.length;
-  const futureCount = showForecastCone && hourlyPath.length > 0 ? hourlyPath.length : 0;
-  const totalSlots = Math.max(10, candlesCount + futureCount);
-  const plotW = svgW - padL - padR;
-  const stepX = plotW / Math.max(1, totalSlots - 1);
-
-  const getSlotX = useCallback(
-    (slotIdx: number) => padL + slotIdx * stepX,
-    [padL, stepX]
-  );
-
-  // Unified price range covering real candles, Bollinger/Donchian overlays, trade levels, and forecast bounds
-  const { minPrice, maxPrice, priceRange } = useMemo(() => {
-    if (candles.length === 0) return { minPrice: 0, maxPrice: 100, priceRange: 100 };
-    let lo = Infinity;
-    let hi = -Infinity;
+    let minP = Infinity;
+    let maxP = -Infinity;
     for (const c of candles) {
-      lo = Math.min(lo, c.low);
-      hi = Math.max(hi, c.high);
-      if (showBands) {
-        lo = Math.min(lo, c.bbLower, c.donLow);
-        hi = Math.max(hi, c.bbUpper, c.donHigh);
-      }
-      if (showEma) {
-        lo = Math.min(lo, c.ema8, c.ema21, c.ema50);
-        hi = Math.max(hi, c.ema8, c.ema21, c.ema50);
-      }
-    }
-    if (showForecastCone && hourlyPath.length > 0) {
-      for (const p of hourlyPath) {
-        lo = Math.min(lo, p.lowerBound);
-        hi = Math.max(hi, p.upperBound);
+      minP = Math.min(minP, c.low, showCloud ? c.zacLower : c.low);
+      maxP = Math.max(maxP, c.high, showCloud ? c.zacUpper : c.high);
+      if (showSma200 && c.sma200 > 0) {
+        // SMA200 çok uzaktaysa grafiği aşırı sıkıştırma (max %25 dışına esnet)
+        if (c.sma200 >= c.low * 0.8 && c.sma200 <= c.high * 1.2) {
+          minP = Math.min(minP, c.sma200);
+          maxP = Math.max(maxP, c.sma200);
+        }
       }
     }
-    if (activeTrade) {
-      lo = Math.min(lo, activeTrade.entryPrice, activeTrade.stopLoss, activeTrade.takeProfit1);
-      hi = Math.max(hi, activeTrade.entryPrice, activeTrade.stopLoss, activeTrade.takeProfit1);
-    } else if (showBands && forecast?.indicators) {
-      lo = Math.min(lo, forecast.indicators.donchianLow);
-      hi = Math.max(hi, forecast.indicators.donchianHigh);
+
+    const h24 = data.forecastCones?.find((h) => h.horizonHours === 24);
+    const h72 = data.forecastCones?.find((h) => h.horizonHours === 72);
+    if (showCone && h72) {
+      minP = Math.min(minP, h72.lower90);
+      maxP = Math.max(maxP, h72.upper90);
     }
-    const rawSpan = Math.max(1e-9, hi - lo);
-    const margin = rawSpan * 0.06;
-    return {
-      minPrice: lo - margin,
-      maxPrice: hi + margin,
-      priceRange: rawSpan + margin * 2,
+    if (data.activeTrade) {
+      minP = Math.min(minP, data.activeTrade.stopLoss, data.activeTrade.entryPrice);
+      maxP = Math.max(maxP, data.activeTrade.stopLoss, data.activeTrade.entryPrice);
+      if (data.activeTrade.takeProfit2 > 0) maxP = Math.max(maxP, data.activeTrade.takeProfit2);
+    } else if (data.zacSnapshot.activeSetup.pod !== 'NONE') {
+      minP = Math.min(minP, data.zacSnapshot.activeSetup.stopLoss);
+      maxP = Math.max(maxP, data.zacSnapshot.activeSetup.stopLoss);
+      if (data.zacSnapshot.activeSetup.takeProfit > 0) {
+        maxP = Math.max(maxP, data.zacSnapshot.activeSetup.takeProfit);
+        minP = Math.min(minP, data.zacSnapshot.activeSetup.takeProfit);
+      }
+    }
+
+    const span = Math.max(1e-6, maxP - minP);
+    minP -= span * 0.06;
+    maxP += span * 0.06;
+
+    const xOf = (idx: number) => PAD_L + (idx + 0.5) * stepX;
+    const yOf = (price: number) =>
+      PAD_T + ((maxP - price) / Math.max(1e-9, maxP - minP)) * (H_MAIN - PAD_T - PAD_B);
+    const yOsc = (score: number) => {
+      const clamped = Math.max(-100, Math.min(100, score));
+      return 16 + ((100 - clamped) / 200) * (H_OSC - 28);
     };
-  }, [candles, hourlyPath, showBands, showEma, showForecastCone, activeTrade, forecast]);
 
-  const getPriceY = useCallback(
-    (px: number) => padT + priceH - ((px - minPrice) / (priceRange || 1)) * priceH,
-    [minPrice, priceRange, padT, priceH]
-  );
-
-  const polylineFor = useCallback(
-    (getter: (c: ProChartCandle) => number) =>
-      candles.map((c, i) => `${getSlotX(i).toFixed(1)},${getPriceY(getter(c)).toFixed(1)}`).join(' '),
-    [candles, getSlotX, getPriceY]
-  );
-
-  // Forecast polygon and line
-  const { conePolyPoints, forecastLinePoints, upperLinePoints, lowerLinePoints } = useMemo(() => {
-    if (!showForecastCone || candles.length === 0 || hourlyPath.length === 0) {
-      return { conePolyPoints: '', forecastLinePoints: '', upperLinePoints: '', lowerLinePoints: '' };
-    }
-    const anchorIdx = candles.length - 1;
-    const anchorPx = data?.currentPrice ?? candles[anchorIdx].close;
-    const anchorPt = `${getSlotX(anchorIdx).toFixed(1)},${getPriceY(anchorPx).toFixed(1)}`;
-
-    const upperPts = [
-      anchorPt,
-      ...hourlyPath.map((p, i) => `${getSlotX(anchorIdx + 1 + i).toFixed(1)},${getPriceY(p.upperBound).toFixed(1)}`),
-    ];
-    const lowerPtsReversed = [
-      ...hourlyPath
+    const fvPath = candles.map((c, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(c.fairValue).toFixed(1)}`).join(' ');
+    const sma200Path = candles.map((c, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(c.sma200).toFixed(1)}`).join(' ');
+    const cloudPath =
+      candles.map((c, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(c.zacUpper).toFixed(1)}`).join(' ') +
+      ' ' +
+      candles
         .slice()
         .reverse()
-        .map((p, ri) => {
-          const origI = hourlyPath.length - 1 - ri;
-          return `${getSlotX(anchorIdx + 1 + origI).toFixed(1)},${getPriceY(p.lowerBound).toFixed(1)}`;
-        }),
-      anchorPt,
-    ];
-    const midPts = [
-      anchorPt,
-      ...hourlyPath.map((p, i) => `${getSlotX(anchorIdx + 1 + i).toFixed(1)},${getPriceY(p.predictedPrice).toFixed(1)}`),
-    ];
-    const lowerPts = [
-      anchorPt,
-      ...hourlyPath.map((p, i) => `${getSlotX(anchorIdx + 1 + i).toFixed(1)},${getPriceY(p.lowerBound).toFixed(1)}`),
-    ];
+        .map((c, revI) => `L${xOf(n - 1 - revI).toFixed(1)},${yOf(c.zacLower).toFixed(1)}`)
+        .join(' ') +
+      ' Z';
+
+    const zacLinePath = candles
+      .map((c, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOsc(c.zacScore).toFixed(1)}`)
+      .join(' ');
+
+    // Sağ Tahmin Konisi Geometri (+24S ve +72S)
+    const lastIdx = n - 1;
+    const lastC = candles[lastIdx];
+    const x0 = xOf(lastIdx);
+    const y0 = yOf(lastC.close);
+    const x24 = xOf(lastIdx + 6);
+    const x72 = xOf(lastIdx + 13);
+
+    const conePoly =
+      showCone && h24 && h72
+        ? `${x0.toFixed(1)},${y0.toFixed(1)} ${x24.toFixed(1)},${yOf(h24.upper90).toFixed(1)} ${x72.toFixed(1)},${yOf(h72.upper90).toFixed(1)} ${x72.toFixed(1)},${yOf(h72.lower90).toFixed(1)} ${x24.toFixed(1)},${yOf(h24.lower90).toFixed(1)}`
+        : '';
+    const coneMidPath =
+      showCone && h24 && h72
+        ? `M${x0.toFixed(1)},${y0.toFixed(1)} L${x24.toFixed(1)},${yOf(h24.expectedPrice).toFixed(1)} L${x72.toFixed(1)},${yOf(h72.expectedPrice).toFixed(1)}`
+        : '';
+
+    const gridPrices = Array.from({ length: 6 }, (_, k) => minP + ((maxP - minP) * k) / 5);
 
     return {
-      conePolyPoints: [...upperPts, ...lowerPtsReversed].join(' '),
-      forecastLinePoints: midPts.join(' '),
-      upperLinePoints: upperPts.join(' '),
-      lowerLinePoints: lowerPts.join(' '),
+      W, H_MAIN, H_OSC, PAD_L, PAD_R, stepX, xOf, yOf, yOsc,
+      fvPath, sma200Path, cloudPath, zacLinePath,
+      conePoly, coneMidPath, x24, x72, h24, h72, gridPrices,
+      minP, maxP,
     };
-  }, [showForecastCone, candles, hourlyPath, data?.currentPrice, getSlotX, getPriceY]);
+  }, [data, showCloud, showSma200, showCone]);
 
-  // Sub-pane scales
-  const maxVol = useMemo(() => Math.max(1, ...candles.map((c) => c.volume || 0)), [candles]);
-  const maxMacdAbs = useMemo(() => {
-    let m = 1e-6;
-    for (const c of candles) {
-      m = Math.max(m, Math.abs(c.macdHist), Math.abs(c.macdLine), Math.abs(c.macdSignal));
-    }
-    return m * 1.15;
-  }, [candles]);
-
-  const candleW = Math.max(2.5, Math.min(8, stepX * 0.62));
-  const lastCandle = candles[candles.length - 1];
+  const snap = data?.zacSnapshot;
+  const setup = snap?.activeSetup;
   const hoveredCandle =
-    hoverSlot?.kind === 'candle' && candles[hoverSlot.idx] ? candles[hoverSlot.idx] : lastCandle;
-  const hoveredForecast =
-    hoverSlot?.kind === 'forecast' && hourlyPath[hoverSlot.idx] ? hourlyPath[hoverSlot.idx] : null;
-
-  const regimeMeta = REGIME_LABELS[forecast?.regimePhase || 'YATAY_DENGE'] || REGIME_LABELS.YATAY_DENGE;
-  const fcBull = forecast?.horizonDirection === 'YÜKSELİŞ';
-  const fcBear = forecast?.horizonDirection === 'DÜŞÜŞ';
-  const coneStroke = fcBull ? '#10b981' : fcBear ? '#f43f5e' : '#38bdf8';
-
-  const isCryptoSym = ['BTC/', 'ETH/', 'SOL/', 'BNB/', 'XRP/', 'AVAX/', 'LINK/', 'DOGE/'].some((p) =>
-    symbol.startsWith(p)
-  );
-  const maxDirTp1Prob = forecast ? Math.max(forecast.tp1HitProbLong, forecast.tp1HitProbShort) : 50;
-  const kellyPWin = Math.max(0.4, Math.min(0.7, maxDirTp1Prob / 100 + 0.08));
-  const kellyPayoff = isCryptoSym ? 2.2 : 2.5;
-  const kellyOpt = +Math.max(
-    0.85,
-    Math.min(1.38, ((kellyPWin - (1 - kellyPWin) / kellyPayoff) / 0.32) * 1.12)
-  ).toFixed(2);
-
-  const anchorIdx = Math.max(0, candles.length - 1);
-  const anchorX = getSlotX(anchorIdx);
+    hoverIdx !== null && data?.candles?.[hoverIdx] ? data.candles[hoverIdx] : null;
+  const universeSymbols = data?.universe?.map((u) => u.symbol) || DEFAULT_UNIVERSE;
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900 rounded-md p-4 space-y-3">
-      {/* 1. ÜST ARAÇ ÇUBUĞU (Zaman Dilimi, Varlık & Katman Kontrolleri) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center space-x-2">
-            <Activity className="w-4 h-4 text-sky-400" />
-            <h2 className="text-sm font-bold text-white tracking-tight">
-              Kurumsal İndikatör & İleriye Dönük Tahmin Terminali
-            </h2>
-          </div>
-
-          {availableSymbols && availableSymbols.length > 0 && onSymbolChange ? (
-            <select
-              value={symbol}
-              onChange={(e) => onSymbolChange(e.target.value)}
-              className="bg-zinc-950 border border-zinc-700 text-white font-mono text-xs rounded px-2.5 py-1 focus:outline-none"
-            >
-              {availableSymbols.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-200 font-semibold">
-              {symbol}
-            </span>
-          )}
-
-          {/* Zaman Dilimi Seçici */}
-          <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded p-0.5 text-[11px] font-mono">
-            {(
-              [
-                { k: '15m', label: '15dk' },
-                { k: '1h', label: '1 Saat' },
-                { k: '1d', label: 'Günlük' },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.k}
-                onClick={() => setTf(item.k)}
-                className={`px-2.5 py-0.5 rounded transition-colors ${
-                  tf === item.k ? 'bg-zinc-800 text-white font-semibold' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Katman & Osilatör Düğmeleri */}
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <button
-            onClick={() => setShowEma(!showEma)}
-            className={`px-2 py-1 rounded border transition-colors ${
-              showEma ? 'bg-amber-950/50 border-amber-700/60 text-amber-300' : 'bg-zinc-950 border-zinc-800 text-zinc-400'
-            }`}
-          >
-            EMA 8/21/50
-          </button>
-          <button
-            onClick={() => setShowBands(!showBands)}
-            className={`px-2 py-1 rounded border transition-colors ${
-              showBands ? 'bg-zinc-800 border-zinc-600 text-zinc-200' : 'bg-zinc-950 border-zinc-800 text-zinc-400'
-            }`}
-          >
-            BB + Donchian
-          </button>
-          <button
-            onClick={() => setShowForecastCone(!showForecastCone)}
-            className={`px-2 py-1 rounded border transition-colors flex items-center gap-1 ${
-              showForecastCone ? 'bg-sky-950/60 border-sky-700/70 text-sky-300' : 'bg-zinc-950 border-zinc-800 text-zinc-400'
-            }`}
-          >
-            <Compass className="w-3 h-3" />
-            <span>+24S Tahmin Konisi</span>
-          </button>
-          <button
-            onClick={() => setShowOscillators(!showOscillators)}
-            className={`px-2 py-1 rounded border transition-colors flex items-center gap-1 ${
-              showOscillators ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-zinc-950 border-zinc-800 text-zinc-400'
-            }`}
-          >
-            <Layers className="w-3 h-3" />
-            <span>RSI / MACD / ADX</span>
-          </button>
-          <button
-            onClick={loadChart}
-            className="p-1.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition-colors"
-            title="Grafiği ve tahminleri yenile"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-      </div>
-
-      {/* 2. KANTİTATİF TAHMİN & REJİM ÖZET ŞERİDİ (4 KART) */}
-      {forecast && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
-          <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-[11px]">Rejim & Sıkışma</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${regimeMeta.color}`}>
-                {regimeMeta.label}
+    <div className="space-y-4">
+      {/* 1. ÜST ENSTRÜMAN ŞERİDİ & ZAMAN DİLİMİ KONTROLÜ */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3.5 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-mono font-bold tracking-wider">
+                ZAC v14.0
               </span>
+              <h1 className="text-lg font-bold text-white tracking-tight">
+                {data?.symbol || symbol}{' '}
+                <span className="text-zinc-400 font-normal text-sm">{data?.name || ''}</span>
+              </h1>
             </div>
-            <div className="font-mono text-zinc-200 font-semibold">
-              ADX {forecast.indicators.adx14} <span className="text-zinc-500">•</span> ER {forecast.indicators.er16}
-            </div>
-            <div className="text-[11px] text-zinc-400 font-mono">
-              RSI: {forecast.indicators.rsi14} · RVOL: {forecast.indicators.rvol}x · BB/KC: {forecast.indicators.squeezeRatio}
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-[11px]">+4 Saatlik Tahmin</span>
-              <span
-                className={`text-[10px] font-mono font-semibold flex items-center gap-0.5 ${
-                  fcBull ? 'text-emerald-400' : fcBear ? 'text-rose-400' : 'text-zinc-300'
-                }`}
-              >
-                {fcBull ? <TrendingUp className="w-3 h-3" /> : fcBear ? <TrendingDown className="w-3 h-3" /> : null}
-                {forecast.horizonLabel}
-              </span>
-            </div>
-            <div className="font-mono text-sm font-bold text-white flex items-baseline gap-2">
-              <span>{forecast.pred4hPrice.toFixed(digits)}</span>
-              <span className={forecast.pred4hPct >= 0 ? 'text-emerald-400 text-xs' : 'text-rose-400 text-xs'}>
-                ({forecast.pred4hPct >= 0 ? '+' : ''}{forecast.pred4hPct}%)
-              </span>
-            </div>
-            <div className="text-[11px] text-zinc-400 font-mono">
-              TP1 İhtimali: <span className="text-emerald-400">AL %{forecast.tp1HitProbLong}</span> / <span className="text-rose-400">SAT %{forecast.tp1HitProbShort}</span>
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-[11px]">+12S & +24S Projeksiyon</span>
-              <span className="text-[10px] font-mono text-sky-400">Güven %{forecast.forecastConviction}</span>
-            </div>
-            <div className="font-mono text-xs text-zinc-200 space-y-0.5">
-              <div>
-                +12S: <strong className="text-white">{forecast.pred12hPrice.toFixed(digits)}</strong>{' '}
-                <span className={forecast.pred12hPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                  ({forecast.pred12hPct >= 0 ? '+' : ''}{forecast.pred12hPct}%)
+            {data && (
+              <div className="flex items-center gap-2 font-mono">
+                <span className="text-lg font-bold text-white">
+                  {data.currentPrice.toFixed(data.digits)}
                 </span>
-              </div>
-              <div>
-                +24S: <strong className="text-zinc-300">{forecast.pred24hPrice.toFixed(digits)}</strong>{' '}
-                <span className={forecast.pred24hPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                  ({forecast.pred24hPct >= 0 ? '+' : ''}{forecast.pred24hPct}%)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-zinc-400 text-[11px]">Otonom Bot &amp; Tetikleyici</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-950/60 border border-sky-800/60 text-sky-300">
-                  Kelly {kellyOpt}x
-                </span>
-                <span className="text-[10px] font-mono text-zinc-400">
-                  {activeTrade ? `AÇIK (${activeTrade.entryTimeframe})` : data?.scannerRow?.status || 'TARANIYOR'}
-                </span>
-              </div>
-            </div>
-            {activeTrade ? (
-              <div className="font-mono text-[11px] space-y-0.5">
-                <div className={activeTrade.direction === 'AL (LONG)' ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-                  {activeTrade.direction} @ {activeTrade.entryPrice.toFixed(digits)}
-                </div>
-                <div className="text-zinc-400">
-                  SL: {activeTrade.stopLoss.toFixed(digits)} · TP1: {activeTrade.takeProfit1.toFixed(digits)}
-                </div>
-              </div>
-            ) : (
-              <div className="font-mono text-[11px] text-zinc-300 leading-snug">
-                AL &gt; {forecast.indicators.donchianHigh.toFixed(digits)} | SAT &lt; {forecast.indicators.donchianLow.toFixed(digits)}
-                <div className="text-[10px] text-zinc-500 mt-0.5 truncate" title={data?.scannerRow?.decisionReason || forecast.summaryReason}>
-                  {data?.scannerRow?.decisionReason || forecast.summaryReason}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 3. İNTERAKTİF CROSSHAIR HUD (MUMLAR VEYA TAHMİN SAATİ) */}
-      <div className="bg-zinc-950 border border-zinc-800/90 rounded px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-        {hoveredForecast ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sky-400 font-bold">
-              [İLERİ TAHMİN +{hoveredForecast.hour} SAAT • {hoveredForecast.targetTime}]
-            </span>
-            <span className="text-white">
-              Beklenen: <strong>{hoveredForecast.predictedPrice.toFixed(digits)}</strong> ({hoveredForecast.expectedMovePercent >= 0 ? '+' : ''}{hoveredForecast.expectedMovePercent}%)
-            </span>
-            <span className="text-zinc-400">
-              Güven Bandı: {hoveredForecast.lowerBound.toFixed(digits)} — {hoveredForecast.upperBound.toFixed(digits)}
-            </span>
-            <span className="text-emerald-400">Güven %{hoveredForecast.confidenceScore}</span>
-          </div>
-        ) : hoveredCandle ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-zinc-400">{hoveredCandle.timeStr}</span>
-            <span>A: <strong className="text-zinc-200">{hoveredCandle.open.toFixed(digits)}</strong></span>
-            <span>Y: <strong className="text-emerald-400">{hoveredCandle.high.toFixed(digits)}</strong></span>
-            <span>D: <strong className="text-rose-400">{hoveredCandle.low.toFixed(digits)}</strong></span>
-            <span>K: <strong className="text-white">{hoveredCandle.close.toFixed(digits)}</strong></span>
-            <span className="text-cyan-400">EMA8: {hoveredCandle.ema8.toFixed(digits)}</span>
-            <span className="text-amber-400">EMA21: {hoveredCandle.ema21.toFixed(digits)}</span>
-            <span className="text-violet-400">EMA50: {hoveredCandle.ema50.toFixed(digits)}</span>
-            <span className="text-zinc-300">RSI: {hoveredCandle.rsi14}</span>
-            <span className="text-zinc-300">ADX: {hoveredCandle.adx14}</span>
-          </div>
-        ) : (
-          <span className="text-zinc-500">Yükleniyor...</span>
-        )}
-        <span className="text-zinc-500">{data ? `${symbol} (${tf.toUpperCase()})` : ''}</span>
-      </div>
-
-      {error && (
-        <div className="p-3 bg-rose-950/40 border border-rose-900 rounded text-xs text-rose-300">
-          Grafik alınamadı: {error}
-        </div>
-      )}
-
-      {/* 4. ANA SVG MUM GRAFİĞİ + TAHMİN KONİSİ */}
-      <div className="w-full bg-zinc-950 border border-zinc-800 rounded overflow-hidden select-none">
-        {candles.length === 0 ? (
-          <div className="h-64 flex items-center justify-center text-xs text-zinc-500 font-mono">
-            {loading ? `${symbol} profesyonel indikatör verileri ve tahmin konisi hesaplanıyor...` : 'Mum verisi bekleniyor.'}
-          </div>
-        ) : (
-          <svg
-            viewBox={`0 0 ${svgW} ${padT + priceH + 24}`}
-            className="w-full h-64 sm:h-80 cursor-crosshair touch-none"
-            onMouseLeave={() => setHoverSlot(null)}
-          >
-            {/* Tahmin Bölgesi Arka Plan Ayracı */}
-            {showForecastCone && futureCount > 0 && (
-              <>
-                <rect
-                  x={anchorX}
-                  y={padT}
-                  width={Math.max(0, svgW - padR - anchorX)}
-                  height={priceH}
-                  fill="#0ea5e9"
-                  fillOpacity="0.035"
-                />
-                <line
-                  x1={anchorX}
-                  y1={padT}
-                  x2={anchorX}
-                  y2={padT + priceH}
-                  stroke="#38bdf8"
-                  strokeOpacity="0.45"
-                  strokeWidth="1"
-                  strokeDasharray="3 3"
-                />
-                <text x={anchorX + 6} y={padT + 11} fill="#38bdf8" fontSize="9" fontFamily="monospace" fontWeight="bold">
-                  → İLERİ TAHMİN KONİSİ (+24S)
-                </text>
-              </>
-            )}
-
-            {/* Yatay Fiyat Kılavuzları */}
-            {[0.15, 0.38, 0.62, 0.85].map((pct, idx) => {
-              const y = padT + pct * priceH;
-              const px = maxPrice - pct * priceRange;
-              return (
-                <g key={idx}>
-                  <line x1={padL} y1={y} x2={svgW - padR} y2={y} stroke="#27272a" strokeDasharray="2 3" strokeWidth="1" />
-                  <text x={svgW - padR + 5} y={y + 3} fill="#71717a" fontSize="9" fontFamily="monospace">
-                    {px.toFixed(digits)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Bollinger & Donchian Bantları */}
-            {showBands && candles.length > 2 && (
-              <>
-                <polygon
-                  points={[
-                    ...candles.map((c, i) => `${getSlotX(i).toFixed(1)},${getPriceY(c.bbUpper).toFixed(1)}`),
-                    ...candles.slice().reverse().map((c, ri) => {
-                      const origI = candles.length - 1 - ri;
-                      return `${getSlotX(origI).toFixed(1)},${getPriceY(c.bbLower).toFixed(1)}`;
-                    }),
-                  ].join(' ')}
-                  fill="#94a3b8"
-                  fillOpacity="0.06"
-                />
-                <polyline fill="none" stroke="#64748b" strokeOpacity="0.45" strokeWidth="1" points={polylineFor((c) => c.bbUpper)} />
-                <polyline fill="none" stroke="#64748b" strokeOpacity="0.45" strokeWidth="1" points={polylineFor((c) => c.bbLower)} />
-                <polyline fill="none" stroke="#38bdf8" strokeOpacity="0.35" strokeWidth="1" strokeDasharray="3 3" points={polylineFor((c) => c.donHigh)} />
-                <polyline fill="none" stroke="#f43f5e" strokeOpacity="0.35" strokeWidth="1" strokeDasharray="3 3" points={polylineFor((c) => c.donLow)} />
-              </>
-            )}
-
-            {/* Yatay Donchian Kırılım Tetikleyicileri (Aktif İşlem Yoksa Bot Giriş Rayları) */}
-            {!activeTrade && showBands && forecast?.indicators && (
-              <>
-                <line
-                  x1={padL}
-                  y1={getPriceY(forecast.indicators.donchianHigh)}
-                  x2={svgW - padR}
-                  y2={getPriceY(forecast.indicators.donchianHigh)}
-                  stroke="#10b981"
-                  strokeOpacity="0.48"
-                  strokeWidth="1"
-                  strokeDasharray="4 4"
-                />
-                <text
-                  x={padL + 6}
-                  y={getPriceY(forecast.indicators.donchianHigh) - 4}
-                  fill="#10b981"
-                  fontSize="8.5"
-                  fontFamily="monospace"
-                >
-                  AL TETİK &gt; {forecast.indicators.donchianHigh.toFixed(digits)}
-                </text>
-                <line
-                  x1={padL}
-                  y1={getPriceY(forecast.indicators.donchianLow)}
-                  x2={svgW - padR}
-                  y2={getPriceY(forecast.indicators.donchianLow)}
-                  stroke="#f43f5e"
-                  strokeOpacity="0.48"
-                  strokeWidth="1"
-                  strokeDasharray="4 4"
-                />
-                <text
-                  x={padL + 6}
-                  y={getPriceY(forecast.indicators.donchianLow) + 10}
-                  fill="#f43f5e"
-                  fontSize="8.5"
-                  fontFamily="monospace"
-                >
-                  SAT TETİK &lt; {forecast.indicators.donchianLow.toFixed(digits)}
-                </text>
-              </>
-            )}
-
-            {/* Aktif Açık Pozisyon SL / Entry / TP1 / TP2 Çizgileri */}
-            {activeTrade && (
-              <>
-                <line x1={padL} y1={getPriceY(activeTrade.entryPrice)} x2={svgW - padR} y2={getPriceY(activeTrade.entryPrice)} stroke="#e4e4e7" strokeWidth="1" strokeDasharray="4 2" />
-                <line x1={padL} y1={getPriceY(activeTrade.stopLoss)} x2={svgW - padR} y2={getPriceY(activeTrade.stopLoss)} stroke="#f43f5e" strokeWidth="1.3" strokeDasharray="3 2" />
-                <text x={padL + 6} y={getPriceY(activeTrade.stopLoss) - 4} fill="#f43f5e" fontSize="9" fontFamily="monospace" fontWeight="bold">
-                  SL: {activeTrade.stopLoss.toFixed(digits)}
-                </text>
-                <line x1={padL} y1={getPriceY(activeTrade.takeProfit1)} x2={svgW - padR} y2={getPriceY(activeTrade.takeProfit1)} stroke="#10b981" strokeWidth="1.3" strokeDasharray="3 2" />
-                <text x={padL + 6} y={getPriceY(activeTrade.takeProfit1) - 4} fill="#10b981" fontSize="9" fontFamily="monospace" fontWeight="bold">
-                  TP1: {activeTrade.takeProfit1.toFixed(digits)}
-                </text>
-              </>
-            )}
-
-            {/* Japon Mumları (OHLC Candlesticks) */}
-            {candles.map((c, i) => {
-              const x = getSlotX(i);
-              const isUp = c.close >= c.open;
-              const col = isUp ? '#10b981' : '#f43f5e';
-              const yHi = getPriceY(c.high);
-              const yLo = getPriceY(c.low);
-              const yO = getPriceY(c.open);
-              const yC = getPriceY(c.close);
-              const bodyTop = Math.min(yO, yC);
-              const bodyH = Math.max(1.5, Math.abs(yO - yC));
-              return (
-                <g key={c.timestamp}>
-                  <line x1={x} y1={yHi} x2={x} y2={yLo} stroke={col} strokeWidth="1" />
-                  <rect
-                    x={x - candleW / 2}
-                    y={bodyTop}
-                    width={candleW}
-                    height={bodyH}
-                    fill={col}
-                    fillOpacity={isUp ? 0.85 : 0.9}
-                    rx="0.5"
-                  />
-                </g>
-              );
-            })}
-
-            {/* EMA 8 / 21 / 50 Şeridi */}
-            {showEma && (
-              <>
-                <polyline fill="none" stroke="#22d3ee" strokeWidth="1.2" points={polylineFor((c) => c.ema8)} />
-                <polyline fill="none" stroke="#f59e0b" strokeWidth="1.4" points={polylineFor((c) => c.ema21)} />
-                <polyline fill="none" stroke="#a855f7" strokeWidth="1.4" points={polylineFor((c) => c.ema50)} />
-              </>
-            )}
-
-            {/* +24 Saat İleriye Dönük Güven Tüneli ve Medyan Rota */}
-            {showForecastCone && futureCount > 0 && (
-              <>
-                {conePolyPoints && <polygon points={conePolyPoints} fill={coneStroke} fillOpacity="0.14" />}
-                {upperLinePoints && <polyline fill="none" stroke={coneStroke} strokeOpacity="0.45" strokeWidth="1" strokeDasharray="3 3" points={upperLinePoints} />}
-                {lowerLinePoints && <polyline fill="none" stroke={coneStroke} strokeOpacity="0.45" strokeWidth="1" strokeDasharray="3 3" points={lowerLinePoints} />}
-                {forecastLinePoints && <polyline fill="none" stroke={coneStroke} strokeWidth="2.2" points={forecastLinePoints} />}
-                {[3, 11, hourlyPath.length - 1]
-                  .filter((idx) => idx >= 0 && idx < hourlyPath.length)
-                  .map((idx) => {
-                    const p = hourlyPath[idx];
-                    const cx = getSlotX(anchorIdx + 1 + idx);
-                    const cy = getPriceY(p.predictedPrice);
-                    return (
-                      <g key={p.hour}>
-                        <circle cx={cx} cy={cy} r="3.5" fill={coneStroke} stroke="#09090b" strokeWidth="1.5" />
-                        <text x={cx} y={cy - 7} textAnchor="middle" fill={coneStroke} fontSize="8.5" fontFamily="monospace" fontWeight="bold">
-                          +{p.hour}s
-                        </text>
-                      </g>
-                    );
-                  })}
-              </>
-            )}
-
-            {/* Canlı Fiyat İşaretçisi (Sağ Eksen Kutusu) */}
-            {data?.currentPrice && (
-              <g>
-                <rect
-                  x={svgW - padR + 2}
-                  y={getPriceY(data.currentPrice) - 8}
-                  width={padR - 4}
-                  height={16}
-                  rx="2"
-                  fill={coneStroke}
-                />
-                <text
-                  x={svgW - padR + 6}
-                  y={getPriceY(data.currentPrice) + 3}
-                  fill="#09090b"
-                  fontSize="9"
-                  fontFamily="monospace"
-                  fontWeight="bold"
-                >
-                  {data.currentPrice.toFixed(digits)}
-                </text>
-              </g>
-            )}
-
-            {/* Hover Dikey Çizgisi */}
-            {hoverSlot && (
-              <line
-                x1={getSlotX(hoverSlot.kind === 'candle' ? hoverSlot.idx : anchorIdx + 1 + hoverSlot.idx)}
-                y1={padT}
-                x2={getSlotX(hoverSlot.kind === 'candle' ? hoverSlot.idx : anchorIdx + 1 + hoverSlot.idx)}
-                y2={padT + priceH}
-                stroke="#e4e4e7"
-                strokeOpacity="0.5"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
-            )}
-
-            {/* Zaman Etiketleri */}
-            {candles.map((c, i) => {
-              if (i % 16 !== 0) return null;
-              return (
-                <text key={c.timestamp} x={getSlotX(i)} y={padT + priceH + 14} textAnchor="middle" fill="#71717a" fontSize="8" fontFamily="monospace">
-                  {c.timeStr.split(' ')[0]}
-                </text>
-              );
-            })}
-            {showForecastCone &&
-              hourlyPath.map((p, i) => {
-                if ((i + 1) % 6 !== 0) return null;
-                return (
-                  <text key={p.hour} x={getSlotX(anchorIdx + 1 + i)} y={padT + priceH + 14} textAnchor="middle" fill="#38bdf8" fontSize="8" fontFamily="monospace">
-                    +{p.hour}s
-                  </text>
-                );
-              })}
-
-            {/* Hover Trigger Rectangles (Mumlar + Gelecek) */}
-            {candles.map((c, i) => (
-              <rect
-                key={`hc-${c.timestamp}`}
-                x={getSlotX(i) - stepX / 2}
-                y={0}
-                width={Math.max(3, stepX)}
-                height={padT + priceH}
-                fill="transparent"
-                onMouseEnter={() => setHoverSlot({ kind: 'candle', idx: i })}
-                onTouchStart={() => setHoverSlot({ kind: 'candle', idx: i })}
-              />
-            ))}
-            {showForecastCone &&
-              hourlyPath.map((p, i) => (
-                <rect
-                  key={`hf-${p.hour}`}
-                  x={getSlotX(anchorIdx + 1 + i) - stepX / 2}
-                  y={0}
-                  width={Math.max(3, stepX)}
-                  height={padT + priceH}
-                  fill="transparent"
-                  onMouseEnter={() => setHoverSlot({ kind: 'forecast', idx: i })}
-                  onTouchStart={() => setHoverSlot({ kind: 'forecast', idx: i })}
-                />
-              ))}
-          </svg>
-        )}
-      </div>
-
-      {/* 5. SENKRONİZE ALT OSİLATÖR PANELLERİ (RVOL + RSI + MACD + ADX) */}
-      {showOscillators && candles.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-mono">
-            <span className="text-zinc-400">Senkronize Alt İndikatör Panelleri (Sol Bölge: Gerçek Mumlarla Hizalı)</span>
-            <div className="flex items-center space-x-1">
-              {(['ALL', 'RSI', 'MACD', 'ADX'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setOscTab(t)}
-                  className={`px-2 py-0.5 rounded border ${
-                    oscTab === t ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 ${
+                    data.changePercent24h >= 0
+                      ? 'bg-emerald-500/15 text-emerald-400'
+                      : 'bg-rose-500/15 text-rose-400'
                   }`}
                 >
-                  {t === 'ALL' ? 'Tümü' : t}
+                  {data.changePercent24h >= 0 ? (
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowDownRight className="w-3.5 h-3.5" />
+                  )}
+                  {data.changePercent24h >= 0 ? '+' : ''}
+                  {data.changePercent24h}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Zaman Dilimi & Katman Anahtarları */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded p-0.5 text-xs font-mono">
+              {(['15m', '1h', '4h', '12h', '1d'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTf(t)}
+                  className={`px-2.5 py-1 rounded transition-colors ${
+                    tf === t
+                      ? 'bg-cyan-500/20 text-cyan-300 font-bold'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {t.toUpperCase()}
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => setShowCloud((v) => !v)}
+              className={`text-[11px] px-2 py-1 rounded border transition-colors ${
+                showCloud
+                  ? 'bg-cyan-950/50 border-cyan-700/60 text-cyan-300'
+                  : 'bg-zinc-950 border-zinc-800 text-zinc-500'
+              }`}
+            >
+              Fair-Value Bulutu
+            </button>
+            <button
+              onClick={() => setShowSma200((v) => !v)}
+              className={`text-[11px] px-2 py-1 rounded border transition-colors ${
+                showSma200
+                  ? 'bg-amber-950/50 border-amber-700/60 text-amber-300'
+                  : 'bg-zinc-950 border-zinc-800 text-zinc-500'
+              }`}
+            >
+              SMA200
+            </button>
+            <button
+              onClick={() => setShowMarkers((v) => !v)}
+              className={`text-[11px] px-2 py-1 rounded border transition-colors ${
+                showMarkers
+                  ? 'bg-emerald-950/50 border-emerald-700/60 text-emerald-300'
+                  : 'bg-zinc-950 border-zinc-800 text-zinc-500'
+              }`}
+            >
+              Pod Sinyalleri
+            </button>
+            <button
+              onClick={() => setShowCone((v) => !v)}
+              className={`text-[11px] px-2 py-1 rounded border transition-colors ${
+                showCone
+                  ? 'bg-violet-950/50 border-violet-700/60 text-violet-300'
+                  : 'bg-zinc-950 border-zinc-800 text-zinc-500'
+              }`}
+            >
+              +24S/+72S Konisi
+            </button>
+
+            <button
+              onClick={() => loadChart(symbol, tf)}
+              disabled={loading}
+              className="p-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
+              title="Canlı Yenile"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* 17 Varlık Hızlı Seçici */}
+        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-zinc-800/80">
+          {universeSymbols.map((s) => (
+            <button
+              key={s}
+              onClick={() => onSelectSymbol?.(s)}
+              className={`px-2 py-1 rounded text-[11px] font-mono transition-colors ${
+                s === symbol
+                  ? 'bg-white text-zinc-950 font-bold'
+                  : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-rose-950/40 border border-rose-800 text-rose-300 rounded p-3 text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* 2. HERO ZAC v14 KARAR KOKPİTİ (BOTLA %100 SENKRON TEK GERÇEK KAYNAK) */}
+      {snap && setup && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* Sol: ZAC Composite Skor + Rejim */}
+          <div className="lg:col-span-4 bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex flex-col justify-between space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                ZELTRA Alpha Composite
+              </span>
+              {snap.xsmomRank > 0 && (
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-200">
+                  Liderlik #{snap.xsmomRank} / {snap.xsmomTotal}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-end justify-between">
+              <div>
+                <div
+                  className={`text-4xl font-black font-mono tracking-tight ${
+                    snap.zacScore >= 30
+                      ? 'text-emerald-400'
+                      : snap.zacScore <= -30
+                        ? 'text-rose-400'
+                        : 'text-zinc-200'
+                  }`}
+                >
+                  {snap.zacScore >= 0 ? `+${snap.zacScore}` : snap.zacScore}
+                  <span className="text-sm text-zinc-500 font-normal"> / 100</span>
+                </div>
+                <div className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-zinc-200">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: REGIME_COLORS[snap.regime] || '#71717a' }}
+                  />
+                  {snap.regimeLabelTR}
+                </div>
+              </div>
+
+              <div className="text-right text-[11px] font-mono text-zinc-400 space-y-0.5">
+                <div>EWMAC: <span className={snap.ewmac >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{snap.ewmac >= 0 ? '+' : ''}{snap.ewmac}</span></div>
+                <div>SMA200: <span className={snap.aboveSma200 ? 'text-emerald-400' : 'text-rose-400'}>{snap.aboveSma200 ? 'ÜSTÜNDE' : 'ALTINDA'}</span></div>
+                <div>VolOranı: <span className={snap.volRatio > 1.35 ? 'text-amber-400' : 'text-zinc-200'}>{snap.volRatio}x</span></div>
+              </div>
+            </div>
+
+            {/* ZAC -100..+100 Çubuğu */}
+            <div className="space-y-1">
+              <div className="h-2 bg-zinc-950 rounded-full overflow-hidden relative border border-zinc-800">
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-zinc-600 z-10" />
+                <div
+                  className={`h-full transition-all ${
+                    snap.zacScore >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
+                  }`}
+                  style={{
+                    marginLeft: snap.zacScore >= 0 ? '50%' : `${50 + snap.zacScore / 2}%`,
+                    width: `${Math.abs(snap.zacScore) / 2}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+                <span>-100 Güçlü Sat</span>
+                <span>0 Nötr</span>
+                <span>+100 Güçlü Al</span>
+              </div>
+            </div>
           </div>
 
-          <div className="w-full bg-zinc-950 border border-zinc-800 rounded overflow-hidden">
-            {/* RSI(14) Paneli */}
-            {(oscTab === 'ALL' || oscTab === 'RSI') && (
-              <div className="border-b border-zinc-800/80 px-2 pt-1">
-                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                  <span>Wilder RSI (14) — Aşırı Alım 70 / Satım 30</span>
-                  <span className="text-white font-semibold">{hoveredCandle?.rsi14 ?? '-'}</span>
+          {/* Orta + Sağ: Aktif Kurumsal İşlem Planı (3-Pod Motoru ile %100 Aynı!) */}
+          <div className="lg:col-span-8 bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex flex-col justify-between space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`px-3 py-1 rounded text-xs font-black tracking-wide ${
+                    setup.direction === 'AL (LONG)'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : setup.direction === 'SAT (SHORT)'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                  }`}
+                >
+                  {setup.direction}
+                </span>
+                <div>
+                  <div className="text-sm font-bold text-white">{setup.podLabelTR}</div>
+                  <div className="text-[11px] text-zinc-400">
+                    Otonom 3-Pod Fon Motoru ile Birebir Senkron Karar
+                  </div>
                 </div>
-                <svg viewBox={`0 0 ${svgW} 56`} className="w-full h-14">
-                  <line x1={padL} y1={56 - (70 / 100) * 48 - 4} x2={anchorX} y2={56 - (70 / 100) * 48 - 4} stroke="#f43f5e" strokeOpacity="0.35" strokeDasharray="2 2" />
-                  <line x1={padL} y1={56 - (50 / 100) * 48 - 4} x2={anchorX} y2={56 - (50 / 100) * 48 - 4} stroke="#52525b" strokeOpacity="0.4" strokeDasharray="2 2" />
-                  <line x1={padL} y1={56 - (30 / 100) * 48 - 4} x2={anchorX} y2={56 - (30 / 100) * 48 - 4} stroke="#10b981" strokeOpacity="0.35" strokeDasharray="2 2" />
-                  <polyline
-                    fill="none"
-                    stroke="#38bdf8"
-                    strokeWidth="1.5"
-                    points={candles.map((c, i) => `${getSlotX(i).toFixed(1)},${(56 - (c.rsi14 / 100) * 48 - 4).toFixed(1)}`).join(' ')}
-                  />
-                </svg>
               </div>
-            )}
 
-            {/* MACD(12,26,9) & Volume Paneli */}
-            {(oscTab === 'ALL' || oscTab === 'MACD') && (
-              <div className="border-b border-zinc-800/80 px-2 pt-1">
-                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                  <span>MACD (12,26,9) & Bağıl Hacim (RVOL)</span>
-                  <span className="text-zinc-200">
-                    Hist: {hoveredCandle?.macdHist ?? 0} · RVOL: {hoveredCandle?.rvol ?? 1}x
+              {data?.activeTrade ? (
+                <div className="px-3 py-1 rounded bg-emerald-950/60 border border-emerald-600/50 text-xs font-mono">
+                  <span className="text-emerald-300 font-bold">BOTTA AÇIK: {data.activeTrade.direction}</span>{' '}
+                  <span className={data.activeTrade.totalPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                    ({data.activeTrade.totalPnL_TRY >= 0 ? '+' : ''}
+                    {data.activeTrade.totalPnL_TRY.toLocaleString('tr-TR')} TL)
                   </span>
                 </div>
-                <svg viewBox={`0 0 ${svgW} 64`} className="w-full h-16">
-                  {/* Volume bars subtle background */}
-                  {candles.map((c, i) => {
-                    const vh = maxVol > 0 ? ((c.volume || 0) / maxVol) * 20 : 0;
-                    return (
-                      <rect
-                        key={`v-${c.timestamp}`}
-                        x={getSlotX(i) - candleW / 2}
-                        y={62 - vh}
-                        width={candleW}
-                        height={vh}
-                        fill={c.close >= c.open ? '#10b981' : '#f43f5e'}
-                        fillOpacity="0.18"
-                      />
-                    );
-                  })}
-                  <line x1={padL} y1={32} x2={anchorX} y2={32} stroke="#3f3f46" strokeWidth="1" />
-                  {candles.map((c, i) => {
-                    const h = (c.macdHist / maxMacdAbs) * 26;
-                    return (
-                      <rect
-                        key={`m-${c.timestamp}`}
-                        x={getSlotX(i) - candleW / 2}
-                        y={h >= 0 ? 32 - h : 32}
-                        width={candleW}
-                        height={Math.max(1, Math.abs(h))}
-                        fill={h >= 0 ? '#10b981' : '#f43f5e'}
-                        fillOpacity="0.75"
-                      />
-                    );
-                  })}
-                  <polyline
-                    fill="none"
-                    stroke="#f59e0b"
-                    strokeWidth="1.1"
-                    points={candles.map((c, i) => `${getSlotX(i).toFixed(1)},${(32 - (c.macdLine / maxMacdAbs) * 26).toFixed(1)}`).join(' ')}
-                  />
-                  <polyline
-                    fill="none"
-                    stroke="#a855f7"
-                    strokeWidth="1.1"
-                    points={candles.map((c, i) => `${getSlotX(i).toFixed(1)},${(32 - (c.macdSignal / maxMacdAbs) * 26).toFixed(1)}`).join(' ')}
-                  />
-                </svg>
-              </div>
-            )}
-
-            {/* ADX(14) & +DI/-DI Trend Gücü Paneli */}
-            {(oscTab === 'ALL' || oscTab === 'ADX') && (
-              <div className="px-2 pt-1">
-                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                  <span>ADX(14) Trend Gücü (Eşik 20) & +DI / -DI Yön Basıncı</span>
-                  <span className="text-zinc-200">
-                    ADX: {hoveredCandle?.adx14 ?? 18} · +DI: <span className="text-emerald-400">{hoveredCandle?.pdi14 ?? 20}</span> · -DI: <span className="text-rose-400">{hoveredCandle?.ndi14 ?? 20}</span>
-                  </span>
+              ) : (
+                <div className="text-xs font-mono text-zinc-400">
+                  Kanaat: <span className="text-white font-bold">%{setup.convictionPercent}</span>
                 </div>
-                <svg viewBox={`0 0 ${svgW} 56`} className="w-full h-14">
-                  <line x1={padL} y1={52 - (20 / 60) * 44} x2={anchorX} y2={52 - (20 / 60) * 44} stroke="#eab308" strokeOpacity="0.45" strokeDasharray="3 2" />
-                  <polyline
-                    fill="none"
-                    stroke="#10b981"
-                    strokeOpacity="0.7"
-                    strokeWidth="1"
-                    points={candles.map((c, i) => `${getSlotX(i).toFixed(1)},${(52 - (Math.min(60, c.pdi14) / 60) * 44).toFixed(1)}`).join(' ')}
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-xs">
+              <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                <div className="text-[10px] text-zinc-500 uppercase">Referans Giriş</div>
+                <div className="text-sm font-bold text-white mt-0.5">
+                  {setup.entryPrice.toFixed(snap.digits)}
+                </div>
+              </div>
+              <div className="bg-zinc-950 border border-rose-900/40 rounded p-2.5">
+                <div className="text-[10px] text-rose-400 uppercase">Stop-Loss ({setup.trailingAtrMult} ATR)</div>
+                <div className="text-sm font-bold text-rose-300 mt-0.5">
+                  {setup.stopLoss.toFixed(snap.digits)}
+                </div>
+              </div>
+              <div className="bg-zinc-950 border border-emerald-900/40 rounded p-2.5">
+                <div className="text-[10px] text-emerald-400 uppercase">
+                  {setup.pod === 'MR_SPRING_12H' ? 'Hedef TP (3 ATR / 12H)' : 'İz Süren Hedef'}
+                </div>
+                <div className="text-sm font-bold text-emerald-300 mt-0.5">
+                  {setup.takeProfit > 0 ? setup.takeProfit.toFixed(snap.digits) : 'Trailing Stop'}
+                </div>
+              </div>
+              <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                <div className="text-[10px] text-zinc-500 uppercase">12H IBS / CumRSI2</div>
+                <div className="text-sm font-bold text-cyan-300 mt-0.5">
+                  {snap.ibs12h.toFixed(2)} / {snap.cumRsi2_12h}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed bg-zinc-950/70 border border-zinc-800/80 rounded px-3 py-2">
+              {setup.rationaleTR}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 3. ÇİFT PANELLİ ETKİLEŞİMLİ ZAC v14 GRAFİK & OSİLATÖR TERMİNALİ */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3.5 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-400 border-b border-zinc-800 pb-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-zinc-200 font-semibold flex items-center gap-1">
+              <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
+              {hoveredCandle ? hoveredCandle.timeStr : 'Grafik üzerinde gezinin'}
+            </span>
+            {hoveredCandle && data && (
+              <>
+                <span>A: <strong className="text-white">{hoveredCandle.open.toFixed(data.digits)}</strong></span>
+                <span>Y: <strong className="text-emerald-400">{hoveredCandle.high.toFixed(data.digits)}</strong></span>
+                <span>D: <strong className="text-rose-400">{hoveredCandle.low.toFixed(data.digits)}</strong></span>
+                <span>K: <strong className="text-white">{hoveredCandle.close.toFixed(data.digits)}</strong></span>
+                <span>
+                  ZAC:{' '}
+                  <strong className={hoveredCandle.zacScore >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                    {hoveredCandle.zacScore >= 0 ? `+${hoveredCandle.zacScore}` : hoveredCandle.zacScore}
+                  </strong>
+                </span>
+                <span>RSI14: <strong className="text-zinc-200">{hoveredCandle.rsi14}</strong></span>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-cyan-400 inline-block" /> Fair-Value</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-amber-400 inline-block" /> SMA200</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500/30 border border-violet-400 inline-block" /> +24S/+72S %90 Koni</span>
+          </div>
+        </div>
+
+        {loading && !data ? (
+          <div className="h-[460px] flex items-center justify-center text-xs text-zinc-400 font-mono">
+            Gerçek borsa mumları ve ZAC v14 serileri hesaplanıyor...
+          </div>
+        ) : chartGeom && data ? (
+          <div className="w-full overflow-x-auto select-none">
+            <svg
+              viewBox={`0 0 ${chartGeom.W} ${chartGeom.H_MAIN + chartGeom.H_OSC + 18}`}
+              className="w-full min-w-[720px] h-auto block bg-zinc-950 rounded border border-zinc-800/80"
+              onMouseLeave={() => setHoverIdx(null)}
+            >
+              {/* Izgara ve Sağ Fiyat Ekseni */}
+              {chartGeom.gridPrices.map((gp, gi) => {
+                const y = chartGeom.yOf(gp);
+                return (
+                  <g key={gi}>
+                    <line
+                      x1={chartGeom.PAD_L}
+                      y1={y}
+                      x2={chartGeom.W - chartGeom.PAD_R}
+                      y2={y}
+                      stroke="#27272a"
+                      strokeDasharray="2 4"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={chartGeom.W - chartGeom.PAD_R + 6}
+                      y={y + 3.5}
+                      fill="#71717a"
+                      fontSize="10"
+                      fontFamily="monospace"
+                    >
+                      {gp.toFixed(data.digits)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* ZAC Fair-Value Volatilite Bulutu */}
+              {showCloud && (
+                <>
+                  <path d={chartGeom.cloudPath} fill="rgba(34,211,238,0.08)" />
+                  <path d={chartGeom.fvPath} fill="none" stroke="#22d3ee" strokeWidth="1.5" opacity="0.85" />
+                </>
+              )}
+
+              {/* SMA200 Seküler Çizgi */}
+              {showSma200 && (
+                <path
+                  d={chartGeom.sma200Path}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="1.4"
+                  strokeDasharray="5 4"
+                  opacity="0.85"
+                />
+              )}
+
+              {/* +24S / +72S İstatistiksel Olasılık Konisi (%90 Güven Bandı) */}
+              {showCone && chartGeom.conePoly && (
+                <g>
+                  <polygon points={chartGeom.conePoly} fill="rgba(139,92,246,0.18)" stroke="rgba(167,139,250,0.45)" strokeWidth="1" />
+                  <path d={chartGeom.coneMidPath} fill="none" stroke="#a78bfa" strokeWidth="2" strokeDasharray="4 3" />
+                  {chartGeom.h24 && (
+                    <g>
+                      <circle cx={chartGeom.x24} cy={chartGeom.yOf(chartGeom.h24.expectedPrice)} r="3.5" fill="#a78bfa" />
+                      <text
+                        x={chartGeom.x24}
+                        y={chartGeom.yOf(chartGeom.h24.upper90) - 5}
+                        fill="#c4b5fd"
+                        fontSize="9"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
+                        +24S ({chartGeom.h24.expectedPrice.toFixed(data.digits)})
+                      </text>
+                    </g>
+                  )}
+                  {chartGeom.h72 && (
+                    <g>
+                      <circle cx={chartGeom.x72} cy={chartGeom.yOf(chartGeom.h72.expectedPrice)} r="3.5" fill="#c084fc" />
+                      <text
+                        x={chartGeom.x72 - 6}
+                        y={chartGeom.yOf(chartGeom.h72.upper90) - 5}
+                        fill="#e9d5ff"
+                        fontSize="9"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
+                        +72S
+                      </text>
+                    </g>
+                  )}
+                </g>
+              )}
+
+              {/* Aktif Pozisyon veya Aktif Pod Seviye Rayları */}
+              {(data.activeTrade || (setup && setup.pod !== 'NONE')) && (() => {
+                const entry = data.activeTrade ? data.activeTrade.entryPrice : setup!.entryPrice;
+                const sl = data.activeTrade ? data.activeTrade.stopLoss : setup!.stopLoss;
+                const tp = data.activeTrade ? data.activeTrade.takeProfit2 : setup!.takeProfit;
+                return (
+                  <g>
+                    <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(entry)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(entry)} stroke="#38bdf8" strokeDasharray="4 3" strokeWidth="1" />
+                    <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(sl)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(sl)} stroke="#f43f5e" strokeDasharray="4 3" strokeWidth="1.2" />
+                    {tp > 0 && (
+                      <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(tp)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(tp)} stroke="#10b981" strokeDasharray="4 3" strokeWidth="1.2" />
+                    )}
+                  </g>
+                );
+              })()}
+
+              {/* Mum Çubukları */}
+              {data.candles.map((c, idx) => {
+                const x = chartGeom.xOf(idx);
+                const isUp = c.close >= c.open;
+                const col = isUp ? '#10b981' : '#f43f5e';
+                const yHi = chartGeom.yOf(c.high);
+                const yLo = chartGeom.yOf(c.low);
+                const yTop = chartGeom.yOf(Math.max(c.open, c.close));
+                const yBot = chartGeom.yOf(Math.min(c.open, c.close));
+                const bodyH = Math.max(1.5, yBot - yTop);
+                const bodyW = Math.max(2.4, chartGeom.stepX * 0.62);
+
+                return (
+                  <g key={c.timestamp}>
+                    <line x1={x} y1={yHi} x2={x} y2={yLo} stroke={col} strokeWidth="1.1" />
+                    <rect
+                      x={x - bodyW / 2}
+                      y={yTop}
+                      width={bodyW}
+                      height={bodyH}
+                      fill={col}
+                      rx="0.5"
+                    />
+                    {/* Hover yakalama sütunu */}
+                    <rect
+                      x={x - chartGeom.stepX / 2}
+                      y={0}
+                      width={chartGeom.stepX}
+                      height={chartGeom.H_MAIN + chartGeom.H_OSC}
+                      fill="transparent"
+                      onMouseEnter={() => setHoverIdx(idx)}
+                    />
+                  </g>
+                );
+              })}
+
+              {/* Tarihsel 3-Pod Tetik İşaretçileri */}
+              {showMarkers &&
+                data.markers.map((m, mi) => {
+                  const x = chartGeom.xOf(m.index);
+                  const isL = m.direction === 'LONG';
+                  const y = isL ? chartGeom.yOf(m.price) + 14 : chartGeom.yOf(m.price) - 14;
+                  const fill = isL ? '#10b981' : '#f43f5e';
+                  return (
+                    <g key={mi}>
+                      <polygon
+                        points={
+                          isL
+                            ? `${x},${y - 7} ${x - 4.5},${y + 1} ${x + 4.5},${y + 1}`
+                            : `${x},${y + 7} ${x - 4.5},${y - 1} ${x + 4.5},${y - 1}`
+                        }
+                        fill={fill}
+                      />
+                      <text
+                        x={x}
+                        y={isL ? y + 10 : y - 5}
+                        fill={fill}
+                        fontSize="8.5"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
+                        {m.label}
+                      </text>
+                    </g>
+                  );
+                })}
+
+              {/* Canlı Fiyat Çizgisi */}
+              <line
+                x1={chartGeom.PAD_L}
+                y1={chartGeom.yOf(data.currentPrice)}
+                x2={chartGeom.W - chartGeom.PAD_R}
+                y2={chartGeom.yOf(data.currentPrice)}
+                stroke="#e4e4e7"
+                strokeWidth="0.9"
+                strokeDasharray="2 2"
+                opacity="0.7"
+              />
+              <rect
+                x={chartGeom.W - chartGeom.PAD_R + 2}
+                y={chartGeom.yOf(data.currentPrice) - 8}
+                width={70}
+                height={16}
+                rx="2"
+                fill="#06b6d4"
+              />
+              <text
+                x={chartGeom.W - chartGeom.PAD_R + 37}
+                y={chartGeom.yOf(data.currentPrice) + 3.5}
+                fill="#09090b"
+                fontSize="10"
+                fontWeight="bold"
+                fontFamily="monospace"
+                textAnchor="middle"
+              >
+                {data.currentPrice.toFixed(data.digits)}
+              </text>
+
+              {/* Hover Dikey Çizgi */}
+              {hoverIdx !== null && (
+                <line
+                  x1={chartGeom.xOf(hoverIdx)}
+                  y1={0}
+                  x2={chartGeom.xOf(hoverIdx)}
+                  y2={chartGeom.H_MAIN + chartGeom.H_OSC + 10}
+                  stroke="#71717a"
+                  strokeDasharray="3 3"
+                  strokeWidth="1"
+                  pointerEvents="none"
+                />
+              )}
+
+              {/* ALT PANEL: ZAC v14 ALPHA OSİLATÖRÜ (-100..+100) + REJİM ŞERİDİ */}
+              <g transform={`translate(0, ${chartGeom.H_MAIN + 8})`}>
+                <line x1={0} y1={0} x2={chartGeom.W} y2={0} stroke="#27272a" strokeWidth="1" />
+                <text x={chartGeom.PAD_L} y={11} fill="#a1a1aa" fontSize="9.5" fontFamily="monospace" fontWeight="bold">
+                  ZAC v14 ALPHA OSİLATÖRÜ (-100 .. +100) & REJİM ŞERİDİ
+                </text>
+
+                {/* Rejim Renk Şeridi */}
+                {data.candles.map((c, idx) => (
+                  <rect
+                    key={`reg-${idx}`}
+                    x={chartGeom.xOf(idx) - chartGeom.stepX / 2}
+                    y={14}
+                    width={Math.max(1, chartGeom.stepX)}
+                    height={3.5}
+                    fill={REGIME_COLORS[c.regime] || '#52525b'}
+                    opacity="0.85"
                   />
-                  <polyline
-                    fill="none"
-                    stroke="#f43f5e"
-                    strokeOpacity="0.7"
-                    strokeWidth="1"
-                    points={candles.map((c, i) => `${getSlotX(i).toFixed(1)},${(52 - (Math.min(60, c.ndi14) / 60) * 44).toFixed(1)}`).join(' ')}
-                  />
-                  <polyline
-                    fill="none"
-                    stroke="#e4e4e7"
-                    strokeWidth="1.6"
-                    points={candles.map((c, i) => `${getSlotX(i).toFixed(1)},${(52 - (Math.min(60, c.adx14) / 60) * 44).toFixed(1)}`).join(' ')}
-                  />
-                </svg>
+                ))}
+
+                {/* +35 / 0 / -35 Eşik Çizgileri */}
+                {[35, 0, -35].map((lvl) => (
+                  <g key={lvl}>
+                    <line
+                      x1={chartGeom.PAD_L}
+                      y1={chartGeom.yOsc(lvl)}
+                      x2={chartGeom.W - chartGeom.PAD_R}
+                      y2={chartGeom.yOsc(lvl)}
+                      stroke={lvl === 0 ? '#52525b' : lvl > 0 ? '#065f46' : '#881337'}
+                      strokeDasharray={lvl === 0 ? '' : '3 3'}
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={chartGeom.W - chartGeom.PAD_R + 6}
+                      y={chartGeom.yOsc(lvl) + 3}
+                      fill="#71717a"
+                      fontSize="9"
+                      fontFamily="monospace"
+                    >
+                      {lvl > 0 ? `+${lvl}` : lvl}
+                    </text>
+                  </g>
+                ))}
+
+                {/* ZAC Histogram Çubukları */}
+                {data.candles.map((c, idx) => {
+                  const x = chartGeom.xOf(idx);
+                  const y0 = chartGeom.yOsc(0);
+                  const yVal = chartGeom.yOsc(c.zacScore);
+                  const h = Math.max(1, Math.abs(yVal - y0));
+                  const top = Math.min(y0, yVal);
+                  const col =
+                    c.zacScore >= 35
+                      ? '#10b981'
+                      : c.zacScore > 0
+                        ? '#047857'
+                        : c.zacScore <= -35
+                          ? '#f43f5e'
+                          : '#9f1239';
+                  return (
+                    <rect
+                      key={`z-${idx}`}
+                      x={x - Math.max(1.5, chartGeom.stepX * 0.35)}
+                      y={top}
+                      width={Math.max(3, chartGeom.stepX * 0.7)}
+                      height={h}
+                      fill={col}
+                      opacity="0.65"
+                    />
+                  );
+                })}
+
+                <path d={chartGeom.zacLinePath} fill="none" stroke="#38bdf8" strokeWidth="1.5" />
+              </g>
+            </svg>
+          </div>
+        ) : null}
+      </div>
+
+      {/* 4. ZAC v14 5-SÜTUNLU KURUMSAL AYRINTI KARTLARI */}
+      {snap && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          {snap.pillars.map((p) => (
+            <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3.5 space-y-2">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px] font-semibold text-zinc-300 leading-tight">{p.label}</span>
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                    p.status === 'POZİTİF'
+                      ? 'bg-emerald-500/15 text-emerald-400'
+                      : p.status === 'NEGATİF'
+                        ? 'bg-rose-500/15 text-rose-400'
+                        : p.status === 'UYARI'
+                          ? 'bg-amber-500/15 text-amber-400'
+                          : 'bg-zinc-800 text-zinc-400'
+                  }`}
+                >
+                  {p.status}
+                </span>
+              </div>
+              <div className="text-xs font-mono font-bold text-white">{p.rawValue}</div>
+              <p className="text-[11px] text-zinc-400 leading-snug">{p.detail}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 5. ÇOKLU-UFUK İSTATİSTİKSEL TAHMİN MATRİSİ + DÜRÜST GERÇEK ZAMANLI OOS DENETİM */}
+      {data && snap && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* Sol: +4S / +12S / +24S / +72S Tahmin Tablosu */}
+          <div className="lg:col-span-8 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Compass className="w-4 h-4 text-violet-400" />
+                Kalibre Çoklu-Ufuk İstatistiksel Tahmin Konileri
+              </h2>
+              <span className="text-[11px] text-zinc-500 font-mono">
+                %90 Ampirik Volatilite Koridoru
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-400 text-[11px]">
+                    <th className="py-2 pr-2">Ufuk</th>
+                    <th className="py-2 px-2">Yön</th>
+                    <th className="py-2 px-2 text-right">Beklenen Fiyat</th>
+                    <th className="py-2 px-2 text-right">Beklenen %</th>
+                    <th className="py-2 px-2 text-right">%90 Alt – Üst Bant</th>
+                    <th className="py-2 pl-2 text-right">P(Yükseliş / Düşüş)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/60">
+                  {snap.horizons.map((h) => (
+                    <tr key={h.horizonHours} className="hover:bg-zinc-800/30">
+                      <td className="py-2.5 pr-2 font-bold text-white">{h.label}</td>
+                      <td className="py-2.5 px-2">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${
+                            h.direction === 'YÜKSELİŞ'
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : h.direction === 'DÜŞÜŞ'
+                                ? 'bg-rose-500/15 text-rose-400'
+                                : 'bg-zinc-800 text-zinc-400'
+                          }`}
+                        >
+                          {h.direction === 'YÜKSELİŞ' && <TrendingUp className="w-3 h-3" />}
+                          {h.direction === 'DÜŞÜŞ' && <TrendingDown className="w-3 h-3" />}
+                          {h.direction}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2 text-right text-white font-semibold">
+                        {h.expectedPrice.toFixed(snap.digits)}
+                      </td>
+                      <td
+                        className={`py-2.5 px-2 text-right font-semibold ${
+                          h.expectedMovePct >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        {h.expectedMovePct >= 0 ? '+' : ''}
+                        {h.expectedMovePct.toFixed(2)}%
+                      </td>
+                      <td className="py-2.5 px-2 text-right text-zinc-300">
+                        {h.lower90.toFixed(snap.digits)} – {h.upper90.toFixed(snap.digits)}
+                      </td>
+                      <td className="py-2.5 pl-2 text-right">
+                        <span className="text-emerald-400">%{h.pUp}</span>
+                        <span className="text-zinc-600"> / </span>
+                        <span className="text-rose-400">%{h.pDown}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sağ: Dürüst Gerçek Zamanlı OOS Kendi-Denetim Kartı */}
+          <div className="lg:col-span-4 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3 flex flex-col justify-between">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  Dürüst +24S OOS Kalibrasyon
+                </h2>
+                <span className="text-[10px] font-mono text-zinc-400">
+                  N={data.oosSelfAudit.sampleSize}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 font-mono">
+                <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                  <div className="text-[10px] text-zinc-500">Yüksek İnanç (|ZAC|≥35)</div>
+                  <div className="text-lg font-bold text-emerald-400 mt-0.5">
+                    {data.oosSelfAudit.highConvictionCount > 0
+                      ? `%${data.oosSelfAudit.highConvictionHitRatePct}`
+                      : 'Veri Yok'}
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    n={data.oosSelfAudit.highConvictionCount} sinyal
+                  </div>
+                </div>
+                <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
+                  <div className="text-[10px] text-zinc-500">%90 Bant Kapsama</div>
+                  <div className="text-lg font-bold text-violet-300 mt-0.5">
+                    %{data.oosSelfAudit.cone90CoveragePct}
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    Tüm barlar: %{data.oosSelfAudit.allBarHitRatePct}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                {data.oosSelfAudit.methodologyNoteTR}
+              </p>
+            </div>
+
+            {data.newsContext?.impactingHeadline && (
+              <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 text-[11px] space-y-1">
+                <div className="text-zinc-500 flex justify-between">
+                  <span>Canlı Haber Bağlamı ({data.newsContext.source})</span>
+                  <span>{data.newsContext.newsTimeAgo}</span>
+                </div>
+                <div className="text-zinc-200 font-medium line-clamp-2">
+                  {data.newsContext.impactingHeadline}
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
-
-      {/* Lejant Alt Bilgi */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-zinc-500 pt-1 border-t border-zinc-800/70">
-        <div className="flex flex-wrap items-center gap-3">
-          <span><span className="inline-block w-2 h-0.5 bg-cyan-400 mr-1 align-middle" />EMA8</span>
-          <span><span className="inline-block w-2 h-0.5 bg-amber-400 mr-1 align-middle" />EMA21</span>
-          <span><span className="inline-block w-2 h-0.5 bg-violet-400 mr-1 align-middle" />EMA50</span>
-          <span><span className="inline-block w-2 h-0.5 bg-slate-400 mr-1 align-middle" />Bollinger(20,2)</span>
-          <span><span className="inline-block w-2 h-0.5 bg-sky-400 mr-1 align-middle" />Donchian / İleri Tahmin Tüneli</span>
-        </div>
-        <span>Walk-Forward Doğrulamalı İki Zaman Ölçekli Motor (v6.0)</span>
-      </div>
     </div>
   );
 };
