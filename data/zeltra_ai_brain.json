@@ -1,17 +1,17 @@
 {
   "version": "cortex-v15.0-adaptive-5expert",
-  "updatedAtMs": 1795299251917,
-  "updatedAtTR": "22.11.2026 01:14",
-  "totalPostMortems": 0,
+  "updatedAtMs": 1795306165733,
+  "updatedAtTR": "22.11.2026 03:09",
+  "totalPostMortems": 6,
   "horizons": {
     "1": {
       "horizonHours": 1,
       "weights": {
-        "E1_MACRO_TREND": 0.085,
-        "E2_MICRO_DISPLACEMENT": 0.2156,
-        "E3_MEAN_REV_SPRING": 0.3247,
-        "E4_CANDLE_VSA_SWEEP": 0.2936,
-        "E5_XSMOM_REGIME": 0.0811
+        "E1_MACRO_TREND": 0.0763,
+        "E2_MICRO_DISPLACEMENT": 0.2178,
+        "E3_MEAN_REV_SPRING": 0.3187,
+        "E4_CANDLE_VSA_SWEEP": 0.3128,
+        "E5_XSMOM_REGIME": 0.0743
       },
       "priorWeights": {
         "E1_MACRO_TREND": 0.09,
@@ -20,37 +20,37 @@
         "E4_CANDLE_VSA_SWEEP": 0.29,
         "E5_XSMOM_REGIME": 0.08
       },
-      "biasCorrectionScore": 0.02,
+      "biasCorrectionScore": 0.97,
       "convictionDeadzone": 10,
-      "bandScaleMultiplier": 0.813,
-      "totalLearnedSamples": 748,
-      "correctCount": 565,
-      "band90HitCount": 695,
+      "bandScaleMultiplier": 0.8,
+      "totalLearnedSamples": 754,
+      "correctCount": 571,
+      "band90HitCount": 701,
       "expertHitCounts": {
         "E1_MACRO_TREND": {
-          "right": 387,
-          "total": 699,
-          "accuracyPct": 55.4
+          "right": 389,
+          "total": 705,
+          "accuracyPct": 55.2
         },
         "E2_MICRO_DISPLACEMENT": {
-          "right": 296,
-          "total": 572,
+          "right": 299,
+          "total": 578,
           "accuracyPct": 51.7
         },
         "E3_MEAN_REV_SPRING": {
-          "right": 273,
-          "total": 545,
+          "right": 274,
+          "total": 547,
           "accuracyPct": 50.1
         },
         "E4_CANDLE_VSA_SWEEP": {
-          "right": 260,
-          "total": 571,
-          "accuracyPct": 45.5
+          "right": 264,
+          "total": 577,
+          "accuracyPct": 45.8
         },
         "E5_XSMOM_REGIME": {
-          "right": 387,
-          "total": 699,
-          "accuracyPct": 55.4
+          "right": 389,
+          "total": 705,
+          "accuracyPct": 55.2
         }
       }
     },
@@ -162,8 +162,129 @@
     "FVG_İVME_KIRILIMI": 0,
     "SIĞ_SEANS_TESERE_GÜRÜLTÜSÜ": 0,
     "VOLATİLİTE_ŞOKU_TERS_BAR": 0,
-    "TAM_KURUMSAL_KONFLUENS_İSABETİ": 0,
-    "KISA_VADE_ORTALAMA_DÖNÜŞ_İSABETİ": 0
+    "TAM_KURUMSAL_KONFLUENS_İSABETİ": 3,
+    "KISA_VADE_ORTALAMA_DÖNÜŞ_İSABETİ": 3
   },
-  "recentLessons": []
+  "recentLessons": [
+    {
+      "id": "PM-1795306165733-BTCUSD-1H",
+      "forecastId": "LF-1795302562842-BTCUSD-1H",
+      "symbol": "BTC/USD",
+      "horizonHours": 1,
+      "timestampMs": 1795306165733,
+      "timestampTR": "22.11.2026 03:09",
+      "outcome": "YATAY_NÖTR",
+      "predictedDirection": "YATAY",
+      "actualMovePct": 0.188,
+      "predictedMovePct": -0.01,
+      "rootCauseCategory": "KISA_VADE_ORTALAMA_DÖNÜŞ_İSABETİ",
+      "rootCauseTitleTR": "Mum/VSA & Kısa Vadeli Yay İsabeti",
+      "whyItHappenedTR": "Doğru tahmin yaptım çünkü: Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi ve mum mikroyapısı (Ayı FVG (Fair Value Gap Dengesizliği)) gerçek piyasa akışıyla (%+0.188) tam uyum sağladı.",
+      "nextTimeActionTR": "Bu başarılı kurulumu hafızada pekiştirdim: +1S ufkunda Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi ağırlığı %31 olarak güçlendirildi.",
+      "winningExpert": "E4_CANDLE_VSA_SWEEP",
+      "winningExpertLabelTR": "Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi",
+      "weightDeltaSummaryTR": "MACRO_TREND: %8 (-0.4%) | MICRO_DISPLACEMENT: %22 (-0.3%) | MEAN_REV_SPRING: %32 (-0.2%) | CANDLE_VSA_SWEEP: %31 (+1.2%) | XSMOM_REGIME: %7 (-0.3%)",
+      "patternAtEntryTR": "Ayı FVG (Fair Value Gap Dengesizliği)"
+    },
+    {
+      "id": "PM-1795306165733-ETHUSD-1H",
+      "forecastId": "LF-1795302562842-ETHUSD-1H",
+      "symbol": "ETH/USD",
+      "horizonHours": 1,
+      "timestampMs": 1795306165733,
+      "timestampTR": "22.11.2026 03:09",
+      "outcome": "YATAY_NÖTR",
+      "predictedDirection": "YATAY",
+      "actualMovePct": 0.193,
+      "predictedMovePct": 0.005,
+      "rootCauseCategory": "KISA_VADE_ORTALAMA_DÖNÜŞ_İSABETİ",
+      "rootCauseTitleTR": "Mum/VSA & Kısa Vadeli Yay İsabeti",
+      "whyItHappenedTR": "Doğru tahmin yaptım çünkü: Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi ve mum mikroyapısı (Standart Mum Akışı) gerçek piyasa akışıyla (%+0.193) tam uyum sağladı.",
+      "nextTimeActionTR": "Bu başarılı kurulumu hafızada pekiştirdim: +1S ufkunda Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi ağırlığı %30 olarak güçlendirildi.",
+      "winningExpert": "E4_CANDLE_VSA_SWEEP",
+      "winningExpertLabelTR": "Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi",
+      "weightDeltaSummaryTR": "MACRO_TREND: %8 (-0.5%) | MICRO_DISPLACEMENT: %22 (+0.5%) | MEAN_REV_SPRING: %32 (-0.6%) | CANDLE_VSA_SWEEP: %30 (+0.9%) | XSMOM_REGIME: %8 (-0.3%)",
+      "patternAtEntryTR": "Standart Mum Akışı"
+    },
+    {
+      "id": "PM-1795306165733-SOLUSD-1H",
+      "forecastId": "LF-1795302562842-SOLUSD-1H",
+      "symbol": "SOL/USD",
+      "horizonHours": 1,
+      "timestampMs": 1795306165733,
+      "timestampTR": "22.11.2026 03:09",
+      "outcome": "YATAY_NÖTR",
+      "predictedDirection": "YATAY",
+      "actualMovePct": 0.171,
+      "predictedMovePct": 0.003,
+      "rootCauseCategory": "TAM_KURUMSAL_KONFLUENS_İSABETİ",
+      "rootCauseTitleTR": "Kurumsal Çoklu-Uzman Uyum İsabeti",
+      "whyItHappenedTR": "Doğru tahmin yaptım çünkü: Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi ve mum mikroyapısı (İç Mum Sıkışması (Volatilite Daralması)) gerçek piyasa akışıyla (%+0.171) tam uyum sağladı.",
+      "nextTimeActionTR": "Bu başarılı kurulumu hafızada pekiştirdim: +1S ufkunda Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi ağırlığı %29 olarak güçlendirildi.",
+      "winningExpert": "E4_CANDLE_VSA_SWEEP",
+      "winningExpertLabelTR": "Uzman-4: Mum Anatomisi, VSA Emilim & Likidite Süpürmesi",
+      "weightDeltaSummaryTR": "MACRO_TREND: %9 (-0.6%) | MICRO_DISPLACEMENT: %22 (+0.3%) | MEAN_REV_SPRING: %33 (-0.1%) | CANDLE_VSA_SWEEP: %29 (+0.8%) | XSMOM_REGIME: %8 (-0.4%)",
+      "patternAtEntryTR": "İç Mum Sıkışması (Volatilite Daralması)"
+    },
+    {
+      "id": "PM-1795302862855-BTCUSD-1H",
+      "forecastId": "LF-1795299252102-BTCUSD-1H",
+      "symbol": "BTC/USD",
+      "horizonHours": 1,
+      "timestampMs": 1795302862855,
+      "timestampTR": "22.11.2026 02:14",
+      "outcome": "YATAY_NÖTR",
+      "predictedDirection": "YATAY",
+      "actualMovePct": -0.058,
+      "predictedMovePct": -0.004,
+      "rootCauseCategory": "TAM_KURUMSAL_KONFLUENS_İSABETİ",
+      "rootCauseTitleTR": "Kurumsal Çoklu-Uzman Uyum İsabeti",
+      "whyItHappenedTR": "Doğru tahmin yaptım çünkü: Uzman-1: Makro Trend (Günlük EWMAC & SMA200) ve mum mikroyapısı (Standart Mum Akışı) gerçek piyasa akışıyla (%-0.058) tam uyum sağladı.",
+      "nextTimeActionTR": "Bu başarılı kurulumu hafızada pekiştirdim: +1S ufkunda Uzman-1: Makro Trend (Günlük EWMAC & SMA200) ağırlığı %9 olarak güçlendirildi.",
+      "winningExpert": "E1_MACRO_TREND",
+      "winningExpertLabelTR": "Uzman-1: Makro Trend (Günlük EWMAC & SMA200)",
+      "weightDeltaSummaryTR": "MACRO_TREND: %9 (+0.6%) | MICRO_DISPLACEMENT: %21 (-0.1%) | MEAN_REV_SPRING: %33 (-0.2%) | CANDLE_VSA_SWEEP: %28 (-0.7%) | XSMOM_REGIME: %8 (+0.4%)",
+      "patternAtEntryTR": "Standart Mum Akışı"
+    },
+    {
+      "id": "PM-1795302862855-ETHUSD-1H",
+      "forecastId": "LF-1795299252102-ETHUSD-1H",
+      "symbol": "ETH/USD",
+      "horizonHours": 1,
+      "timestampMs": 1795302862855,
+      "timestampTR": "22.11.2026 02:14",
+      "outcome": "YATAY_NÖTR",
+      "predictedDirection": "YATAY",
+      "actualMovePct": -0.026,
+      "predictedMovePct": 0.005,
+      "rootCauseCategory": "TAM_KURUMSAL_KONFLUENS_İSABETİ",
+      "rootCauseTitleTR": "Kurumsal Çoklu-Uzman Uyum İsabeti",
+      "whyItHappenedTR": "Doğru tahmin yaptım çünkü: Uzman-1: Makro Trend (Günlük EWMAC & SMA200) ve mum mikroyapısı (Standart Mum Akışı) gerçek piyasa akışıyla (%-0.026) tam uyum sağladı.",
+      "nextTimeActionTR": "Bu başarılı kurulumu hafızada pekiştirdim: +1S ufkunda Uzman-1: Makro Trend (Günlük EWMAC & SMA200) ağırlığı %9 olarak güçlendirildi.",
+      "winningExpert": "E1_MACRO_TREND",
+      "winningExpertLabelTR": "Uzman-1: Makro Trend (Günlük EWMAC & SMA200)",
+      "weightDeltaSummaryTR": "MACRO_TREND: %9 (+0.6%) | MICRO_DISPLACEMENT: %21 (-0.3%) | MEAN_REV_SPRING: %33 (-0.1%) | CANDLE_VSA_SWEEP: %29 (-0.6%) | XSMOM_REGIME: %8 (+0.3%)",
+      "patternAtEntryTR": "Standart Mum Akışı"
+    },
+    {
+      "id": "PM-1795302862855-SOLUSD-1H",
+      "forecastId": "LF-1795299252102-SOLUSD-1H",
+      "symbol": "SOL/USD",
+      "horizonHours": 1,
+      "timestampMs": 1795302862855,
+      "timestampTR": "22.11.2026 02:14",
+      "outcome": "YATAY_NÖTR",
+      "predictedDirection": "YATAY",
+      "actualMovePct": 0.029,
+      "predictedMovePct": 0.021,
+      "rootCauseCategory": "KISA_VADE_ORTALAMA_DÖNÜŞ_İSABETİ",
+      "rootCauseTitleTR": "Mum/VSA & Kısa Vadeli Yay İsabeti",
+      "whyItHappenedTR": "Doğru tahmin yaptım çünkü: Uzman-3: Kısa Vadeli Yay & Ortalama Dönüş (RSI2/IBS) ve mum mikroyapısı (Standart Mum Akışı) gerçek piyasa akışıyla (%+0.029) tam uyum sağladı.",
+      "nextTimeActionTR": "Bu başarılı kurulumu hafızada pekiştirdim: +1S ufkunda Uzman-3: Kısa Vadeli Yay & Ortalama Dönüş (RSI2/IBS) ağırlığı %33 olarak güçlendirildi.",
+      "winningExpert": "E3_MEAN_REV_SPRING",
+      "winningExpertLabelTR": "Uzman-3: Kısa Vadeli Yay & Ortalama Dönüş (RSI2/IBS)",
+      "weightDeltaSummaryTR": "MACRO_TREND: %8 (-0.6%) | MICRO_DISPLACEMENT: %22 (+0.1%) | MEAN_REV_SPRING: %33 (+0.5%) | CANDLE_VSA_SWEEP: %30 (+0.3%) | XSMOM_REGIME: %8 (-0.4%)",
+      "patternAtEntryTR": "Standart Mum Akışı"
+    }
+  ]
 }

@@ -458,8 +458,9 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
         }
 
         if (f.expectedDirection === 'YATAY') {
-          f.directionHit = f.inside90Band;
-          f.status = 'YATAY_NÖTR';
+          const neutralMaxMove = f.horizonHours === 1 ? 0.45 : f.horizonHours === 4 ? 0.90 : 1.80;
+          f.directionHit = Boolean(f.inside90Band) && Math.abs(f.actualMovePct || 0) <= neutralMaxMove;
+          f.status = f.directionHit ? 'YATAY_NÖTR' : 'YANLIŞ';
         } else {
           const actualUp = trueTargetPx >= f.baselinePrice;
           const predUp = f.expectedDirection === 'YÜKSELİŞ';
@@ -567,8 +568,9 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
         f.settledAtTR = formatTR(nowMs);
 
         if (f.expectedDirection === 'YATAY') {
-          f.directionHit = f.inside90Band;
-          f.status = 'YATAY_NÖTR';
+          const neutralMaxMove = f.horizonHours === 1 ? 0.45 : f.horizonHours === 4 ? 0.90 : 1.80;
+          f.directionHit = Boolean(f.inside90Band) && Math.abs(f.actualMovePct || 0) <= neutralMaxMove;
+          f.status = f.directionHit ? 'YATAY_NÖTR' : 'YANLIŞ';
         } else {
           const actualUp = settlePx >= f.baselinePrice;
           const predUp = f.expectedDirection === 'YÜKSELİŞ';
@@ -756,11 +758,12 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
 
   const all = store.forecasts;
   const pending = all.filter((f) => f.status === 'BEKLİYOR');
-  const settledDirectional = all.filter((f) => f.status === 'DOĞRU' || f.status === 'YANLIŞ');
   const settledAll = all.filter((f) => f.status !== 'BEKLİYOR');
-  const dirHits = settledDirectional.filter((f) => f.status === 'DOĞRU').length;
-  const hcSettled = settledDirectional.filter((f) => Math.abs(f.zacScore) >= 35 || f.activePod !== 'NONE');
-  const hcHits = hcSettled.filter((f) => f.status === 'DOĞRU').length;
+  const isForecastHit = (f: LockedForwardForecast) =>
+    f.status === 'DOĞRU' || (f.status === 'YATAY_NÖTR' && f.directionHit !== false);
+  const dirHits = settledAll.filter(isForecastHit).length;
+  const hcSettled = settledAll.filter((f) => Math.abs(f.zacScore) >= 35 || f.activePod !== 'NONE');
+  const hcHits = hcSettled.filter(isForecastHit).length;
   const bandHits = settledAll.filter((f) => f.inside90Band).length;
   const avgErr =
     settledAll.length > 0
@@ -771,8 +774,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
     const sub = all.filter((f) => f.horizonHours === h);
     const subPending = sub.filter((f) => f.status === 'BEKLİYOR');
     const subSettledAll = sub.filter((f) => f.status !== 'BEKLİYOR');
-    const subDir = sub.filter((f) => f.status === 'DOĞRU' || f.status === 'YANLIŞ');
-    const subDirHits = subDir.filter((f) => f.status === 'DOĞRU').length;
+    const subDirHits = subSettledAll.filter(isForecastHit).length;
     const subBandHits = subSettledAll.filter((f) => f.inside90Band).length;
     const subErr =
       subSettledAll.length > 0
@@ -784,7 +786,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       pending: subPending.length,
       settled: subSettledAll.length,
       directionHits: subDirHits,
-      directionHitRatePct: subDir.length > 0 ? +((subDirHits / subDir.length) * 100).toFixed(1) : 0,
+      directionHitRatePct: subSettledAll.length > 0 ? +((subDirHits / subSettledAll.length) * 100).toFixed(1) : 0,
       band90Hits: subBandHits,
       band90CoveragePct: subSettledAll.length > 0 ? +((subBandHits / subSettledAll.length) * 100).toFixed(1) : 0,
       avgPriceErrorPct: subErr,
@@ -838,7 +840,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       settledCount: settledAll.length,
       directionHits: dirHits,
       directionHitRatePct:
-        settledDirectional.length > 0 ? +((dirHits / settledDirectional.length) * 100).toFixed(1) : 0,
+        settledAll.length > 0 ? +((dirHits / settledAll.length) * 100).toFixed(1) : 0,
       highConvictionSettled: hcSettled.length,
       highConvictionHitRatePct:
         hcSettled.length > 0 ? +((hcHits / hcSettled.length) * 100).toFixed(1) : 0,
