@@ -3,7 +3,7 @@
 import { analyzeArticleWithAI, synthesizeAssetNewsAI } from './newsAiEngine';
 
 export const SYMBOL_MAP: Record<string, string> = {
-  // Majör
+  // FX Majör & Kur
   'EUR/USD': 'EURUSD=X',
   'GBP/USD': 'GBPUSD=X',
   'USD/JPY': 'JPY=X',
@@ -11,85 +11,25 @@ export const SYMBOL_MAP: Record<string, string> = {
   'USD/CAD': 'CAD=X',
   'AUD/USD': 'AUDUSD=X',
   'NZD/USD': 'NZDUSD=X',
-
-  // Minör
-  'EUR/GBP': 'EURGBP=X',
-  'EUR/JPY': 'EURJPY=X',
-  'EUR/CHF': 'EURCHF=X',
-  'EUR/CAD': 'EURCAD=X',
-  'EUR/AUD': 'EURAUD=X',
-  'EUR/NZD': 'EURNZD=X',
-  'GBP/JPY': 'GBPJPY=X',
-  'GBP/CHF': 'GBPCHF=X',
-  'GBP/CAD': 'GBPCAD=X',
-  'GBP/AUD': 'GBPAUD=X',
-  'GBP/NZD': 'GBPNZD=X',
-  'AUD/JPY': 'AUDJPY=X',
-  'AUD/CAD': 'AUDCAD=X',
-  'AUD/CHF': 'AUDCHF=X',
-  'AUD/NZD': 'AUDNZD=X',
-  'NZD/JPY': 'NZDJPY=X',
-  'NZD/CAD': 'NZDCAD=X',
-  'NZD/CHF': 'NZDCHF=X',
-  'CAD/JPY': 'CADJPY=X',
-  'CAD/CHF': 'CADCHF=X',
-  'CHF/JPY': 'CHFJPY=X',
-
-  // Egzotik
   'USD/TRY': 'USDTRY=X',
   'EUR/TRY': 'EURTRY=X',
-  'GBP/TRY': 'GBPTRY=X',
-  'USD/ZAR': 'USDZAR=X',
-  'USD/MXN': 'USDMXN=X',
-  'USD/BRL': 'USDBRL=X',
-  'USD/SGD': 'USDSGD=X',
-  'USD/HKD': 'USDHKD=X',
-  'USD/PLN': 'USDPLN=X',
-  'USD/HUF': 'USDHUF=X',
-  'USD/CZK': 'USDCZK=X',
-  'USD/THB': 'USDTHB=X',
-  'USD/CNH': 'USDCNH=X',
-  'USD/SEK': 'USDSEK=X',
-  'USD/NOK': 'USDNOK=X',
-  'USD/DKK': 'USDDKK=X',
-  'EUR/PLN': 'EURPLN=X',
-  'EUR/HUF': 'EURHUF=X',
-  'EUR/CZK': 'EURCZK=X',
-  'EUR/ZAR': 'EURZAR=X',
 
-  // Değerli Metaller
+  // Değerli Metaller & Emtia
   'XAU/USD': 'GC=F',
-  'XAU/EUR': 'XAUEUR=X',
-  'XAU/GBP': 'XAUGBP=X',
-  'XAU/TRY': 'GC=F',
   'XAG/USD': 'SI=F',
-  'XAG/EUR': 'XAGEUR=X',
-  'XAG/GBP': 'XAGGBP=X',
-  'XPT/USD': 'PL=F',
-  'XPD/USD': 'PA=F',
-
-  // Enerji
+  'COPPER': 'HG=F',
   'BRENT': 'BZ=F',
   'WTI': 'CL=F',
   'NATGAS': 'NG=F',
-  'GASOLINE': 'RB=F',
-  'HEATING_OIL': 'HO=F',
-  'COAL': 'NCF=F',
 
-  // Endeksler (Canlı Vadeli Kontratlar — 23/5 Küresel Akış)
+  // Endeksler & Makro Göstergeler
   'NAS100': 'NQ=F',
   'SPX500': 'ES=F',
   'US30': 'YM=F',
-  'RUSSELL2000': 'RTY=F',
   'VIX': '^VIX',
-  'GER40': '^GDAXI',
-  'UK100': '^FTSE',
-  'FRA40': '^FCHI',
-  'EUSTX50': '^STOXX50E',
-  'JP225': '^N225',
-  'HK50': '^HSI',
+  'US10Y': '^TNX',
 
-  // Hisseler
+  // ABD Teknoloji & Lider Hisseler
   'NVDA': 'NVDA',
   'AAPL': 'AAPL',
   'MSFT': 'MSFT',
@@ -97,59 +37,18 @@ export const SYMBOL_MAP: Record<string, string> = {
   'AMZN': 'AMZN',
   'META': 'META',
   'AMD': 'AMD',
-  'INTC': 'INTC',
-  'AVGO': 'AVGO',
-  'QCOM': 'QCOM',
-  'ORCL': 'ORCL',
   'TSLA': 'TSLA',
-  'JPM': 'JPM',
-  'GS': 'GS',
-  'BAC': 'BAC',
-  'V': 'V',
-  'MA': 'MA',
-  'KO': 'KO',
-  'PEP': 'PEP',
-  'MCD': 'MCD',
-  'WMT': 'WMT',
-  'XOM': 'XOM',
-  'CVX': 'CVX',
 
-  // Kripto
+  // Kripto Varlıklar
   'BTC/USD': 'BTC-USD',
   'ETH/USD': 'ETH-USD',
   'SOL/USD': 'SOL-USD',
   'BNB/USD': 'BNB-USD',
   'XRP/USD': 'XRP-USD',
-  'DOGE/USD': 'DOGE-USD',
-  'ADA/USD': 'ADA-USD',
   'AVAX/USD': 'AVAX-USD',
   'LINK/USD': 'LINK-USD',
-  'DOT/USD': 'DOT-USD',
-  'LTC/USD': 'LTC-USD',
-  'BCH/USD': 'BCH-USD',
-  'TON/USD': 'TON11419-USD',
-  'TRX/USD': 'TRX-USD',
-  'XLM/USD': 'XLM-USD',
-  'ETC/USD': 'ETC-USD',
-
-  // Tarım & Sanayi Metalleri
-  'WHEAT': 'ZW=F',
-  'CORN': 'ZC=F',
-  'SOYBEANS': 'ZS=F',
-  'COFFEE': 'KC=F',
-  'COCOA': 'CC=F',
-  'SUGAR': 'SB=F',
-  'COTTON': 'CT=F',
-  'COPPER': 'HG=F',
-  'ALUMINUM': 'ALI=F',
-
-  // Tahviller & ETF
-  'US10Y': '^TNX',
-  'US30Y': '^TYX',
-  'US05Y': '^FVX',
-  'GLD': 'GLD',
-  'SLV': 'SLV',
-  'USO': 'USO',
+  'DOGE/USD': 'DOGE-USD',
+  'ADA/USD': 'ADA-USD',
 };
 
 // In-Memory OHLC & Hourly History Cache + In-Flight Deduplication (20s OHLC + 2.5s Real-Time Orderbook Tick Overlay)
@@ -170,7 +69,6 @@ const hourlyCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
 const inFlightHourly = new Map<string, Promise<HourlyBar[]>>();
 const bars15mCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
 const inFlight15m = new Map<string, Promise<HourlyBar[]>>();
-const depthCache = new Map<string, { timestamp: number; ratio: number; bidVol: number; askVol: number }>();
 
 const KRAKEN_PAIR_MAP: Record<string, string> = {
   'BTC/USD': 'XXBTZUSD',
@@ -813,54 +711,6 @@ export async function fetchReal15mHistory(symbol: string): Promise<HourlyBar[]> 
   }
 }
 
-// Gerçek Kraken Emir Defteri Dengesizliği (Bid/Ask Derinlik Oranı — 5 Sn Cache)
-export async function fetchCryptoOrderbookImbalance(
-  symbol: string
-): Promise<{ ratio: number; bidVol: number; askVol: number }> {
-  const kPair = KRAKEN_PAIR_MAP[symbol];
-  if (!kPair) return { ratio: 1, bidVol: 0, askVol: 0 };
-  const now = Date.now();
-  const cached = depthCache.get(symbol);
-  if (cached && now - cached.timestamp < 5000) {
-    return { ratio: cached.ratio, bidVol: cached.bidVol, askVol: cached.askVol };
-  }
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
-  try {
-    const resp = await fetch(`https://api.kraken.com/0/public/Depth?pair=${kPair}&count=20`, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    if (!resp.ok) return cached || { ratio: 1, bidVol: 0, askVol: 0 };
-    const json: any = await resp.json();
-    const key = Object.keys(json?.result || {})[0];
-    const book = key ? json.result[key] : null;
-    if (!book?.bids || !book?.asks) return cached || { ratio: 1, bidVol: 0, askVol: 0 };
-    const bidVol = (book.bids as any[]).reduce((s, r) => s + Number(r[1] || 0), 0);
-    const askVol = (book.asks as any[]).reduce((s, r) => s + Number(r[1] || 0), 0);
-    const ratio = +(bidVol / (askVol || 1)).toFixed(2);
-    const val = { timestamp: Date.now(), ratio, bidVol, askVol };
-    depthCache.set(symbol, val);
-    return { ratio, bidVol, askVol };
-  } catch {
-    return cached || { ratio: 1, bidVol: 0, askVol: 0 };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export interface MicroBarBundle {
-  symbol: string;
-  bars1m: HourlyBar[];
-  bars3m: HourlyBar[];
-  livePrice: number;
-  rawFeedPrice: number;
-  liveSource: string;
-  lastBarTimestamp: number;
-  dataDelaySec: number;
-  isDelayed: boolean;
-}
-
 export interface MacroPulseSnapshot {
   dxyPrice: number;
   dxyChg3mPct: number;
@@ -872,106 +722,8 @@ export interface MacroPulseSnapshot {
   fetchedAt: number;
 }
 
-export interface KrakenTradeFlow {
-  takerBuyRatio: number;
-  buyVol3m: number;
-  sellVol3m: number;
-  tradeCount3m: number;
-  cvdImbalance: number;
-}
-
-const microCache = new Map<string, { timestamp: number; data: MicroBarBundle }>();
-const inFlightMicro = new Map<string, Promise<MicroBarBundle>>();
 let macroPulseCache: { timestamp: number; data: MacroPulseSnapshot } | null = null;
 let inFlightMacro: Promise<MacroPulseSnapshot> | null = null;
-const tradeFlowCache = new Map<string, { timestamp: number; data: KrakenTradeFlow }>();
-
-const REALTIME_PROXY_TICKERS: Record<string, { proxyType: 'KRAKEN' | 'YAHOO'; ticker: string; label: string; tvStreamingSymbol?: string }> = {
-  'XAU/USD': { proxyType: 'KRAKEN', ticker: 'PAXGUSD', label: 'Kraken PAXG Spot Proxy (0sn)', tvStreamingSymbol: 'FX:XAUUSD' },
-  NAS100: { proxyType: 'YAHOO', ticker: 'QQQ', label: 'QQQ Pre/Post Real-Time Proxy' },
-  SPX500: { proxyType: 'YAHOO', ticker: 'SPY', label: 'SPY Pre/Post Real-Time Proxy' },
-  WTI: { proxyType: 'YAHOO', ticker: 'USO', label: 'USO Pre/Post Real-Time Proxy', tvStreamingSymbol: 'FX:USOIL' },
-};
-
-const tvStreamingMinuteBuffer = new Map<string, HourlyBar[]>();
-
-async function fetchTradingViewStreamingPrice(tvTicker: string): Promise<number | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3500);
-  try {
-    const resp = await fetch('https://scanner.tradingview.com/global/scan', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-      body: JSON.stringify({
-        symbols: { tickers: [tvTicker] },
-        columns: ['name', 'close', 'update_mode'],
-      }),
-    });
-    if (!resp.ok) return null;
-    const json: any = await resp.json();
-    const row = json?.data?.[0]?.d;
-    const px = Number(row?.[1]);
-    const mode = String(row?.[2] || '');
-    if (Number.isFinite(px) && px > 0 && mode === 'streaming') {
-      return px;
-    }
-    return null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function recordTvStreamingMinuteTick(tvTicker: string, price: number, nowMs: number): HourlyBar[] {
-  const minTs = Math.floor(nowMs / 60000) * 60000;
-  const arr = tvStreamingMinuteBuffer.get(tvTicker) || [];
-  const last = arr[arr.length - 1];
-  if (!last || last.timestamp < minTs) {
-    arr.push({
-      timestamp: minTs,
-      open: price,
-      high: price,
-      low: price,
-      close: price,
-      volume: 1,
-    });
-    if (arr.length > 240) arr.splice(0, arr.length - 240);
-  } else if (last.timestamp === minTs) {
-    last.close = price;
-    last.high = Math.max(last.high ?? price, price);
-    last.low = Math.min(last.low ?? price, price);
-    last.volume = (last.volume ?? 0) + 1;
-  }
-  tvStreamingMinuteBuffer.set(tvTicker, arr);
-  return arr;
-}
-
-function aggregateBarsTo3m(bars1m: HourlyBar[]): HourlyBar[] {
-  if (!bars1m.length) return [];
-  const buckets = new Map<number, HourlyBar>();
-  for (const b of bars1m) {
-    const bTs = Math.floor(b.timestamp / 180000) * 180000;
-    const prev = buckets.get(bTs);
-    if (!prev) {
-      buckets.set(bTs, {
-        timestamp: bTs,
-        open: b.open ?? b.close,
-        high: b.high ?? b.close,
-        low: b.low ?? b.close,
-        close: b.close,
-        volume: b.volume ?? 0,
-      });
-    } else {
-      prev.high = Math.max(prev.high ?? prev.close, b.high ?? b.close);
-      prev.low = Math.min(prev.low ?? prev.close, b.low ?? b.close);
-      prev.close = b.close;
-      prev.volume = (prev.volume ?? 0) + (b.volume ?? 0);
-    }
-  }
-  return Array.from(buckets.values()).sort((a, b) => a.timestamp - b.timestamp);
-}
 
 async function fetchYahoo1mBarsRaw(yahooTicker: string, range = '2d'): Promise<{ bars: HourlyBar[]; metaPrice: number }> {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -1017,193 +769,6 @@ async function fetchYahoo1mBarsRaw(yahooTicker: string, range = '2d'): Promise<{
     }
   }
   return { bars: [], metaPrice: 0 };
-}
-
-async function fetchKraken1mBarsRaw(pair: string): Promise<HourlyBar[]> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 6000);
-  try {
-    const resp = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=1`, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    if (!resp.ok) return [];
-    const kJson: any = await resp.json();
-    const resKey = Object.keys(kJson?.result || {}).find((k) => k !== 'last');
-    const rows: any[] = resKey ? kJson.result[resKey] || [] : [];
-    return rows.map((r) => ({
-      timestamp: Number(r[0]) * 1000,
-      open: Number(r[1]),
-      high: Number(r[2]),
-      low: Number(r[3]),
-      close: Number(r[4]),
-      vwap: Number(r[5]) || Number(r[4]),
-      volume: Number(r[6]) || 0,
-    }));
-  } catch {
-    return [];
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-// Sıfır Gecikmeli 1m & 3m Mikroyapı Verisi (+ CME Gecikmesine Karşı Anlık Spot/ETF Proxy Düzeltmesi)
-export async function fetchReal1mAnd3mHistory(symbol: string): Promise<MicroBarBundle> {
-  const now = Date.now();
-  const cached = microCache.get(symbol);
-  if (cached && now - cached.timestamp < 10000) {
-    if (KRAKEN_PAIR_MAP[symbol] && cached.data.bars1m.length > 0) {
-      const q = (await fetchLiveCryptoQuotes())[symbol];
-      if (q && q.mid > 0) {
-        const clonedBars = cached.data.bars1m.slice();
-        const lastIdx = clonedBars.length - 1;
-        clonedBars[lastIdx] = {
-          ...clonedBars[lastIdx],
-          close: q.mid,
-          high: Math.max(clonedBars[lastIdx].high ?? q.mid, q.mid),
-          low: Math.min(clonedBars[lastIdx].low ?? q.mid, q.mid),
-        };
-        return {
-          ...cached.data,
-          bars1m: clonedBars,
-          bars3m: aggregateBarsTo3m(clonedBars),
-          livePrice: q.mid,
-          rawFeedPrice: q.mid,
-          dataDelaySec: 0,
-          isDelayed: false,
-        };
-      }
-    }
-    return cached.data;
-  }
-
-  if (inFlightMicro.has(symbol)) return inFlightMicro.get(symbol)!;
-
-  const work = (async (): Promise<MicroBarBundle> => {
-    try {
-      const kPair = KRAKEN_PAIR_MAP[symbol];
-      let bars1m: HourlyBar[] = [];
-      let rawPrice = 0;
-      let livePrice = 0;
-      let liveSource = kPair ? `Kraken ${kPair} 1m (0sn)` : `Yahoo ${SYMBOL_MAP[symbol] || symbol} 1m`;
-
-      if (kPair) {
-        const [kBars, liveQuotes] = await Promise.all([
-          fetchKraken1mBarsRaw(kPair),
-          fetchLiveCryptoQuotes().catch(() => ({} as Record<string, LiveOrderbookQuote>)),
-        ]);
-        bars1m = kBars;
-        const q = liveQuotes[symbol];
-        rawPrice = q?.mid || (bars1m.length ? bars1m[bars1m.length - 1].close : 0);
-        livePrice = rawPrice;
-        if (bars1m.length > 0 && livePrice > 0) {
-          const last = bars1m[bars1m.length - 1];
-          last.close = livePrice;
-          last.high = Math.max(last.high ?? livePrice, livePrice);
-          last.low = Math.min(last.low ?? livePrice, livePrice);
-        }
-      } else {
-        const yTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
-        const primary = await fetchYahoo1mBarsRaw(yTicker, '2d');
-        bars1m = primary.bars;
-        rawPrice = bars1m.length ? bars1m[bars1m.length - 1].close : primary.metaPrice;
-        livePrice = rawPrice;
-
-        // CME vadeli kontratlar ücretsiz akışta ~10dk gecikmeli olduğu için canlı ETF / 7-24 PAXG spot proxy / TradingView Streaming (0sn) ile gerçek zamanlıya projekte et
-        const proxyCfg = REALTIME_PROXY_TICKERS[symbol];
-        if (proxyCfg && bars1m.length > 5) {
-          const lastPrimaryBar = bars1m[bars1m.length - 1];
-          const primaryLagSec = Math.max(0, Math.round((Date.now() - lastPrimaryBar.timestamp) / 1000));
-          if (primaryLagSec > 90) {
-            let appliedProxy = false;
-            const proxyBars =
-              proxyCfg.proxyType === 'KRAKEN'
-                ? await fetchKraken1mBarsRaw(proxyCfg.ticker)
-                : (await fetchYahoo1mBarsRaw(proxyCfg.ticker, '1d')).bars;
-
-            if (proxyBars.length > 10) {
-              const lastProxy = proxyBars[proxyBars.length - 1];
-              if (lastProxy.timestamp > lastPrimaryBar.timestamp + 60000) {
-                const baseProxy =
-                  proxyBars.find((b) => b.timestamp >= lastPrimaryBar.timestamp) ||
-                  proxyBars[proxyBars.length - 1];
-                if (baseProxy && baseProxy.close > 0 && lastPrimaryBar.close > 0) {
-                  const scaleRatio = lastPrimaryBar.close / baseProxy.close;
-                  const syntheticTail = proxyBars
-                    .filter((b) => b.timestamp > lastPrimaryBar.timestamp)
-                    .map((b) => ({
-                      timestamp: b.timestamp,
-                      open: +(b.open ?? b.close) * scaleRatio,
-                      high: +(b.high ?? b.close) * scaleRatio,
-                      low: +(b.low ?? b.close) * scaleRatio,
-                      close: +(b.close * scaleRatio),
-                      volume: b.volume ?? 0,
-                    }));
-                  if (syntheticTail.length > 0) {
-                    bars1m = [...bars1m, ...syntheticTail];
-                    livePrice = bars1m[bars1m.length - 1].close;
-                    liveSource = `${yTicker} + ${proxyCfg.label}`;
-                    appliedProxy = Date.now() - bars1m[bars1m.length - 1].timestamp <= 150000;
-                  }
-                }
-              }
-            }
-
-            if (!appliedProxy && proxyCfg.tvStreamingSymbol) {
-              const tvPx = await fetchTradingViewStreamingPrice(proxyCfg.tvStreamingSymbol);
-              if (tvPx && tvPx > 0) {
-                const tvBars = recordTvStreamingMinuteTick(proxyCfg.tvStreamingSymbol, tvPx, Date.now());
-                const latestPrimaryTs = bars1m[bars1m.length - 1].timestamp;
-                const extraBars = tvBars.filter((b) => b.timestamp > latestPrimaryTs);
-                if (extraBars.length > 0) {
-                  bars1m = [...bars1m, ...extraBars];
-                }
-                livePrice = tvPx;
-                liveSource = `${yTicker} + TV ${proxyCfg.tvStreamingSymbol} (0sn)`;
-              }
-            }
-          }
-        }
-      }
-
-      const lastTs = bars1m.length ? bars1m[bars1m.length - 1].timestamp : 0;
-      const delaySec = lastTs > 0 ? Math.max(0, Math.round((Date.now() - lastTs) / 1000)) : 9999;
-      const bundle: MicroBarBundle = {
-        symbol,
-        bars1m,
-        bars3m: aggregateBarsTo3m(bars1m),
-        livePrice,
-        rawFeedPrice: rawPrice,
-        liveSource,
-        lastBarTimestamp: lastTs,
-        dataDelaySec: delaySec,
-        isDelayed: delaySec > 180,
-      };
-      if (bars1m.length > 0) microCache.set(symbol, { timestamp: Date.now(), data: bundle });
-      return bundle;
-    } catch {
-      return (
-        cached?.data || {
-          symbol,
-          bars1m: [],
-          bars3m: [],
-          livePrice: 0,
-          rawFeedPrice: 0,
-          liveSource: 'ERR',
-          lastBarTimestamp: 0,
-          dataDelaySec: 9999,
-          isDelayed: true,
-        }
-      );
-    }
-  })();
-
-  inFlightMicro.set(symbol, work);
-  try {
-    return await work;
-  } finally {
-    inFlightMicro.delete(symbol);
-  }
 }
 
 export async function fetchMacroPulse(): Promise<MacroPulseSnapshot> {
@@ -1260,55 +825,6 @@ export async function fetchMacroPulse(): Promise<MacroPulseSnapshot> {
   })();
 
   return inFlightMacro;
-}
-
-export async function fetchKrakenTradeFlow(symbol: string): Promise<KrakenTradeFlow> {
-  const kPair = KRAKEN_PAIR_MAP[symbol];
-  if (!kPair) return { takerBuyRatio: 1, buyVol3m: 0, sellVol3m: 0, tradeCount3m: 0, cvdImbalance: 0 };
-  const now = Date.now();
-  const cached = tradeFlowCache.get(symbol);
-  if (cached && now - cached.timestamp < 5000) return cached.data;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3500);
-  try {
-    const sinceNs = (now - 180000) * 1000000;
-    const resp = await fetch(`https://api.kraken.com/0/public/Trades?pair=${kPair}&since=${sinceNs}`, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    if (!resp.ok) return cached?.data || { takerBuyRatio: 1, buyVol3m: 0, sellVol3m: 0, tradeCount3m: 0, cvdImbalance: 0 };
-    const json: any = await resp.json();
-    const resKey = Object.keys(json?.result || {}).find((k) => k !== 'last');
-    const rows: any[] = resKey ? json.result[resKey] || [] : [];
-    const cutoffSec = (now - 180000) / 1000;
-    let buyVol3m = 0;
-    let sellVol3m = 0;
-    let tradeCount3m = 0;
-    for (const r of rows) {
-      const tSec = Number(r[2]);
-      if (tSec >= cutoffSec) {
-        const vol = Number(r[1]) || 0;
-        if (r[3] === 'b') buyVol3m += vol;
-        else sellVol3m += vol;
-        tradeCount3m++;
-      }
-    }
-    const total = buyVol3m + sellVol3m;
-    const val: KrakenTradeFlow = {
-      takerBuyRatio: sellVol3m > 0 ? +(buyVol3m / sellVol3m).toFixed(2) : buyVol3m > 0 ? 2.5 : 1,
-      buyVol3m: +buyVol3m.toFixed(4),
-      sellVol3m: +sellVol3m.toFixed(4),
-      tradeCount3m,
-      cvdImbalance: total > 0 ? +((buyVol3m - sellVol3m) / total).toFixed(3) : 0,
-    };
-    tradeFlowCache.set(symbol, { timestamp: Date.now(), data: val });
-    return val;
-  } catch {
-    return cached?.data || { takerBuyRatio: 1, buyVol3m: 0, sellVol3m: 0, tradeCount3m: 0, cvdImbalance: 0 };
-  } finally {
-    clearTimeout(timeout);
-  }
 }
 
 // Multi-Source Financial Feeds (14 Global Financial & Market Feeds — Last 24 Hours)

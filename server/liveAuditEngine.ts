@@ -725,9 +725,13 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
       }
     }
 
-    if (store.forecasts.length > 600) {
-      store.forecasts = store.forecasts.slice(0, 600);
-    }
+    // Ufuk bazlı adil saklama: +1S tahminlerinin +24S tahminlerini listeden düşürmesini engelle!
+    const f1 = store.forecasts.filter((x) => x.horizonHours === 1).slice(0, 260);
+    const f4 = store.forecasts.filter((x) => x.horizonHours === 4).slice(0, 140);
+    const f24 = store.forecasts.filter((x) => x.horizonHours === 24).slice(0, 100);
+    store.forecasts = [...f1, ...f4, ...f24].sort(
+      (a, b) => (b.settledAtMs || b.lockedAtMs) - (a.settledAtMs || a.lockedAtMs)
+    );
 
     store.lastUpdatedAtMs = nowMs;
     store.lastUpdatedAtTR = formatTR(nowMs);
@@ -883,6 +887,10 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       byHorizon,
     },
     aiBrain,
-    forecasts: all.slice(0, 150),
+    forecasts: [
+      ...all.filter((x) => x.horizonHours === 24).slice(0, 80),
+      ...all.filter((x) => x.horizonHours === 4).slice(0, 100),
+      ...all.filter((x) => x.horizonHours === 1).slice(0, 180),
+    ].sort((a, b) => (b.settledAtMs || b.lockedAtMs) - (a.settledAtMs || a.lockedAtMs)),
   };
 }
