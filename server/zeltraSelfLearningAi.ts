@@ -782,8 +782,6 @@ export function learnFromSettledForecast(params: {
   const prof = brain.horizons[hKey];
 
   const actualDir = params.actualMovePct > 0.015 ? 1 : params.actualMovePct < -0.015 ? -1 : 0;
-  const predDir =
-    params.predictedDirection === 'YÜKSELİŞ' ? 1 : params.predictedDirection === 'DÜŞÜŞ' ? -1 : 0;
 
   prof.totalLearnedSamples += 1;
   if (params.directionHit) prof.correctCount += 1;
