@@ -138,6 +138,10 @@ interface LiveAuditPayload {
     directionHitRatePct: number;
     highConvictionSettled: number;
     highConvictionHitRatePct: number;
+    directionalSettledCount?: number;
+    directionalWinRatePct?: number;
+    directionalProfitFactor?: number;
+    simulated250kDirectionalNetTRY?: number;
     band90CoveragePct: number;
     avgPriceErrorPct: number;
     byHorizon: HorizonStats[];
@@ -706,11 +710,16 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               <div className="text-[10px] text-zinc-500">Tüm sonuçlananlar</div>
             </div>
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
-              <div className="text-[10px] text-zinc-500">Yüksek İnanç (|ZAC|≥35)</div>
+              <div className="text-[10px] text-zinc-500">Yüksek İnanç (|Cortex|≥12)</div>
               <div className="text-base font-bold text-emerald-300 mt-0.5">
                 {fs.highConvictionSettled > 0 ? `%${fs.highConvictionHitRatePct}` : 'Bekleniyor'}
               </div>
-              <div className="text-[10px] text-zinc-500">n={fs.highConvictionSettled}</div>
+              <div className="text-[10px] text-zinc-500">
+                n={fs.highConvictionSettled}
+                {typeof fs.simulated250kDirectionalNetTRY === 'number' && fs.directionalSettledCount
+                  ? ` • ${fmtSignedTL(fs.simulated250kDirectionalNetTRY)} (PF ${fs.directionalProfitFactor ?? '-'})`
+                  : ''}
+              </div>
             </div>
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
               <div className="text-[10px] text-zinc-500">%90 Bant İsabeti</div>

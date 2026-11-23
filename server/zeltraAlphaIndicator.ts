@@ -17,6 +17,7 @@ export type ZacRegime =
 
 export const ZAC_MR12_ASSETS = new Set([
   'NAS100', 'SPX500', 'US30', 'NVDA', 'AAPL', 'MSFT', 'XAU/USD', 'XAG/USD', 'COPPER',
+  'USD/JPY', 'EUR/USD', 'GBP/USD',
 ]);
 
 export const ZAC_CRYPTO_ASSETS = new Set(['BTC/USD', 'ETH/USD', 'SOL/USD']);
@@ -447,7 +448,7 @@ export function evaluateZacAt(
     aboveSma200 &&
     ewmac > 0 &&
     volRatio <= 1.40 &&
-    vixLevel < 35 &&
+    vixLevel < 39.5 &&
     ibs12h < 0.22 &&
     cumRsi2_12h < 18
   ) {
@@ -533,7 +534,7 @@ export function evaluateZacAt(
     const tpRef = roundTo(px + dailyAtr14 * 6.4, digits);
     activeSetup = {
       pod: 'CTA_TREND',
-      podLabelTR: 'Pod-3: Kurumsal CTA Makro Trend',
+      podLabelTR: 'Pod-3: Kurumsal CTA Makro Trend (LONG)',
       direction: 'AL (LONG)',
       entryPrice: roundTo(px, digits),
       stopLoss: sl,
@@ -543,6 +544,31 @@ export function evaluateZacAt(
       maxHoldHours: 0,
       convictionPercent: Math.min(90, Math.round(68 + Math.min(20, (ewmac - 6) * 2))),
       rationaleTR: `CTA MAKRO TREND TETİKLENDİ: Çok-Hızlı EWMAC=+${ewmac.toFixed(1)} (≥8.0), Fiyat > SMA200, Verimlilik ER=${er.toFixed(2)} (≥0.25), Volatilite Sakin (${volRatio.toFixed(2)}). 3.2 ATR Trailing Stop ile uzun trend sürülür.`,
+    };
+  } else if (
+    isCtaEligible &&
+    hasWarmDaily &&
+    !aboveSma200 &&
+    ewmac <= -10.5 &&
+    volRatio <= 1.25 &&
+    er >= 0.25 &&
+    dailyRsi2 > 22 &&
+    ibs12h >= 0.65
+  ) {
+    const sl = roundTo(px + dailyAtr14 * 3.2, digits);
+    const tpRef = roundTo(px - dailyAtr14 * 6.4, digits);
+    activeSetup = {
+      pod: 'CTA_TREND',
+      podLabelTR: 'Pod-3: Kurumsal CTA Makro Trend (SHORT)',
+      direction: 'SAT (SHORT)',
+      entryPrice: roundTo(px, digits),
+      stopLoss: sl,
+      takeProfit: tpRef,
+      trailingAtrMult: 3.2,
+      riskReward: 2.0,
+      maxHoldHours: 0,
+      convictionPercent: Math.min(90, Math.round(68 + Math.min(20, (Math.abs(ewmac) - 8) * 2))),
+      rationaleTR: `CTA MAKRO AYI TRENDİ TETİKLENDİ: EWMAC=${ewmac.toFixed(1)} (≤-10.5), Fiyat < SMA200, 12H Tepki Satışı (IBS12=${ibs12h.toFixed(2)}≥0.65), Verimlilik ER=${er.toFixed(2)}. 3.2 ATR İz Süren Stop ile ayı trendi sürülür.`,
     };
   }
 

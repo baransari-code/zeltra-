@@ -142,12 +142,22 @@ export interface HorizonAdaptiveProfile {
   expertHitCounts: Record<ExpertId, { right: number; total: number; accuracyPct: number }>;
 }
 
+export interface AssetAdaptiveProfile {
+  hits: number;
+  total: number;
+  accuracyPct: number;
+  assetBiasScore: number;     // Varlığa özgü yön kayması düzeltmesi (-15..+15)
+  consecutiveMisses: number;  // Ardışık yanılma sayacı (testere koruma kilidi için)
+  lastOutcome?: 'DOĞRU' | 'YANLIŞ' | 'YATAY_NÖTR';
+}
+
 export interface ZeltraAiBrainState {
   version: string;
   updatedAtMs: number;
   updatedAtTR: string;
   totalPostMortems: number;
   horizons: Record<'1' | '4' | '24', HorizonAdaptiveProfile>;
+  assetProfiles?: Record<string, AssetAdaptiveProfile>;
   rootCauseStats: Record<RootCauseCategory, number>;
   recentLessons: AiPostMortemReflection[];
 }
@@ -629,24 +639,65 @@ export function computeAdaptiveHorizonForecast(
   digits: number,
   experts: ExpertSignalVector,
   micro: MicrostructureAnalysis,
-  hasActivePodTrigger: boolean
+  hasActivePodTrigger: boolean,
+  symbol?: string
 ): CortexAdaptiveForecastResult {
   const brain = loadOrInitAiBrain();
   const hKey = String(horizonHours) as '1' | '4' | '24';
   const prof = brain.horizons[hKey];
   const w = prof.weights;
 
-  const rawScore =
-    w.E1_MACRO_TREND * experts.E1_MACRO_TREND +
+  let e1Eff = experts.E1_MACRO_TREND;
+  let e3Eff = experts.E3_MEAN_REV_SPRING;
+
+  // +24S Derin Yay / Aşırı Satım Koruma Kalkanı:
+  // Günlük trend ayıdayken (E1 < -25) 12H/1H yay aşırı gerilmişse (E3 >= +28), +24S ufkunda dipten geç short açmayı frenle
+  if (
+    horizonHours === 24 &&
+    e1Eff * e3Eff < 0 &&
+    Math.abs(e3Eff) >= 28
+  ) {
+    e1Eff *= 0.62;
+    e3Eff *= 1.45;
+  }
+
+  let rawScore =
+    w.E1_MACRO_TREND * e1Eff +
     w.E2_MICRO_DISPLACEMENT * experts.E2_MICRO_DISPLACEMENT +
-    w.E3_MEAN_REV_SPRING * experts.E3_MEAN_REV_SPRING +
+    w.E3_MEAN_REV_SPRING * e3Eff +
     w.E4_CANDLE_VSA_SWEEP * experts.E4_CANDLE_VSA_SWEEP +
     w.E5_XSMOM_REGIME * experts.E5_XSMOM_REGIME;
+
+  // +1S & +4S Yorulma / Geç Peşinden Koşma (Anti-Chasing) Kalkanı:
+  // Sert düşüş mumundan hemen sonra (zScore <= -1.10 veya RSI2 <= 18 veya IBS <= 0.18) hacim patlaması yoksa dipten tekrar DÜŞÜŞ kovalamayı kes!
+  let exhaustionGuardNote = '';
+  if (horizonHours <= 4 && micro.rvol1h < 1.55) {
+    const oversoldExhausted =
+      micro.zScoreEma20_1h <= -1.10 ||
+      micro.rsi2_1h <= 18 ||
+      (micro.ibs1h <= 0.18 && experts.E3_MEAN_REV_SPRING >= 18);
+    const overboughtExhausted =
+      micro.zScoreEma20_1h >= 1.15 ||
+      micro.rsi2_1h >= 84 ||
+      (micro.ibs1h >= 0.84 && experts.E3_MEAN_REV_SPRING <= -18);
+
+    if (rawScore < 0 && oversoldExhausted) {
+      rawScore = rawScore * 0.42 + Math.max(0, experts.E3_MEAN_REV_SPRING) * 0.28;
+      exhaustionGuardNote = ' • Dipten Geç Satış Kalkanı Aktif';
+    } else if (rawScore > 0 && overboughtExhausted) {
+      rawScore = rawScore * 0.42 + Math.min(0, experts.E3_MEAN_REV_SPRING) * 0.28;
+      exhaustionGuardNote = ' • Tepeden Geç Alım Kalkanı Aktif';
+    }
+  }
+
+  const assetProf = symbol && brain.assetProfiles ? brain.assetProfiles[symbol] : undefined;
+  const assetBias = assetProf ? assetProf.assetBiasScore * (horizonHours === 1 ? 0.55 : 0.40) : 0;
+  const totalBias = prof.biasCorrectionScore * 0.75 + assetBias;
 
   // Sığ/verimsiz seansta (ER < 0.16) yönsüz gürültü sönümlemesi
   const chopDampener = horizonHours <= 4 && micro.er1h < 0.16 && micro.vsaSignal === 'LOW_VOL_DRIFT' ? 0.65 : 1.0;
   const compositeScore = Math.round(
-    Math.max(-100, Math.min(100, (rawScore + prof.biasCorrectionScore) * chopDampener))
+    Math.max(-100, Math.min(100, (rawScore + totalBias) * chopDampener))
   );
 
   // En yüksek katkıyı veren uzmanı bul
@@ -658,7 +709,9 @@ export function computeAdaptiveHorizonForecast(
   expertEntries.sort((a, b) => b.contrib - a.contrib);
   const dominantExpert = expertEntries[0].id;
 
-  const deadzone = prof.convictionDeadzone;
+  // Varlık üst üste yanıldıysa (testere piyasası) yönlü eşiği otomatik sıkılaştır (+2..+5 puan)
+  const missPenalty = assetProf && assetProf.consecutiveMisses >= 2 ? Math.min(5, (assetProf.consecutiveMisses - 1) * 2) : 0;
+  const deadzone = prof.convictionDeadzone + missPenalty;
   let expectedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY' = 'YATAY';
   if (compositeScore >= deadzone) expectedDirection = 'YÜKSELİŞ';
   else if (compositeScore <= -deadzone) expectedDirection = 'DÜŞÜŞ';
@@ -684,7 +737,7 @@ export function computeAdaptiveHorizonForecast(
   const pUp = Math.round(Math.max(28, Math.min(72, 50 + (compositeScore / 100) * maxShift)));
   const pDown = 100 - pUp;
 
-  const aiReasoningTR = `${EXPERT_LABELS_TR[dominantExpert]} baskın (Ağırlık %${Math.round(w[dominantExpert] * 100)}) • Mum: ${micro.patternLabelTR} • Bias Düzeltmesi: ${prof.biasCorrectionScore >= 0 ? '+' : ''}${prof.biasCorrectionScore.toFixed(1)}`;
+  const aiReasoningTR = `${EXPERT_LABELS_TR[dominantExpert]} baskın (Ağırlık %${Math.round(w[dominantExpert] * 100)}) • Mum: ${micro.patternLabelTR} • Bias: ${totalBias >= 0 ? '+' : ''}${totalBias.toFixed(1)}${exhaustionGuardNote}`;
 
   return {
     horizonHours,
@@ -783,13 +836,38 @@ export function learnFromSettledForecast(params: {
     prof.weights[expId] = +(newRawWeights[expId] / wSum).toFixed(4);
   }
 
-  // 2) Sistemik Bias (Yön Kayması) ve %90 Bant Genişliği Adaptasyonu
-  // Eğer gerçekleşen hareket tahmin edilenden yukarıdaysa (+), biasCorrection yukarı kayar (sürekli DÜŞÜŞ deme hatasını otomatik kırar!)
+  // 2) Sistemik + Varlığa Özgü Bias (Yön Kayması) ve %90 Bant Genişliği Adaptasyonu
   const moveResidual = params.actualMovePct - params.predictedMovePct;
   const biasSignal = Math.max(-18, Math.min(18, moveResidual * (params.horizonHours === 1 ? 14 : 7)));
   prof.biasCorrectionScore = +(
     Math.max(-24, Math.min(24, prof.biasCorrectionScore * 0.84 + biasSignal * 0.16))
   ).toFixed(2);
+
+  if (!brain.assetProfiles) brain.assetProfiles = {};
+  const curAssetProf = brain.assetProfiles[params.symbol] || {
+    hits: 0,
+    total: 0,
+    accuracyPct: 50,
+    assetBiasScore: 0,
+    consecutiveMisses: 0,
+  };
+  curAssetProf.total += 1;
+  if (params.directionHit) {
+    curAssetProf.hits += 1;
+    curAssetProf.consecutiveMisses = 0;
+  } else {
+    curAssetProf.consecutiveMisses = (curAssetProf.consecutiveMisses || 0) + 1;
+  }
+  curAssetProf.accuracyPct = +((curAssetProf.hits / curAssetProf.total) * 100).toFixed(1);
+  curAssetProf.assetBiasScore = +(
+    Math.max(-15, Math.min(15, (curAssetProf.assetBiasScore || 0) * 0.78 + biasSignal * 0.22))
+  ).toFixed(2);
+  curAssetProf.lastOutcome = !params.directionHit
+    ? 'YANLIŞ'
+    : params.predictedDirection === 'YATAY'
+      ? 'YATAY_NÖTR'
+      : 'DOĞRU';
+  brain.assetProfiles[params.symbol] = curAssetProf;
 
   // %90 bant kalibrasyonu: hedef %90 kapsama
   const targetCov = 0.90;
@@ -805,20 +883,13 @@ export function learnFromSettledForecast(params: {
   let nextTimeActionTR = '';
 
   const e1 = params.expertsAtEntry.E1_MACRO_TREND;
+  const e2 = params.expertsAtEntry.E2_MICRO_DISPLACEMENT;
   const e3 = params.expertsAtEntry.E3_MEAN_REV_SPRING;
   const e4 = params.expertsAtEntry.E4_CANDLE_VSA_SWEEP;
 
-  if (!params.directionHit && predDir !== 0) {
-    // YANLIŞ TAHMİN KÖK-NEDEN TEŞHİSİ
+  if (!params.directionHit) {
+    // YANLIŞ TAHMİN KÖK-NEDEN TEŞHİSİ (Önce en spesifik mum/mikroyapı nedenleri kontrol edilir!)
     if (
-      (e1 * actualDir < 0 && (e3 * actualDir > 0 || e4 * actualDir > 0)) ||
-      (predDir < 0 && actualDir > 0 && e1 < -20)
-    ) {
-      rootCauseCategory = 'MAKRO_MİKRO_ÇATIŞMASI_TEPKİ';
-      rootCauseTitleTR = 'Makro Trend Tuzağı — Kısa Vadeli Yay/Tepki Dönüşü';
-      whyItHappenedTR = `Yanlış tahmin yaptım çünkü: Günlük Makro Trend (${e1 >= 0 ? '+' : ''}${e1}) ${params.predictedDirection} yönünde baskı kurarken, kısa vadeli 1H grafikte aşırı sıkışma (Yay=${e3 >= 0 ? '+' : ''}${e3}, Mum/VSA=${e4 >= 0 ? '+' : ''}${e4}) kaynaklı ${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}% ters tepki hareketi gerçekleşti.`;
-      nextTimeActionTR = `Bir sonraki +${params.horizonHours}S tahminimde: Kısa vadeli ufukta Makro Trend uzmanının ağırlığını düşürüp %${Math.round(prof.weights[bestExpert] * 100)} ağırlıkla ${EXPERT_LABELS_TR[bestExpert]} sinyaline ve ${prof.biasCorrectionScore >= 0 ? '+' : ''}${prof.biasCorrectionScore} bias düzeltmesine öncelik vereceğim.`;
-    } else if (
       params.patternAtEntry === 'SSL_SWEEP_BULL_PINBAR' ||
       params.patternAtEntry === 'BSL_SWEEP_BEAR_REJECTION' ||
       Math.abs(e4) >= 35
@@ -829,27 +900,43 @@ export function learnFromSettledForecast(params: {
       nextTimeActionTR = `Bir sonraki tahminimde: Önceki 16-bar tepe/dip (BSL/SSL) bölgelerinde uzun fitilli ret mumu oluştuğunda kırılım yönüne girmek yerine Uzman-4 (Mum & Likidite Süpürmesi) dönüş sinyalini (%${Math.round(prof.weights.E4_CANDLE_VSA_SWEEP * 100)} ağırlık) dinleyeceğim.`;
     } else if (
       params.patternAtEntry === 'VSA_STOPPING_VOLUME_BULL' ||
-      params.patternAtEntry === 'VSA_ABSORPTION_SUPPLY_BEAR'
+      params.patternAtEntry === 'VSA_ABSORPTION_SUPPLY_BEAR' ||
+      params.patternAtEntry === 'CLIMAX_EXHAUSTION_REVERSAL'
     ) {
       rootCauseCategory = 'VSA_KURUMSAL_EMİLİM_DÖNÜŞÜ';
       rootCauseTitleTR = 'VSA Hacim-Yayılım Emilimi (Pasif Limit Duvarı)';
       whyItHappenedTR = `Yanlış tahmin yaptım çünkü: Yüksek hacimli harekette kurumsal pasif limit emirleri karşı tarafı emdi (${params.patternLabelAtEntryTR}) ve hareket ${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}% tersine döndü.`;
       nextTimeActionTR = `Bir sonraki tahminimde: RVOL ≥ 1.35 iken mum yayılımı dar kalıyor veya ters yarıda kapanıyorsa VSA Emilim dönüş uzmanına öncelik vereceğim.`;
-    } else if (Math.abs(params.actualMovePct) < 0.25 || params.er1hAtEntry < 0.20) {
-      rootCauseCategory = 'SIĞ_SEANS_TESERE_GÜRÜLTÜSÜ';
-      rootCauseTitleTR = 'Sığ Seans & Düşük Verimlilik Testeresi';
-      whyItHappenedTR = `Yanlış tahmin yaptım çünkü: Trend verimliliği düşükken (ER=${params.er1hAtEntry}) fiyat yalnızca ${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}% mikro-gürültü bandında rastgele salındı.`;
-      nextTimeActionTR = `Bir sonraki tahminimde: ER < 0.20 olan sığ seanslarda yönlü kanaat eşiğini (${prof.convictionDeadzone} puan) koruyup zorlama yön tahmini yerine YATAY koridora geçeceğim.`;
-    } else if (params.volRatioAtEntry >= 1.30) {
+    } else if (
+      params.predictedDirection === 'YATAY' ||
+      params.patternAtEntry === 'BULLISH_FVG_IMBALANCE' ||
+      params.patternAtEntry === 'BEARISH_FVG_IMBALANCE' ||
+      params.patternAtEntry === 'BULLISH_ENGULFING_DISPLACEMENT' ||
+      params.patternAtEntry === 'BEARISH_ENGULFING_DISPLACEMENT' ||
+      Math.abs(e2) >= 28
+    ) {
+      rootCauseCategory = 'FVG_İVME_KIRILIMI';
+      rootCauseTitleTR =
+        params.predictedDirection === 'YATAY'
+          ? 'Sıkışma Bandı Kırılımı & Mikro İvme Patlaması'
+          : 'Mikro İvme & FVG Dengesizlik Kayması';
+      whyItHappenedTR = `Yanlış tahmin yaptım çünkü: ${params.predictedDirection} beklerken mikro ivme ve FVG dengesizliği (U2=${e2 >= 0 ? '+' : ''}${e2}) fiyatı ${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}% hızlandırdı.`;
+      nextTimeActionTR = `Bir sonraki +${params.horizonHours}S tahminimde: ${params.symbol} için varlık biasını (${curAssetProf.assetBiasScore >= 0 ? '+' : ''}${curAssetProf.assetBiasScore}) güncelledim ve doğru yönü bilen ${EXPERT_LABELS_TR[bestExpert]} ağırlığını %${Math.round(prof.weights[bestExpert] * 100)} seviyesine yükselttim.`;
+    } else if (params.volRatioAtEntry >= 1.28 || Math.abs(params.actualMovePct) >= 0.85) {
       rootCauseCategory = 'VOLATİLİTE_ŞOKU_TERS_BAR';
       rootCauseTitleTR = 'Yüksek Volatilite Şoku & Ani Haber/Kaldıraç Tasfiyesi';
       whyItHappenedTR = `Yanlış tahmin yaptım çünkü: Volatilite oranı yüksekken (${params.volRatioAtEntry}x) ani kaldıraç tasfiyesi fiyatı ${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}% savurdu.`;
-      nextTimeActionTR = `Bir sonraki tahminimde: Volatilite genişlemesinde (%90 bant çarpanı ${prof.bandScaleMultiplier}x) aşırı uzamış mumların peşinden gitmeyip ortalama dönüş uzmanını güçlendireceğim.`;
+      nextTimeActionTR = `Bir sonraki tahminimde: Volatilite genişlemesinde (%90 bant çarpanı ${prof.bandScaleMultiplier}x) aşırı uzamış mumların peşinden gitmeyip Dipten/Tepeden Geç Giriş Kalkanını devreye sokacağım.`;
+    } else if (Math.abs(params.actualMovePct) < 0.20 || params.er1hAtEntry < 0.20) {
+      rootCauseCategory = 'SIĞ_SEANS_TESERE_GÜRÜLTÜSÜ';
+      rootCauseTitleTR = 'Sığ Seans & Düşük Verimlilik Testeresi';
+      whyItHappenedTR = `Yanlış tahmin yaptım çünkü: Trend verimliliği düşükken (ER=${params.er1hAtEntry}) fiyat yalnızca ${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}% mikro-gürültü bandında rastgele salındı.`;
+      nextTimeActionTR = `Bir sonraki tahminimde: ${params.symbol} için yönlü kanaat eşiğini (${prof.convictionDeadzone + Math.min(5, Math.max(0, (curAssetProf.consecutiveMisses - 1) * 2))} puan) sıkılaştırıp sığ seansta YATAY koridora geçeceğim.`;
     } else {
-      rootCauseCategory = 'FVG_İVME_KIRILIMI';
-      rootCauseTitleTR = 'Mikro İvme & FVG Dengesizlik Kayması';
-      whyItHappenedTR = `Yanlış tahmin yaptım çünkü: ${EXPERT_LABELS_TR[worstExpert]} (${params.expertsAtEntry[worstExpert]}) yanıltıcı sinyal üretirken gerçek fiyat ${EXPERT_LABELS_TR[bestExpert]} yönünde (${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}%) hareket etti.`;
-      nextTimeActionTR = `Bir sonraki +${params.horizonHours}S tahminimde: Yanılan uzmanın ağırlığını kısıp doğru yönü bilen ${EXPERT_LABELS_TR[bestExpert]} ağırlığını %${Math.round(prof.weights[bestExpert] * 100)} seviyesine yükselttim.`;
+      rootCauseCategory = 'MAKRO_MİKRO_ÇATIŞMASI_TEPKİ';
+      rootCauseTitleTR = 'Makro Trend Tuzağı — Kısa Vadeli Yay/Tepki Dönüşü';
+      whyItHappenedTR = `Yanlış tahmin yaptım çünkü: Günlük Makro Trend (${e1 >= 0 ? '+' : ''}${e1}) ${params.predictedDirection} yönünde baskı kurarken, kısa vadeli 1H grafikte aşırı sıkışma (Yay=${e3 >= 0 ? '+' : ''}${e3}, Mum/VSA=${e4 >= 0 ? '+' : ''}${e4}) kaynaklı ${params.actualMovePct >= 0 ? '+' : ''}${params.actualMovePct}% ters tepki hareketi gerçekleşti.`;
+      nextTimeActionTR = `Bir sonraki +${params.horizonHours}S tahminimde: Kısa vadeli ufukta dipten/tepeden geç giriş kalkanını aktif tutup %${Math.round(prof.weights[bestExpert] * 100)} ağırlıkla ${EXPERT_LABELS_TR[bestExpert]} sinyaline öncelik vereceğim.`;
     }
   } else {
     // DOĞRU TAHMİN VEYA YATAY BANT İSABETİ ÖZ-DEĞERLENDİRMESİ
@@ -882,7 +969,7 @@ export function learnFromSettledForecast(params: {
     horizonHours: params.horizonHours,
     timestampMs: nowMs,
     timestampTR: formatTR(nowMs),
-    outcome: params.predictedDirection === 'YATAY' ? 'YATAY_NÖTR' : params.directionHit ? 'DOĞRU' : 'YANLIŞ',
+    outcome: !params.directionHit ? 'YANLIŞ' : params.predictedDirection === 'YATAY' ? 'YATAY_NÖTR' : 'DOĞRU',
     predictedDirection: params.predictedDirection,
     actualMovePct: params.actualMovePct,
     predictedMovePct: params.predictedMovePct,

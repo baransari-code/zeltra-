@@ -798,12 +798,14 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           const lastD = dPack.bars.length - 1;
           const atr20 = dPack.atr20[lastD] || dPack.atr14[lastD];
           if (atr20 > 0) {
-            const candSl = pos.peakPrice - atr20 * trailMult;
-            if (candSl > pos.stopLoss) pos.stopLoss = +candSl.toFixed(spec.digits);
+            const candSl = isLong ? pos.peakPrice - atr20 * trailMult : pos.peakPrice + atr20 * trailMult;
+            if (isLong ? candSl > pos.stopLoss : candSl < pos.stopLoss) {
+              pos.stopLoss = +candSl.toFixed(spec.digits);
+            }
           }
           const ewmacNow = calcEwmacAt(dPack.e8, dPack.e16, dPack.e32, dPack.e64, dPack.e128, dPack.atr20, lastD);
-          if (ewmacNow <= 0) {
-            closeTrade(liqPrice, 'CTA TREND DÖNÜŞÜ (EWMAC ≤ 0)', 'BREAKEVEN_EXIT');
+          if (isLong ? ewmacNow <= 0 : ewmacNow >= -2) {
+            closeTrade(liqPrice, 'CTA TREND DÖNÜŞÜ', 'BREAKEVEN_EXIT');
             continue;
           }
         }

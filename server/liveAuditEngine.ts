@@ -157,6 +157,10 @@ export interface LiveAuditDashboardPayload {
     directionHitRatePct: number;
     highConvictionSettled: number;
     highConvictionHitRatePct: number;
+    directionalSettledCount?: number;
+    directionalWinRatePct?: number;
+    directionalProfitFactor?: number;
+    simulated250kDirectionalNetTRY?: number;
     band90CoveragePct: number;
     avgPriceErrorPct: number;
     byHorizon: LiveAuditHorizonStats[];
@@ -679,7 +683,8 @@ export async function runLiveAuditTick(forceLockOpenMarkets = false): Promise<Li
           spec.digits,
           experts,
           micro,
-          snap.activeSetup.pod !== 'NONE'
+          snap.activeSetup.pod !== 'NONE',
+          sym
         );
 
         const targetAtMs = nowMs + h * 3600 * 1000;
@@ -762,8 +767,32 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
   const isForecastHit = (f: LockedForwardForecast) =>
     f.status === 'DOĞRU' || (f.status === 'YATAY_NÖTR' && f.directionHit !== false);
   const dirHits = settledAll.filter(isForecastHit).length;
-  const hcSettled = settledAll.filter((f) => Math.abs(f.zacScore) >= 35 || f.activePod !== 'NONE');
-  const hcHits = hcSettled.filter(isForecastHit).length;
+  const directionalOnly = settledAll.filter(
+    (f) => f.expectedDirection === 'YÜKSELİŞ' || f.expectedDirection === 'DÜŞÜŞ'
+  );
+  const directionalHits = directionalOnly.filter((f) => f.status === 'DOĞRU').length;
+  const hcSettled = settledAll.filter(
+    (f) =>
+      (f.expectedDirection === 'YÜKSELİŞ' || f.expectedDirection === 'DÜŞÜŞ') &&
+      (Math.abs(f.zacScore) >= 12 || f.activePod !== 'NONE')
+  );
+  const hcHits = hcSettled.filter((f) => f.status === 'DOĞRU').length;
+
+  let grossWinPct = 0;
+  let grossLossPct = 0;
+  let simNetTRY = 0;
+  for (const f of directionalOnly) {
+    const sign = f.expectedDirection === 'YÜKSELİŞ' ? 1 : -1;
+    const retPct = sign * (f.actualMovePct || 0);
+    const costPct = ZAC_CRYPTO_ASSETS.has(f.symbol) ? 0.04 : 0.015;
+    const netPct = retPct - costPct;
+    if (retPct > 0) grossWinPct += retPct;
+    else grossLossPct += Math.abs(retPct);
+    simNetTRY += 62500 * (netPct / 100);
+  }
+  const directionalProfitFactor =
+    grossLossPct > 0 ? +(grossWinPct / grossLossPct).toFixed(2) : grossWinPct > 0 ? 9.99 : 0;
+  const simulated250kDirectionalNetTRY = Math.round(simNetTRY);
   const bandHits = settledAll.filter((f) => f.inside90Band).length;
   const avgErr =
     settledAll.length > 0
@@ -844,6 +873,11 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       highConvictionSettled: hcSettled.length,
       highConvictionHitRatePct:
         hcSettled.length > 0 ? +((hcHits / hcSettled.length) * 100).toFixed(1) : 0,
+      directionalSettledCount: directionalOnly.length,
+      directionalWinRatePct:
+        directionalOnly.length > 0 ? +((directionalHits / directionalOnly.length) * 100).toFixed(1) : 0,
+      directionalProfitFactor,
+      simulated250kDirectionalNetTRY,
       band90CoveragePct: settledAll.length > 0 ? +((bandHits / settledAll.length) * 100).toFixed(1) : 0,
       avgPriceErrorPct: avgErr,
       byHorizon,
