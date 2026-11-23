@@ -160,7 +160,7 @@ export interface LiveAuditDashboardPayload {
     directionalSettledCount?: number;
     directionalWinRatePct?: number;
     directionalProfitFactor?: number;
-    simulated5kDirectionalNetUSD?: number;
+    simulated1kDirectionalNetUSD?: number;
     band90CoveragePct: number;
     avgPriceErrorPct: number;
     byHorizon: LiveAuditHorizonStats[];
@@ -792,11 +792,11 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
     const netPct = retPct - costPct;
     if (retPct > 0) grossWinPct += retPct;
     else grossLossPct += Math.abs(retPct);
-    simNetUSD += 1250 * (netPct / 100);
+    simNetUSD += 250 * (netPct / 100);
   }
   const directionalProfitFactor =
     grossLossPct > 0 ? +(grossWinPct / grossLossPct).toFixed(2) : grossWinPct > 0 ? 9.99 : 0;
-  const simulated5kDirectionalNetUSD = +simNetUSD.toFixed(2);
+  const simulated1kDirectionalNetUSD = +simNetUSD.toFixed(2);
   const bandHits = settledAll.filter((f) => f.inside90Band).length;
   const avgErr =
     settledAll.length > 0
@@ -881,7 +881,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       directionalWinRatePct:
         directionalOnly.length > 0 ? +((directionalHits / directionalOnly.length) * 100).toFixed(1) : 0,
       directionalProfitFactor,
-      simulated5kDirectionalNetUSD,
+      simulated1kDirectionalNetUSD,
       band90CoveragePct: settledAll.length > 0 ? +((bandHits / settledAll.length) * 100).toFixed(1) : 0,
       avgPriceErrorPct: avgErr,
       byHorizon,

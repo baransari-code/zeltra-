@@ -202,7 +202,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const [selectedSymbol, setSelectedSymbol] = useState<string>('BTC/USD');
-  const [marginInput, setMarginInput] = useState<string>('500');
+  const [marginInput, setMarginInput] = useState<string>('100');
   const [leverageInput, setLeverageInput] = useState<number>(3);
   const [stopLossInput, setStopLossInput] = useState<string>('');
   const [takeProfitInput, setTakeProfitInput] = useState<string>('');
@@ -303,8 +303,8 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
 
   const handleOpenOrder = async (direction: 'AL (LONG)' | 'SAT (SHORT)') => {
     if (!selectedAsset) return;
-    if (parsedMargin < 25) {
-      setActionMessage({ type: 'err', text: 'Minimum teminat $25.00 USD olmalıdır.' });
+    if (parsedMargin < 10) {
+      setActionMessage({ type: 'err', text: 'Minimum teminat $10.00 USD olmalıdır.' });
       return;
     }
     const sl = stopLossInput.trim() ? Number(stopLossInput) : undefined;
@@ -366,7 +366,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   };
 
   const handleResetArena = async () => {
-    const ok = await postAction({ action: 'reset' }, 'Manuel Arena hesabın $5,000.00 USD olarak sıfırlandı.');
+    const ok = await postAction({ action: 'reset' }, 'Manuel Arena hesabın $1,000.00 USD olarak sıfırlandı.');
     if (ok) {
       setConfirmReset(false);
     }
@@ -382,7 +382,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
     const maxTs = Math.max(...allPts.map((p) => p.timestamp));
     const spanTs = Math.max(1, maxTs - minTs);
 
-    const baseCap = userLedger?.initialCapitalUSD ?? 5000;
+    const baseCap = userLedger?.initialCapitalUSD ?? 1000;
     const equities = [baseCap, ...allPts.map((p) => p.equityUSD)];
     const minEq = Math.min(...equities);
     const maxEq = Math.max(...equities);
@@ -481,8 +481,8 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   }
 
   const availCash = userLedger?.availableCashUSD ?? 0;
-  const userEquity = arena?.userEquityUSD ?? 5000;
-  const botEquity = arena?.botEquityUSD ?? 5000;
+  const userEquity = arena?.userEquityUSD ?? 1000;
+  const botEquity = arena?.botEquityUSD ?? 1000;
   const leadUSD = arena?.leadUSD ?? 0;
   const totalGrossOpenUSD =
     userLedger?.openPositions.reduce((s, p) => s + (p.grossUnrealizedPnL_USD ?? 0), 0) ?? 0;
@@ -507,10 +507,10 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-bold text-white mt-2">
-              Sen vs Otonom Sistem — $5,000 USD Gerçek Piyasa Düellosu
+              Sen vs Otonom Sistem — $1,000 USD Gerçek Piyasa Düellosu
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Burada kendi $5,000 kasanla canlı piyasa spread, kayma, IBKR komisyonu ve %85 marjin likidasyon kurallarıyla işlem açıp otonom botla birebir yarışabilirsin.
+              Burada kendi $1,000 kasanla canlı piyasa spread, kayma, IBKR komisyonu ve %85 marjin likidasyon kurallarıyla işlem açıp otonom botla birebir yarışabilirsin.
             </p>
           </div>
 
@@ -538,7 +538,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-red-950/60 text-zinc-300 hover:text-red-300 border border-zinc-700 hover:border-red-800/60 transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Kasamı Sıfırla ($5K)
+                Kasamı Sıfırla ($1K)
               </button>
             ) : (
               <div className="inline-flex items-center gap-1.5 bg-red-950/60 border border-red-700/70 rounded-lg px-2.5 py-1">
@@ -826,14 +826,14 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             </div>
             <input
               type="number"
-              min={25}
-              step={25}
+              min={10}
+              step={10}
               value={marginInput}
               onChange={(e) => setMarginInput(e.target.value)}
               className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-500"
             />
             <div className="grid grid-cols-5 gap-1.5 mt-1.5">
-              {[100, 250, 500, 1000].map((amt) => (
+              {[50, 100, 250, 500].map((amt) => (
                 <button
                   key={amt}
                   type="button"

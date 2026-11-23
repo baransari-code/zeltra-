@@ -1,4 +1,4 @@
-// server/manualTrader.ts — ZELTRA /test2 Gerçek Piyasa Manuel İşlem Arenası (Sen vs Otonom Bot $5,000 USD Yarışması)
+// server/manualTrader.ts — ZELTRA /test2 Gerçek Piyasa Manuel İşlem Arenası (Sen vs Otonom Bot $1,000 USD Yarışması)
 import fs from 'fs';
 import path from 'path';
 import type http from 'http';
@@ -81,7 +81,7 @@ function createCleanManualLedger(initialCapitalUSD = INITIAL_CAPITAL_USD, usdTry
   return {
     botId: 'ZELTRA-USER-ARENA-USD',
     currency: 'USD',
-    strategyVersion: 'manual-ibkr-v2-usd',
+    strategyVersion: 'manual-ibkr-v3-1k-usd',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -142,7 +142,7 @@ function createCleanManualLedger(initialCapitalUSD = INITIAL_CAPITAL_USD, usdTry
         timestamp: nowIso,
         type: 'SYSTEM',
         symbol: 'ARENA',
-        message: '$5,000.00 USD Manuel IBKR Arena hesabı başlatıldı. Gerçek piyasa fiyatları, spread ve IBKR komisyonlarıyla özgürce işlem açabilirsiniz.',
+        message: '$1,000.00 USD Manuel IBKR Arena hesabı başlatıldı. Gerçek piyasa fiyatları, spread ve IBKR komisyonlarıyla özgürce işlem açabilirsiniz.',
       },
     ],
   };
@@ -170,54 +170,14 @@ async function loadOrInitManualLedger(): Promise<AutonomousLedgerState> {
     try {
       const raw = fs.readFileSync(MANUAL_LEDGER_FILE, 'utf-8');
       const parsed: any = JSON.parse(raw);
-      if (parsed && parsed.currency === 'USD' && typeof parsed.initialCapitalUSD === 'number') {
+      if (
+        parsed &&
+        parsed.currency === 'USD' &&
+        parsed.strategyVersion === 'manual-ibkr-v3-1k-usd' &&
+        typeof parsed.initialCapitalUSD === 'number'
+      ) {
         recalculateLedgerMetrics(parsed);
         return parsed as AutonomousLedgerState;
-      }
-      if (parsed && (parsed.openPositions?.length > 0 || parsed.closedTrades?.length > 0)) {
-        const rate = Number(parsed.liveUsdTry) > 5 ? Number(parsed.liveUsdTry) : 50.59;
-        const d = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? +(v / rate).toFixed(2) : 0);
-        const convT = (t: any): AutonomousTrade => ({
-          ...t,
-          allocatedCapitalUSD: d(t.allocatedCapitalUSD ?? t.allocatedCapitalTRY),
-          notionalValueUSD: d(t.notionalValueUSD ?? t.notionalValueTRY),
-          riskUSD: d(t.riskUSD ?? t.riskAmountTRY ?? t.riskTRY),
-          spot1xEquivalentPnL_USD: d(t.spot1xEquivalentPnL_USD ?? t.spot1xEquivalentPnL_TRY),
-          executionCostUSD: d(t.executionCostUSD ?? t.executionCostTRY),
-          entryCommissionUSD: d(t.entryCommissionUSD ?? t.entryCommissionTRY),
-          exitCommissionUSD: d(t.exitCommissionUSD ?? t.exitCommissionTRY),
-          financingCostUSD: d(t.financingCostUSD ?? t.financingCostTRY),
-          grossUnrealizedPnL_USD: d(t.grossUnrealizedPnL_USD ?? t.grossUnrealizedPnL_TRY),
-          realizedPnL_USD: d(t.realizedPnL_USD ?? t.realizedPnL_TRY),
-          unrealizedPnL_USD: d(t.unrealizedPnL_USD ?? t.unrealizedPnL_TRY),
-          totalPnL_USD: d(t.totalPnL_USD ?? t.totalPnL_TRY),
-        });
-        const migrated: AutonomousLedgerState = {
-          ...parsed,
-          botId: 'ZELTRA-USER-ARENA-USD',
-          currency: 'USD',
-          strategyVersion: 'manual-ibkr-v2-usd',
-          initialCapitalUSD: d(parsed.initialCapitalTRY || 250000),
-          cashBalanceUSD: d(parsed.cashBalanceTRY || 250000),
-          allocatedMarginUSD: d(parsed.allocatedMarginTRY),
-          availableCashUSD: d(parsed.availableCashTRY || 250000),
-          openFloatingPnL_USD: d(parsed.openFloatingPnL_TRY),
-          totalEquityUSD: d(parsed.totalEquityTRY || 250000),
-          peakEquityUSD: d(parsed.peakEquityTRY || 250000),
-          netProfitUSD: d(parsed.netProfitTRY),
-          openPositions: (parsed.openPositions || []).map(convT),
-          closedTrades: (parsed.closedTrades || []).map(convT),
-          equityCurve: (parsed.equityCurve || []).map((c: any) => ({
-            timestamp: c.timestamp,
-            timeStr: c.timeStr,
-            equityUSD: typeof c.equityUSD === 'number' ? c.equityUSD : d(c.equityTRY),
-            cashUSD: typeof c.cashUSD === 'number' ? c.cashUSD : d(c.cashTRY),
-            drawdownPercent: c.drawdownPercent ?? 0,
-          })),
-        };
-        recalculateLedgerMetrics(migrated);
-        saveManualLedger(migrated);
-        return migrated;
       }
     } catch {
       // Re-init on corruption
@@ -544,8 +504,8 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
     }
 
     const marginUSD = Number(params.marginUSD);
-    if (!Number.isFinite(marginUSD) || marginUSD < 25) {
-      throw new Error('Minimum pozisyon teminatı $25.00 USD olmalıdır.');
+    if (!Number.isFinite(marginUSD) || marginUSD < 10) {
+      throw new Error('Minimum pozisyon teminatı $10.00 USD olmalıdır.');
     }
     if (marginUSD > state.availableCashUSD) {
       throw new Error(`Yetersiz serbest nakit! Kullanılabilir teminat: $${state.availableCashUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`);

@@ -141,7 +141,7 @@ interface LiveAuditPayload {
     directionalSettledCount?: number;
     directionalWinRatePct?: number;
     directionalProfitFactor?: number;
-    simulated5kDirectionalNetUSD?: number;
+    simulated1kDirectionalNetUSD?: number;
     band90CoveragePct: number;
     avgPriceErrorPct: number;
     byHorizon: HorizonStats[];
@@ -284,7 +284,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   const equitySvg = useMemo(() => {
     const hist = data?.portfolio?.equityHistory || [];
     if (hist.length < 2) return null;
-    const baseCap = data?.portfolio?.initialCapitalUSD || 5_000;
+    const baseCap = data?.portfolio?.initialCapitalUSD || 1_000;
     const W = 860;
     const H = 150;
     const PAD = 18;
@@ -357,7 +357,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
           },
           {
             id: 'portfolio',
-            label: `Portföy (${p ? fmtUSD(p.totalEquityUSD) : '$5,000.00'})`,
+            label: `Portföy (${p ? fmtUSD(p.totalEquityUSD) : '$1,000.00'})`,
             sub: p ? `${p.openPositionsCount} Açık` : '',
           },
         ].map((tab) => {
@@ -830,8 +830,8 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               </div>
               <div className="text-[10px] text-zinc-500">
                 n={fs.highConvictionSettled}
-                {typeof fs.simulated5kDirectionalNetUSD === 'number' && fs.directionalSettledCount
-                  ? ` • ${fmtSignedUSD(fs.simulated5kDirectionalNetUSD)} (PF ${fs.directionalProfitFactor ?? '-'})`
+                {typeof fs.simulated1kDirectionalNetUSD === 'number' && fs.directionalSettledCount
+                  ? ` • ${fmtSignedUSD(fs.simulated1kDirectionalNetUSD)} (PF ${fs.directionalProfitFactor ?? '-'})`
                   : ''}
               </div>
             </div>

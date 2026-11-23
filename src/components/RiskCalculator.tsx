@@ -18,7 +18,7 @@ export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
   liveUsdTry: _liveUsdTry,
   onSelectSymbol,
 }) => {
-  const [capitalUSD, setCapitalUSD] = useState<number>(5000);
+  const [capitalUSD, setCapitalUSD] = useState<number>(1000);
   const [riskPercent, setRiskPercent] = useState<number>(1.5);
   const [entry, setEntry] = useState<number>(0);
   const [stopLoss, setStopLoss] = useState<number>(0);

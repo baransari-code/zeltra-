@@ -251,7 +251,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
   const wfSvg = useMemo(() => {
     if (!wfReport || !wfReport.equityCurve || wfReport.equityCurve.length < 2) return null;
     const pts = wfReport.equityCurve;
-    const baseCap = wfReport.initialCapitalUSD || 5_000;
+    const baseCap = wfReport.initialCapitalUSD || 1_000;
     const W = 900;
     const H = 210;
     const PAD = 24;
@@ -328,14 +328,14 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
 
           <button
             onClick={() => {
-              if (window.confirm('Test fonu $5,000 USD başlangıç sermayesi ile sıfırlansın mı?')) {
+              if (window.confirm('Test fonu $1,000 USD başlangıç sermayesi ile sıfırlansın mı?')) {
                 fetchLedger('reset');
               }
             }}
             disabled={busyAction !== null}
             className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1.5"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> $5K Sıfırla
+            <RotateCcw className="w-3.5 h-3.5" /> $1K Sıfırla
           </button>
         </div>
       </div>
@@ -636,12 +636,12 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                       <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                         <div className="bg-rose-950/30 border border-rose-900/50 rounded p-2.5 space-y-1">
                           <div className="text-[10px] text-rose-300 font-bold">ESKİ (v13.2) — 2Y</div>
-                          <div className="text-sm font-black text-rose-400">$486</div>
+                          <div className="text-sm font-black text-rose-400">$97</div>
                           <div className="text-[11px] text-rose-300">-90.3% | DD %90.9</div>
                           <div className="text-[10px] text-zinc-400">PF 0.58 • 0/9 Çeyrek</div>
                         </div>
                         <div className="bg-emerald-950/30 border border-emerald-800/50 rounded p-2.5 space-y-1">
-                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v15.2) — {wfWindow.toUpperCase()}</div>
+                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v15.3) — {wfWindow.toUpperCase()}</div>
                           <div className="text-sm font-black text-emerald-400">{fmtUSD(wfReport.endingEquityUSD)}</div>
                           <div className="text-[11px] text-emerald-300">
                             {wfReport.netProfitPercent >= 0 ? '+' : ''}{wfReport.netProfitPercent}% | DD %{wfReport.maxDrawdownPercent}
