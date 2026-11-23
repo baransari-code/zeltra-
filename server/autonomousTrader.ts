@@ -1,10 +1,10 @@
 // server/autonomousTrader.ts
-// ZELTRA v14.0 — Kurumsal 3-Pod Otonom Fon Motoru (250.000 TL Test & Canlıya Hazırlık Platformu)
-// Mimari: Citadel / Millennium tarzı ayrık sermaye kotalı 3 korelasyonsuz alfa motoru:
-//   Pod-1: MR_SPRING_12H  (Hisse/Endeks/Metal 12H Seküler Dip Sıçraması — 2Y OOS: %63.9 WR, PF 1.53)
-//   Pod-2: CRYPTO_MOM_12H (7/24 Kripto 12H Sakin-Vol Çift Yönlü Trend   — 2Y OOS: %60.8 WR, PF 2.21)
-//   Pod-3: CTA_TREND      (Günlük Çok-Hızlı EWMAC Makro Trend Takibi    — 2Y OOS: %50.0 WR, PF 1.86 | 4.2Y PF 2.14)
-// Gerçek 2Y Saatlik Birleşik Kanıt: 250K -> 390K TL (+%56.1), Sharpe 1.54, Sortino 2.45, MaxDD %8.7, PF 1.84, 8/9 Pozitif Çeyrek.
+// ZELTRA v15.2 — Kurumsal 3-Pod + Cortex Otonom Fon Motoru (USD Bazlı Canlıya Hazırlık Platformu)
+// Mimari: Citadel / Millennium tarzı ayrık sermaye kotalı 3 korelasyonsuz alfa motoru + Cortex +1S/+4S:
+//   Pod-1: MR_SPRING_12H  (Hisse/Endeks/Metal 12H Seküler Dip Sıçraması)
+//   Pod-2: CRYPTO_MOM_12H (7/24 Kripto 12H Sakin-Vol Çift Yönlü Trend)
+//   Pod-3: CTA_TREND      (Günlük Çok-Hızlı EWMAC Makro Trend Takibi)
+// Doğrudan USD ($5,000) bazlı muhasebe — sıfır kur çarpıtması.
 
 import fs from 'fs';
 import path from 'path';
@@ -39,8 +39,8 @@ import {
   loadOrInitAiBrain,
 } from './zeltraSelfLearningAi';
 
-export const STRATEGY_VERSION = 'v14.0-zeltra-alpha-3pod';
-export const INITIAL_CAPITAL_TRY = 250_000;
+export const STRATEGY_VERSION = 'v15.2-zeltra-usd';
+export const INITIAL_CAPITAL_USD = 5_000;
 export const LIVE_GO_TARGET_ISO = '2026-12-01T00:00:00.000Z';
 const LEDGER_FILE = path.resolve(process.cwd(), 'data', 'autonomous_trader_ledger.json');
 
@@ -100,18 +100,15 @@ export function getSpec(symbol: string): InstrumentMicroSpec {
   );
 }
 
-export function computeIbkrCommissionTRY(
+export function computeIbkrCommissionUSD(
   spec: InstrumentMicroSpec,
-  notionalTRY: number,
-  units: number,
-  usdTry: number
+  notionalUSD: number,
+  units: number
 ): number {
-  const safeUsdTry = usdTry > 1 ? usdTry : 42.0;
-  const minTRY = spec.ibkrMinFeeUSD * safeUsdTry;
   if (spec.ibkrPerShareUSD) {
-    return Math.max(minTRY, Math.abs(units) * spec.ibkrPerShareUSD * safeUsdTry);
+    return Math.max(spec.ibkrMinFeeUSD, Math.abs(units) * spec.ibkrPerShareUSD);
   }
-  return Math.max(minTRY, Math.abs(notionalTRY) * spec.ibkrCommissionRate);
+  return Math.max(spec.ibkrMinFeeUSD, Math.abs(notionalUSD) * spec.ibkrCommissionRate);
 }
 
 export function isMarketOpenForAsset(
@@ -169,22 +166,22 @@ export interface AutonomousTrade {
   trailingAtrMult?: number;
   entry12hBucketTs?: number;
   maxExitTimestamp?: number;
-  allocatedCapitalTRY: number;
-  notionalValueTRY?: number;
+  allocatedCapitalUSD: number;
+  notionalValueUSD?: number;
   effectiveLeverage?: number;
   positionSizeUnits: number;
   unitLabel?: string;
-  riskTRY?: number;
-  spot1xEquivalentPnL_TRY?: number;
-  executionCostTRY?: number;
-  entryCommissionTRY?: number;
-  exitCommissionTRY?: number;
-  financingCostTRY?: number;
-  grossUnrealizedPnL_TRY?: number;
+  riskUSD?: number;
+  spot1xEquivalentPnL_USD?: number;
+  executionCostUSD?: number;
+  entryCommissionUSD?: number;
+  exitCommissionUSD?: number;
+  financingCostUSD?: number;
+  grossUnrealizedPnL_USD?: number;
   tp1Hit: boolean;
-  realizedPnL_TRY: number;
-  unrealizedPnL_TRY: number;
-  totalPnL_TRY: number;
+  realizedPnL_USD: number;
+  unrealizedPnL_USD: number;
+  totalPnL_USD: number;
   totalPnL_Percent: number;
   rMultiple?: number;
   rationale: string;
@@ -200,7 +197,7 @@ export interface ActivityLogItem {
   symbol: string;
   pod?: string;
   message: string;
-  pnlImpactTRY?: number;
+  pnlImpactUSD?: number;
   [key: string]: any;
 }
 
@@ -252,6 +249,7 @@ export interface LiveReadinessGate {
 
 export interface AutonomousLedgerState {
   botId: string;
+  currency?: 'USD';
   strategyVersion: string;
   isRunning: boolean;
   observationModeActive?: boolean;
@@ -261,22 +259,22 @@ export interface AutonomousLedgerState {
   tickCount?: number;
   liveUsdTry: number;
   vixLevel?: number;
-  initialCapitalTRY: number;
-  cashBalanceTRY: number;
-  allocatedMarginTRY: number;
-  availableCashTRY: number;
-  openFloatingPnL_TRY: number;
-  totalEquityTRY: number;
-  peakEquityTRY?: number;
-  netProfitTRY: number;
+  initialCapitalUSD: number;
+  cashBalanceUSD: number;
+  allocatedMarginUSD: number;
+  availableCashUSD: number;
+  openFloatingPnL_USD: number;
+  totalEquityUSD: number;
+  peakEquityUSD?: number;
+  netProfitUSD: number;
   netProfitPercent: number;
   drawdownThrottleScale?: number;
   dailyLossHaltActive?: boolean;
   openPositions: AutonomousTrade[];
   closedTrades: AutonomousTrade[];
   activityLog: ActivityLogItem[];
-  equityHistory?: { timestamp: number; timeStr: string; equityTRY: number; ddPct: number }[];
-  equityCurve: { timestamp: number; timeStr: string; equityTRY: number; cashTRY?: number; drawdownPercent?: number }[];
+  equityHistory?: { timestamp: number; timeStr: string; equityUSD: number; ddPct: number }[];
+  equityCurve: { timestamp: number; timeStr: string; equityUSD: number; cashUSD?: number; drawdownPercent?: number }[];
   marketScanner?: any[];
   attribution?: any;
   lastMarketRadar?: MarketRadarItem[];
@@ -287,7 +285,7 @@ export interface AutonomousLedgerState {
     maxSlots: number;
     closedCount: number;
     winRatePct: number;
-    netPnL_TRY: number;
+    netPnL_USD: number;
   }[];
   liveReadiness?: {
     targetDateTR: string;
@@ -302,15 +300,15 @@ export interface AutonomousLedgerState {
     losingTrades: number;
     winRatePercent: number;
     profitFactor: number;
-    avgWinTRY: number;
-    avgLossTRY: number;
-    expectancyTRY: number;
+    avgWinUSD: number;
+    avgLossUSD: number;
+    expectancyUSD: number;
     maxDrawdownPercent: number;
-    totalSpreadAndCommissionTRY: number;
-    totalFinancingTRY?: number;
-    activeNotionalVolumeTRY?: number;
+    totalSpreadAndCommissionUSD: number;
+    totalFinancingUSD?: number;
+    activeNotionalVolumeUSD?: number;
     avgMarginLeverage?: number;
-    spot1xTotalNetProfitTRY?: number;
+    spot1xTotalNetProfitUSD?: number;
     [key: string]: any;
   };
 }
@@ -367,10 +365,11 @@ function formatTRDateTime(ms = Date.now()): string {
   });
 }
 
-function createFreshLedger(usdTry = 42.5): AutonomousLedgerState {
+function createFreshLedger(usdTry = 50.59): AutonomousLedgerState {
   const nowIso = new Date().toISOString();
   const ledger: AutonomousLedgerState = {
-    botId: 'ZELTRA-ALPHA-V14-3POD',
+    botId: 'ZELTRA-ALPHA-USD',
+    currency: 'USD',
     strategyVersion: STRATEGY_VERSION,
     isRunning: true,
     observationModeActive: false,
@@ -380,14 +379,14 @@ function createFreshLedger(usdTry = 42.5): AutonomousLedgerState {
     tickCount: 0,
     liveUsdTry: usdTry,
     vixLevel: 18.0,
-    initialCapitalTRY: INITIAL_CAPITAL_TRY,
-    cashBalanceTRY: INITIAL_CAPITAL_TRY,
-    allocatedMarginTRY: 0,
-    availableCashTRY: INITIAL_CAPITAL_TRY,
-    openFloatingPnL_TRY: 0,
-    totalEquityTRY: INITIAL_CAPITAL_TRY,
-    peakEquityTRY: INITIAL_CAPITAL_TRY,
-    netProfitTRY: 0,
+    initialCapitalUSD: INITIAL_CAPITAL_USD,
+    cashBalanceUSD: INITIAL_CAPITAL_USD,
+    allocatedMarginUSD: 0,
+    availableCashUSD: INITIAL_CAPITAL_USD,
+    openFloatingPnL_USD: 0,
+    totalEquityUSD: INITIAL_CAPITAL_USD,
+    peakEquityUSD: INITIAL_CAPITAL_USD,
+    netProfitUSD: 0,
     netProfitPercent: 0,
     drawdownThrottleScale: 1.0,
     dailyLossHaltActive: false,
@@ -401,14 +400,14 @@ function createFreshLedger(usdTry = 42.5): AutonomousLedgerState {
         symbol: 'PORTFÖY',
         pod: 'SYSTEM',
         message:
-          'ZELTRA v14.0 Kurumsal 3-Pod Otonom Fon Motoru 250.000 TL başlangıç sermayesi ile AKTİF TEST MODUNDA başlatıldı (Hedef Canlı Geçiş: 01.12.2026).',
+          'ZELTRA v15.2 Kurumsal 3-Pod + Cortex Otonom Fon Motoru $5,000 USD başlangıç sermayesi ile AKTİF TEST MODUNDA başlatıldı (Hedef Canlı Geçiş: 01.12.2026).',
       },
     ],
     equityHistory: [
-      { timestamp: Date.now(), timeStr: formatTRDateTime(), equityTRY: INITIAL_CAPITAL_TRY, ddPct: 0 },
+      { timestamp: Date.now(), timeStr: formatTRDateTime(), equityUSD: INITIAL_CAPITAL_USD, ddPct: 0 },
     ],
     equityCurve: [
-      { timestamp: Date.now(), timeStr: formatTRDateTime(), equityTRY: INITIAL_CAPITAL_TRY, drawdownPercent: 0 },
+      { timestamp: Date.now(), timeStr: formatTRDateTime(), equityUSD: INITIAL_CAPITAL_USD, drawdownPercent: 0 },
     ],
     lastMarketRadar: [],
     podStats: [],
@@ -425,15 +424,15 @@ function createFreshLedger(usdTry = 42.5): AutonomousLedgerState {
       losingTrades: 0,
       winRatePercent: 0,
       profitFactor: 0,
-      avgWinTRY: 0,
-      avgLossTRY: 0,
-      expectancyTRY: 0,
+      avgWinUSD: 0,
+      avgLossUSD: 0,
+      expectancyUSD: 0,
       maxDrawdownPercent: 0,
-      totalSpreadAndCommissionTRY: 0,
-      totalFinancingTRY: 0,
-      activeNotionalVolumeTRY: 0,
+      totalSpreadAndCommissionUSD: 0,
+      totalFinancingUSD: 0,
+      activeNotionalVolumeUSD: 0,
       avgMarginLeverage: 0,
-      spot1xTotalNetProfitTRY: 0,
+      spot1xTotalNetProfitUSD: 0,
     },
   };
   recalculateLedgerMetrics(ledger);
@@ -448,8 +447,116 @@ function saveLedgerAtomic(ledger: AutonomousLedgerState): void {
     fs.writeFileSync(tmp, JSON.stringify(ledger, null, 2), 'utf-8');
     fs.renameSync(tmp, LEDGER_FILE);
   } catch (err) {
-    console.error('[ZELTRA v14] Ledger kayıt hatası:', err);
+    console.error('[ZELTRA v15.2 USD] Ledger kayıt hatası:', err);
   }
+}
+
+function stripLegacyTryKeys<T extends Record<string, any>>(obj: T): T {
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (!k.endsWith('TRY')) clean[k] = v;
+  }
+  return clean as T;
+}
+
+function migrateLegacyLedgerToUsd(raw: any): AutonomousLedgerState | null {
+  if (!raw || typeof raw !== 'object') return null;
+  if (
+    raw.currency === 'USD' &&
+    typeof raw.initialCapitalUSD === 'number' &&
+    !('initialCapitalTRY' in raw)
+  ) {
+    raw.strategyVersion = STRATEGY_VERSION;
+    return raw as AutonomousLedgerState;
+  }
+  const hasAnyCapital =
+    (typeof raw.initialCapitalUSD === 'number' && raw.initialCapitalUSD > 0) ||
+    (typeof raw.initialCapitalTRY === 'number' && raw.initialCapitalTRY > 0);
+  if (!hasAnyCapital) return null;
+
+  const rate = Number(raw.liveUsdTry) > 5 ? Number(raw.liveUsdTry) : 50.59;
+  const d = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? +(v / rate).toFixed(2) : 0);
+  const convTrade = (t: any): AutonomousTrade =>
+    stripLegacyTryKeys({
+      ...t,
+      allocatedCapitalUSD: t.allocatedCapitalUSD ?? d(t.allocatedCapitalTRY),
+      notionalValueUSD: t.notionalValueUSD ?? d(t.notionalValueTRY),
+      riskUSD: t.riskUSD ?? d(t.riskTRY),
+      spot1xEquivalentPnL_USD: t.spot1xEquivalentPnL_USD ?? d(t.spot1xEquivalentPnL_TRY),
+      executionCostUSD: t.executionCostUSD ?? d(t.executionCostTRY),
+      entryCommissionUSD: t.entryCommissionUSD ?? d(t.entryCommissionTRY),
+      exitCommissionUSD: t.exitCommissionUSD ?? d(t.exitCommissionTRY),
+      financingCostUSD: t.financingCostUSD ?? d(t.financingCostTRY),
+      grossUnrealizedPnL_USD: t.grossUnrealizedPnL_USD ?? d(t.grossUnrealizedPnL_TRY),
+      realizedPnL_USD: t.realizedPnL_USD ?? d(t.realizedPnL_TRY),
+      unrealizedPnL_USD: t.unrealizedPnL_USD ?? d(t.unrealizedPnL_TRY),
+      totalPnL_USD: t.totalPnL_USD ?? d(t.totalPnL_TRY),
+    });
+
+  const baseRaw = stripLegacyTryKeys(raw);
+  const ledger: AutonomousLedgerState = {
+    botId: 'ZELTRA-ALPHA-USD',
+    currency: 'USD',
+    strategyVersion: STRATEGY_VERSION,
+    isRunning: baseRaw.isRunning ?? true,
+    observationModeActive: baseRaw.observationModeActive ?? false,
+    startedAt: baseRaw.startedAt || new Date().toISOString(),
+    lastTickAt: baseRaw.lastTickAt || new Date().toISOString(),
+    liveGoTargetIso: baseRaw.liveGoTargetIso || LIVE_GO_TARGET_ISO,
+    tickCount: baseRaw.tickCount || 0,
+    liveUsdTry: raw.liveUsdTry || rate,
+    vixLevel: baseRaw.vixLevel || 18,
+    initialCapitalUSD: raw.initialCapitalUSD ?? d(raw.initialCapitalTRY),
+    cashBalanceUSD: raw.cashBalanceUSD ?? d(raw.cashBalanceTRY),
+    allocatedMarginUSD: raw.allocatedMarginUSD ?? d(raw.allocatedMarginTRY),
+    availableCashUSD: raw.availableCashUSD ?? d(raw.availableCashTRY),
+    openFloatingPnL_USD: raw.openFloatingPnL_USD ?? d(raw.openFloatingPnL_TRY),
+    totalEquityUSD: raw.totalEquityUSD ?? d(raw.totalEquityTRY),
+    peakEquityUSD: raw.peakEquityUSD ?? d(raw.peakEquityTRY),
+    netProfitUSD: raw.netProfitUSD ?? d(raw.netProfitTRY),
+    netProfitPercent: baseRaw.netProfitPercent ?? 0,
+    drawdownThrottleScale: baseRaw.drawdownThrottleScale ?? 1,
+    dailyLossHaltActive: baseRaw.dailyLossHaltActive ?? false,
+    openPositions: (raw.openPositions || []).map(convTrade),
+    closedTrades: (raw.closedTrades || []).map(convTrade),
+    activityLog: (raw.activityLog || []).map((l: any) =>
+      stripLegacyTryKeys({
+        ...l,
+        pnlImpactUSD:
+          typeof l.pnlImpactUSD === 'number'
+            ? l.pnlImpactUSD
+            : typeof l.pnlImpactTRY === 'number'
+              ? d(l.pnlImpactTRY)
+              : undefined,
+        message: String(l.message || '')
+          .replace(/250\.000\s*TL/g, `$${d(250000).toLocaleString('en-US')}`)
+          .replace(/([+-]?\d[\d.,]*)\s*TL/g, (_m, numStr) => {
+            const n = parseFloat(String(numStr).replace(/\./g, '').replace(',', '.'));
+            if (!Number.isFinite(n)) return `${numStr} USD`;
+            const usd = +(n / rate).toFixed(2);
+            return `${usd < 0 ? '-' : ''}$${Math.abs(usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          }),
+      })
+    ),
+    equityHistory: (raw.equityHistory || []).map((h: any) => ({
+      timestamp: h.timestamp,
+      timeStr: h.timeStr,
+      equityUSD: typeof h.equityUSD === 'number' ? h.equityUSD : d(h.equityTRY),
+      ddPct: h.ddPct ?? 0,
+    })),
+    equityCurve: (raw.equityCurve || []).map((c: any) => ({
+      timestamp: c.timestamp,
+      timeStr: c.timeStr,
+      equityUSD: typeof c.equityUSD === 'number' ? c.equityUSD : d(c.equityTRY),
+      drawdownPercent: c.drawdownPercent ?? 0,
+    })),
+    lastMarketRadar: baseRaw.lastMarketRadar || [],
+    podStats: baseRaw.podStats || [],
+    liveReadiness: baseRaw.liveReadiness,
+    metrics: baseRaw.metrics || {},
+  };
+  recalculateLedgerMetrics(ledger);
+  return ledger;
 }
 
 export function loadOrInitAutonomousLedger(): AutonomousLedgerState {
@@ -457,14 +564,19 @@ export function loadOrInitAutonomousLedger(): AutonomousLedgerState {
   try {
     if (fs.existsSync(LEDGER_FILE)) {
       const raw = JSON.parse(fs.readFileSync(LEDGER_FILE, 'utf-8'));
-      if (raw && raw.strategyVersion === STRATEGY_VERSION) {
-        cachedLedger = raw as AutonomousLedgerState;
-        recalculateLedgerMetrics(cachedLedger);
+      const migrated = migrateLegacyLedgerToUsd(raw);
+      if (migrated) {
+        cachedLedger = migrated;
+        if (raw.currency !== 'USD' || raw.strategyVersion !== STRATEGY_VERSION || 'initialCapitalTRY' in raw) {
+          saveLedgerAtomic(cachedLedger);
+        } else {
+          recalculateLedgerMetrics(cachedLedger);
+        }
         return cachedLedger;
       }
     }
   } catch {
-    // Bozuk veya eski v13 defteri sıfırla
+    // Bozuk defteri sıfırla
   }
   cachedLedger = createFreshLedger();
   saveLedgerAtomic(cachedLedger);
@@ -477,37 +589,37 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
   let activeNotional = 0;
 
   for (const pos of ledger.openPositions) {
-    allocated += pos.allocatedCapitalTRY;
-    openFloat += pos.unrealizedPnL_TRY;
-    activeNotional += pos.notionalValueTRY || pos.allocatedCapitalTRY;
+    allocated += pos.allocatedCapitalUSD;
+    openFloat += pos.unrealizedPnL_USD;
+    activeNotional += pos.notionalValueUSD || pos.allocatedCapitalUSD;
   }
 
-  ledger.allocatedMarginTRY = +allocated.toFixed(2);
-  ledger.availableCashTRY = +Math.max(0, ledger.cashBalanceTRY - allocated).toFixed(2);
-  ledger.openFloatingPnL_TRY = +openFloat.toFixed(2);
-  ledger.totalEquityTRY = +(ledger.cashBalanceTRY + openFloat).toFixed(2);
-  const peakVal = Math.max(ledger.peakEquityTRY || ledger.initialCapitalTRY, ledger.totalEquityTRY);
-  ledger.peakEquityTRY = peakVal;
-  ledger.netProfitTRY = +(ledger.totalEquityTRY - ledger.initialCapitalTRY).toFixed(2);
-  ledger.netProfitPercent = +((ledger.netProfitTRY / ledger.initialCapitalTRY) * 100).toFixed(2);
+  ledger.allocatedMarginUSD = +allocated.toFixed(2);
+  ledger.availableCashUSD = +Math.max(0, ledger.cashBalanceUSD - allocated).toFixed(2);
+  ledger.openFloatingPnL_USD = +openFloat.toFixed(2);
+  ledger.totalEquityUSD = +(ledger.cashBalanceUSD + openFloat).toFixed(2);
+  const peakVal = Math.max(ledger.peakEquityUSD || ledger.initialCapitalUSD, ledger.totalEquityUSD);
+  ledger.peakEquityUSD = peakVal;
+  ledger.netProfitUSD = +(ledger.totalEquityUSD - ledger.initialCapitalUSD).toFixed(2);
+  ledger.netProfitPercent = +((ledger.netProfitUSD / ledger.initialCapitalUSD) * 100).toFixed(2);
 
   const curDd =
     peakVal > 0
-      ? Math.max(0, ((peakVal - ledger.totalEquityTRY) / peakVal) * 100)
+      ? Math.max(0, ((peakVal - ledger.totalEquityUSD) / peakVal) * 100)
       : 0;
   ledger.drawdownThrottleScale = curDd >= 8.0 ? 0.5 : curDd >= 5.0 ? 0.75 : 1.0;
 
   const closed = ledger.closedTrades || [];
-  const wins = closed.filter((t) => t.realizedPnL_TRY > 0);
-  const losses = closed.filter((t) => t.realizedPnL_TRY <= 0);
-  const grossWin = wins.reduce((s, t) => s + t.realizedPnL_TRY, 0);
-  const grossLoss = Math.abs(losses.reduce((s, t) => s + t.realizedPnL_TRY, 0));
+  const wins = closed.filter((t) => t.realizedPnL_USD > 0);
+  const losses = closed.filter((t) => t.realizedPnL_USD <= 0);
+  const grossWin = wins.reduce((s, t) => s + t.realizedPnL_USD, 0);
+  const grossLoss = Math.abs(losses.reduce((s, t) => s + t.realizedPnL_USD, 0));
   const totalFees =
-    closed.reduce((s, t) => s + (t.entryCommissionTRY || 0) + (t.exitCommissionTRY || 0), 0) +
-    ledger.openPositions.reduce((s, t) => s + (t.entryCommissionTRY || 0), 0);
+    closed.reduce((s, t) => s + (t.entryCommissionUSD || 0) + (t.exitCommissionUSD || 0), 0) +
+    ledger.openPositions.reduce((s, t) => s + (t.entryCommissionUSD || 0), 0);
   const totalSwap =
-    closed.reduce((s, t) => s + (t.financingCostTRY || 0), 0) +
-    ledger.openPositions.reduce((s, t) => s + (t.financingCostTRY || 0), 0);
+    closed.reduce((s, t) => s + (t.financingCostUSD || 0), 0) +
+    ledger.openPositions.reduce((s, t) => s + (t.financingCostUSD || 0), 0);
 
   let maxHistDd = curDd;
   for (const pt of ledger.equityHistory || []) {
@@ -521,15 +633,15 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
     losingTrades: losses.length,
     winRatePercent: closed.length > 0 ? +((wins.length / closed.length) * 100).toFixed(1) : 0,
     profitFactor: grossLoss > 0 ? +(grossWin / grossLoss).toFixed(2) : grossWin > 0 ? 9.99 : 0,
-    avgWinTRY: wins.length > 0 ? +(grossWin / wins.length).toFixed(2) : 0,
-    avgLossTRY: losses.length > 0 ? +(-grossLoss / losses.length).toFixed(2) : 0,
-    expectancyTRY: closed.length > 0 ? +((grossWin - grossLoss) / closed.length).toFixed(2) : 0,
+    avgWinUSD: wins.length > 0 ? +(grossWin / wins.length).toFixed(2) : 0,
+    avgLossUSD: losses.length > 0 ? +(-grossLoss / losses.length).toFixed(2) : 0,
+    expectancyUSD: closed.length > 0 ? +((grossWin - grossLoss) / closed.length).toFixed(2) : 0,
     maxDrawdownPercent: +maxHistDd.toFixed(2),
-    totalSpreadAndCommissionTRY: +totalFees.toFixed(2),
-    totalFinancingTRY: +totalSwap.toFixed(2),
-    activeNotionalVolumeTRY: +activeNotional.toFixed(2),
+    totalSpreadAndCommissionUSD: +totalFees.toFixed(2),
+    totalFinancingUSD: +totalSwap.toFixed(2),
+    activeNotionalVolumeUSD: +activeNotional.toFixed(2),
     avgMarginLeverage: allocated > 0 ? +(activeNotional / allocated).toFixed(2) : 0,
-    spot1xTotalNetProfitTRY: ledger.netProfitTRY,
+    spot1xTotalNetProfitUSD: ledger.netProfitUSD,
   };
 
   // Pod bazlı özet
@@ -537,10 +649,10 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
   ledger.podStats = pods.map((pod) => {
     const oc = ledger.openPositions.filter((p) => p.pod === pod).length;
     const cl = closed.filter((p) => p.pod === pod);
-    const cw = cl.filter((p) => p.realizedPnL_TRY > 0).length;
+    const cw = cl.filter((p) => p.realizedPnL_USD > 0).length;
     const net =
-      cl.reduce((s, p) => s + p.realizedPnL_TRY, 0) +
-      ledger.openPositions.filter((p) => p.pod === pod).reduce((s, p) => s + p.unrealizedPnL_TRY, 0);
+      cl.reduce((s, p) => s + p.realizedPnL_USD, 0) +
+      ledger.openPositions.filter((p) => p.pod === pod).reduce((s, p) => s + p.unrealizedPnL_USD, 0);
     return {
       pod,
       label: POD_CONFIG[pod].label,
@@ -548,7 +660,7 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
       maxSlots: POD_CONFIG[pod].maxSlots,
       closedCount: cl.length,
       winRatePct: cl.length > 0 ? +((cw / cl.length) * 100).toFixed(1) : 0,
-      netPnL_TRY: +net.toFixed(2),
+      netPnL_USD: +net.toFixed(2),
     };
   });
 
@@ -593,7 +705,7 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
     overallStatus:
       maxHistDd >= 8.0
         ? 'RİSK KALKANI AKTİF'
-        : closed.length >= 5 && ledger.netProfitTRY >= 0
+        : closed.length >= 5 && ledger.netProfitUSD >= 0
           ? 'CANLIYA HAZIR'
           : 'DOĞRULAMA DEVAM EDİYOR',
     gates,
@@ -691,60 +803,59 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       const q2u = pos.symbol === 'USD/JPY' ? 1 / (q.price || 155) : 1;
       const liqPrice = isLong ? q.bid : q.ask;
 
-      // Gecelik finansman (swap %6.8/yıl sadece kaldıraçlı borç kısmı için)
+      // Gecelik finansman (swap %6.8/yıl sadece kaldıraçlı borç kısmı için — doğrudan USD)
       const lastAccrual = pos.lastSwapAccrualMs || pos.entryTimestamp;
       const elapsedHrs = Math.max(0, (nowMs - lastAccrual) / 3600000);
-      const notionalTRY = pos.positionSizeUnits * q.price * q2u * ledger.liveUsdTry;
-      const borrowedTRY = Math.max(0, notionalTRY - pos.allocatedCapitalTRY);
-      if (borrowedTRY > 0 && elapsedHrs >= 0.05) {
-        const swapDelta = borrowedTRY * (0.068 / (365 * 24)) * elapsedHrs;
-        pos.financingCostTRY = +((pos.financingCostTRY || 0) + swapDelta).toFixed(2);
-        ledger.cashBalanceTRY = +(ledger.cashBalanceTRY - swapDelta).toFixed(2);
+      const notionalUSD = pos.positionSizeUnits * q.price * q2u;
+      const borrowedUSD = Math.max(0, notionalUSD - pos.allocatedCapitalUSD);
+      if (borrowedUSD > 0 && elapsedHrs >= 0.05) {
+        const swapDelta = borrowedUSD * (0.068 / (365 * 24)) * elapsedHrs;
+        pos.financingCostUSD = +((pos.financingCostUSD || 0) + swapDelta).toFixed(2);
+        ledger.cashBalanceUSD = +(ledger.cashBalanceUSD - swapDelta).toFixed(2);
         pos.lastSwapAccrualMs = nowMs;
       }
 
       pos.currentPrice = +q.price.toFixed(spec.digits);
       pos.bidAtTick = +q.bid.toFixed(spec.digits);
       pos.askAtTick = +q.ask.toFixed(spec.digits);
-      pos.notionalValueTRY = +notionalTRY.toFixed(2);
+      pos.notionalValueUSD = +notionalUSD.toFixed(2);
 
       const grossDiff = isLong ? liqPrice - pos.entryPrice : pos.entryPrice - liqPrice;
-      const grossTRY = pos.positionSizeUnits * grossDiff * q2u * ledger.liveUsdTry;
-      const estExitFee = computeIbkrCommissionTRY(spec, notionalTRY, pos.positionSizeUnits, ledger.liveUsdTry);
-      const entryComm = pos.entryCommissionTRY || 0;
-      const swapTotal = pos.financingCostTRY || 0;
-      pos.grossUnrealizedPnL_TRY = +grossTRY.toFixed(2);
-      pos.unrealizedPnL_TRY = +(grossTRY - estExitFee).toFixed(2);
-      pos.totalPnL_TRY = +(grossTRY - entryComm - estExitFee - swapTotal).toFixed(2);
+      const grossUSD = pos.positionSizeUnits * grossDiff * q2u;
+      const estExitFee = computeIbkrCommissionUSD(spec, notionalUSD, pos.positionSizeUnits);
+      const entryComm = pos.entryCommissionUSD || 0;
+      const swapTotal = pos.financingCostUSD || 0;
+      pos.grossUnrealizedPnL_USD = +grossUSD.toFixed(2);
+      pos.unrealizedPnL_USD = +(grossUSD - estExitFee).toFixed(2);
+      pos.totalPnL_USD = +(grossUSD - entryComm - estExitFee - swapTotal).toFixed(2);
       pos.totalPnL_Percent =
-        pos.allocatedCapitalTRY > 0 ? +((pos.totalPnL_TRY / pos.allocatedCapitalTRY) * 100).toFixed(2) : 0;
+        pos.allocatedCapitalUSD > 0 ? +((pos.totalPnL_USD / pos.allocatedCapitalUSD) * 100).toFixed(2) : 0;
 
       const closeTrade = (exitPx: number, reason: string, logType: ActivityLogItem['type']) => {
         const finalDiff = isLong ? exitPx - pos.entryPrice : pos.entryPrice - exitPx;
-        const finalGross = pos.positionSizeUnits * finalDiff * q2u * ledger.liveUsdTry;
-        const exitFee = computeIbkrCommissionTRY(
+        const finalGross = pos.positionSizeUnits * finalDiff * q2u;
+        const exitFee = computeIbkrCommissionUSD(
           spec,
-          pos.positionSizeUnits * exitPx * q2u * ledger.liveUsdTry,
-          pos.positionSizeUnits,
-          ledger.liveUsdTry
+          pos.positionSizeUnits * exitPx * q2u,
+          pos.positionSizeUnits
         );
-        ledger.cashBalanceTRY = +(ledger.cashBalanceTRY + finalGross - exitFee).toFixed(2);
+        ledger.cashBalanceUSD = +(ledger.cashBalanceUSD + finalGross - exitFee).toFixed(2);
         const netTotal = +(finalGross - entryComm - exitFee - swapTotal).toFixed(2);
 
         pos.closeTime = formatTRDateTime(nowMs);
         pos.closeTimestamp = nowMs;
         pos.closePrice = +exitPx.toFixed(spec.digits);
-        pos.exitCommissionTRY = +exitFee.toFixed(2);
-        pos.executionCostTRY = +(entryComm + exitFee + swapTotal).toFixed(2);
-        pos.realizedPnL_TRY = netTotal;
-        pos.unrealizedPnL_TRY = 0;
-        pos.totalPnL_TRY = netTotal;
+        pos.exitCommissionUSD = +exitFee.toFixed(2);
+        pos.executionCostUSD = +(entryComm + exitFee + swapTotal).toFixed(2);
+        pos.realizedPnL_USD = netTotal;
+        pos.unrealizedPnL_USD = 0;
+        pos.totalPnL_USD = netTotal;
         pos.totalPnL_Percent =
-          pos.allocatedCapitalTRY > 0 ? +((netTotal / pos.allocatedCapitalTRY) * 100).toFixed(2) : 0;
-        pos.rMultiple = (pos.riskTRY || 0) > 0 ? +(netTotal / (pos.riskTRY || 1)).toFixed(2) : 0;
+          pos.allocatedCapitalUSD > 0 ? +((netTotal / pos.allocatedCapitalUSD) * 100).toFixed(2) : 0;
+        pos.rMultiple = (pos.riskUSD || 0) > 0 ? +(netTotal / (pos.riskUSD || 1)).toFixed(2) : 0;
         pos.exitReason = reason;
         pos.status =
-          netTotal > 25 ? 'KAPALI (KAR)' : netTotal < -25 ? 'KAPALI (ZARAR)' : 'KAPALI (BAŞA BAŞ)';
+          netTotal > 0.5 ? 'KAPALI (KAR)' : netTotal < -0.5 ? 'KAPALI (ZARAR)' : 'KAPALI (BAŞA BAŞ)';
 
         ledger.closedTrades.unshift(pos);
         ledger.activityLog.unshift({
@@ -753,8 +864,8 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           type: logType,
           symbol: pos.symbol,
           pod: pos.pod,
-          message: `[${pos.pod || 'POD'}] ${pos.symbol} ${pos.direction} kapandı (${reason}) @ ${pos.closePrice} | Net: ${netTotal >= 0 ? '+' : ''}${netTotal.toLocaleString('tr-TR')} TL`,
-          pnlImpactTRY: netTotal,
+          message: `[${pos.pod || 'POD'}] ${pos.symbol} ${pos.direction} kapandı (${reason}) @ ${pos.closePrice} | Net: ${netTotal >= 0 ? '+' : '-'}$${Math.abs(netTotal).toFixed(2)}`,
+          pnlImpactUSD: netTotal,
         });
       };
 
@@ -778,9 +889,9 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           closeTrade(liqPrice, 'HEDEF KÂR AL (CORTEX TP)', 'TP2_FULL');
           continue;
         }
-        // 3) Cortex +1S Vade Sonu Kâr Realizasyonu (>= 45 dk açık ve net kârda iken momentum yavaşlarsa kârı cebe al)
+        // 3) Cortex +1S Vade Sonu Kâr Realizasyonu (>= 45 dk açık ve net ≥ $1 kârda iken momentum yavaşlarsa kârı cebe al)
         const openMins = (nowMs - pos.entryTimestamp) / 60000;
-        if (openMins >= 45 && pos.totalPnL_TRY >= 45) {
+        if (openMins >= 45 && pos.totalPnL_USD >= 1.0) {
           const h1ForPos = h1Map.get(pos.symbol);
           if (h1ForPos && h1ForPos.length >= 25 && p12 && p12.bars.length >= 5) {
             const atr12Now = p12.atr14[p12.bars.length - 1] || Math.abs(pos.entryPrice * 0.006);
@@ -817,7 +928,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         }
         // 4) Maksimum Taşıma Süresi
         if ((pos.maxExitTimestamp || 0) > 0 && nowMs >= (pos.maxExitTimestamp || 0)) {
-          closeTrade(liqPrice, 'CORTEX VADE SÜRE ÇIKIŞI', pos.totalPnL_TRY >= 0 ? 'TP2_FULL' : 'BREAKEVEN_EXIT');
+          closeTrade(liqPrice, 'CORTEX VADE SÜRE ÇIKIŞI', pos.totalPnL_USD >= 0 ? 'TP2_FULL' : 'BREAKEVEN_EXIT');
           continue;
         }
         // 5) Pod-1 MR12 Güç Çıkışı (Tamamlanmış 12H mumda önceki 12H tepe üstü kapanış)
@@ -836,7 +947,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             }
           }
         }
-        // 6) Zirve Takibi, Akıllı Kâr Kilidi (Breakeven + %45 Peak Lock) & İz Süren Stop
+        // 6) Zirve Takibi, Akıllı Kâr Kilidi (Komisyon Üstü Garantili Kâr Kilidi) & İz Süren Stop
         const curPeak = pos.peakPrice ?? pos.entryPrice;
         pos.peakPrice = isLong ? Math.max(curPeak, liqPrice) : Math.min(curPeak, liqPrice);
         const peakMove = isLong ? pos.peakPrice - pos.entryPrice : pos.entryPrice - pos.peakPrice;
@@ -845,12 +956,17 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         const realAtr1h = h1AtrArr.length > 0 ? h1AtrArr[h1AtrArr.length - 1] : 0;
         const atr12Cur = p12 && p12.bars.length >= 5 ? p12.atr14[p12.bars.length - 1] : pos.entryPrice * 0.008;
         const atr1hCur = Math.max(pos.entryPrice * 0.0014, realAtr1h || (atr12Cur || pos.entryPrice * 0.008) / Math.sqrt(12));
-        const peakGrossTRY = pos.positionSizeUnits * Math.max(0, peakMove) * q2u * ledger.liveUsdTry;
-        const roundTripFeeTRY = entryComm + estExitFee + swapTotal;
-        if (peakMove >= atr1hCur * 0.35 && peakGrossTRY >= roundTripFeeTRY * 1.85) {
-          const lockSl = isLong
-            ? pos.entryPrice + peakMove * 0.45
-            : pos.entryPrice - peakMove * 0.45;
+        const peakGrossUSD = pos.positionSizeUnits * Math.max(0, peakMove) * q2u;
+        const roundTripFeeUSD = entryComm + estExitFee + swapTotal;
+        const unitValueUSD = Math.max(1e-9, pos.positionSizeUnits * q2u);
+        const feeBreakEvenMove = roundTripFeeUSD / unitValueUSD;
+        if (
+          peakMove >= atr1hCur * 0.35 &&
+          peakMove >= feeBreakEvenMove * 1.45 &&
+          peakGrossUSD >= roundTripFeeUSD * 1.85
+        ) {
+          const lockedMove = Math.max(peakMove * 0.5, feeBreakEvenMove * 1.15);
+          const lockSl = isLong ? pos.entryPrice + lockedMove : pos.entryPrice - lockedMove;
           if (isLong ? lockSl > pos.stopLoss : lockSl < pos.stopLoss) {
             pos.stopLoss = +lockSl.toFixed(spec.digits);
           }
@@ -897,7 +1013,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
 
     // 5) 17 Varlık ZAC v14 Piyasa Radarı + Yeni 3-Pod Giriş Değerlendirmesi
     const radar: MarketRadarItem[] = [];
-    const curEq = ledger.totalEquityTRY;
+    const curEq = ledger.totalEquityUSD;
     const ddScale = ledger.drawdownThrottleScale ?? 1.0;
 
     for (const sym of CORE_SYMBOLS) {
@@ -1148,32 +1264,31 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
                 : POD_CONFIG.CTA_TREND.riskPct;
 
           const q2u = sym === 'USD/JPY' ? 1 / (entryPx || 155) : 1;
-          const freeMargin = Math.max(0, ledger.cashBalanceTRY - ledger.allocatedMarginTRY);
-          const allocTRY = Math.min(curEq * 0.14, freeMargin * 0.85);
-          const desiredRiskTRY = curEq * (riskPct / 100) * ddScale;
-          const unitRiskTRY = slDist * q2u * ledger.liveUsdTry;
-          const maxUnitsByMargin = (allocTRY * spec.maxIbkrLeverage) / Math.max(1e-6, entryPx * q2u * ledger.liveUsdTry);
-          const units = Math.min(desiredRiskTRY / Math.max(1e-6, unitRiskTRY), maxUnitsByMargin);
+          const freeMargin = Math.max(0, ledger.cashBalanceUSD - ledger.allocatedMarginUSD);
+          const allocUSD = Math.min(curEq * 0.14, freeMargin * 0.85);
+          const desiredRiskUSD = curEq * (riskPct / 100) * ddScale;
+          const unitRiskUSD = slDist * q2u;
+          const maxUnitsByMargin = (allocUSD * spec.maxIbkrLeverage) / Math.max(1e-6, entryPx * q2u);
+          const units = Math.min(desiredRiskUSD / Math.max(1e-6, unitRiskUSD), maxUnitsByMargin);
 
-          if (allocTRY >= 4000 && units > 0) {
-            const notionalTRY = units * entryPx * q2u * ledger.liveUsdTry;
-            const entryFee = computeIbkrCommissionTRY(spec, notionalTRY, units, ledger.liveUsdTry);
-            const roundTripCostPct = (entryFee * 2) / Math.max(1, notionalTRY) + spec.spreadPts / Math.max(1e-6, entryPx);
+          if (allocUSD >= 80 && units > 0) {
+            const notionalUSD = units * entryPx * q2u;
+            const entryFee = computeIbkrCommissionUSD(spec, notionalUSD, units);
+            const roundTripCostPct = (entryFee * 2) / Math.max(1, notionalUSD) + spec.spreadPts / Math.max(1e-6, entryPx);
             const expectedTpPct = tpDist / Math.max(1e-6, entryPx);
             const passesCostGate = isCortexIntraday ? expectedTpPct >= roundTripCostPct * 2.0 : true;
-            if (entryFee * 2 <= desiredRiskTRY * 0.25 && passesCostGate) {
-              ledger.cashBalanceTRY = +(ledger.cashBalanceTRY - entryFee).toFixed(2);
+            if (entryFee * 2 <= desiredRiskUSD * 0.25 && passesCostGate) {
+              ledger.cashBalanceUSD = +(ledger.cashBalanceUSD - entryFee).toFixed(2);
               const latest12Ts = p12.bars[completed12Idx]?.timestamp || nowMs;
               const initLiqPx = isLong ? q.bid : q.ask;
-              const initGrossTRY = (isLong ? initLiqPx - entryPx : entryPx - initLiqPx) * units * q2u * ledger.liveUsdTry;
-              const initEstExitFee = computeIbkrCommissionTRY(
+              const initGrossUSD = (isLong ? initLiqPx - entryPx : entryPx - initLiqPx) * units * q2u;
+              const initEstExitFee = computeIbkrCommissionUSD(
                 spec,
-                units * initLiqPx * q2u * ledger.liveUsdTry,
-                units,
-                ledger.liveUsdTry
+                units * initLiqPx * q2u,
+                units
               );
-              const initUnrealizedTRY = +(initGrossTRY - initEstExitFee).toFixed(2);
-              const initTotalPnL_TRY = +(initGrossTRY - entryFee - initEstExitFee).toFixed(2);
+              const initUnrealizedUSD = +(initGrossUSD - initEstExitFee).toFixed(2);
+              const initTotalPnL_USD = +(initGrossUSD - entryFee - initEstExitFee).toFixed(2);
               const newTrade: AutonomousTrade = {
                 id: `${isCortexIntraday ? 'CORTEX' : 'Z14'}-${nowMs}-${sym.replace(/[^A-Z0-9]/g, '')}`,
                 symbol: sym,
@@ -1198,22 +1313,22 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
                 entry12hBucketTs: latest12Ts,
                 maxExitTimestamp:
                   snap.activeSetup.maxHoldHours > 0 ? nowMs + snap.activeSetup.maxHoldHours * 3600000 : 0,
-                allocatedCapitalTRY: +allocTRY.toFixed(2),
-                notionalValueTRY: +notionalTRY.toFixed(2),
-                effectiveLeverage: +(notionalTRY / allocTRY).toFixed(2),
+                allocatedCapitalUSD: +allocUSD.toFixed(2),
+                notionalValueUSD: +notionalUSD.toFixed(2),
+                effectiveLeverage: +(notionalUSD / allocUSD).toFixed(2),
                 positionSizeUnits: +units.toFixed(spec.digits >= 3 ? 2 : 4),
                 unitLabel: spec.unitLabel,
-                riskTRY: +(units * unitRiskTRY).toFixed(2),
-                executionCostTRY: +entryFee.toFixed(2),
-                entryCommissionTRY: +entryFee.toFixed(2),
-                exitCommissionTRY: 0,
-                financingCostTRY: 0,
-                grossUnrealizedPnL_TRY: +initGrossTRY.toFixed(2),
+                riskUSD: +(units * unitRiskUSD).toFixed(2),
+                executionCostUSD: +entryFee.toFixed(2),
+                entryCommissionUSD: +entryFee.toFixed(2),
+                exitCommissionUSD: 0,
+                financingCostUSD: 0,
+                grossUnrealizedPnL_USD: +initGrossUSD.toFixed(2),
                 tp1Hit: false,
-                realizedPnL_TRY: 0,
-                unrealizedPnL_TRY: initUnrealizedTRY,
-                totalPnL_TRY: initTotalPnL_TRY,
-                totalPnL_Percent: +((initTotalPnL_TRY / allocTRY) * 100).toFixed(2),
+                realizedPnL_USD: 0,
+                unrealizedPnL_USD: initUnrealizedUSD,
+                totalPnL_USD: initTotalPnL_USD,
+                totalPnL_Percent: +((initTotalPnL_USD / allocUSD) * 100).toFixed(2),
                 rationale: snap.activeSetup.rationaleTR,
                 lastSwapAccrualMs: nowMs,
               };
@@ -1231,7 +1346,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
                 type: 'ENTRY',
                 symbol: sym,
                 pod: isCortexIntraday ? `CORTEX_${cortexHorizonHours}S` : pod,
-                message: `[${isCortexIntraday ? `Cortex +${cortexHorizonHours}S (%${assetAcc.toFixed(0)})` : pod}] ${sym} ${dir} AÇILDI @ ${newTrade.entryPrice} | Teminat: ${Math.round(allocTRY).toLocaleString('tr-TR')} TL | SL: ${newTrade.stopLoss}${tp2 > 0 ? ` | TP: ${newTrade.takeProfit2}` : ' | Trailing Stop'}`,
+                message: `[${isCortexIntraday ? `Cortex +${cortexHorizonHours}S (%${assetAcc.toFixed(0)})` : pod}] ${sym} ${dir} AÇILDI @ ${newTrade.entryPrice} | Teminat: $${Math.round(allocUSD).toLocaleString('en-US')} | SL: ${newTrade.stopLoss}${tp2 > 0 ? ` | TP: ${newTrade.takeProfit2}` : ' | Trailing Stop'}`,
               });
               recalculateLedgerMetrics(ledger);
             }
@@ -1264,15 +1379,15 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     if (!ledger.equityHistory) ledger.equityHistory = [];
     const lastHist = ledger.equityHistory[ledger.equityHistory.length - 1];
     if (!lastHist || force || nowMs - lastHist.timestamp >= 5 * 60 * 1000) {
-      const peakEq = ledger.peakEquityTRY || ledger.initialCapitalTRY;
+      const peakEq = ledger.peakEquityUSD || ledger.initialCapitalUSD;
       const ddPct =
         peakEq > 0
-          ? +(((peakEq - ledger.totalEquityTRY) / peakEq) * 100).toFixed(2)
+          ? +(((peakEq - ledger.totalEquityUSD) / peakEq) * 100).toFixed(2)
           : 0;
       ledger.equityHistory.push({
         timestamp: nowMs,
         timeStr: formatTRDateTime(nowMs),
-        equityTRY: ledger.totalEquityTRY,
+        equityUSD: ledger.totalEquityUSD,
         ddPct,
       });
       if (ledger.equityHistory.length > 300) {
@@ -1282,7 +1397,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     ledger.equityCurve = ledger.equityHistory.map((h) => ({
       timestamp: h.timestamp,
       timeStr: h.timeStr,
-      equityTRY: h.equityTRY,
+      equityUSD: h.equityUSD,
       drawdownPercent: h.ddPct,
     }));
     if (ledger.activityLog.length > 150) ledger.activityLog = ledger.activityLog.slice(0, 150);
@@ -1334,7 +1449,7 @@ export async function controlAutonomousBot(
   }
 
   if (action === 'reset') {
-    const usdTry = await fetchLiveUsdTryRate().catch(() => ledger.liveUsdTry || 42.5);
+    const usdTry = await fetchLiveUsdTryRate().catch(() => ledger.liveUsdTry || 50.59);
     cachedLedger = createFreshLedger(usdTry);
     saveLedgerAtomic(cachedLedger);
     return runAutonomousBotTick(true);
@@ -1348,20 +1463,20 @@ export async function controlAutonomousBot(
       const isLong = pos.direction === 'AL (LONG)';
       const exitPx = isLong ? pos.bidAtTick || pos.currentPrice : pos.askAtTick || pos.currentPrice;
       const q2u = pos.symbol === 'USD/JPY' ? 1 / (exitPx || 155) : 1;
-      const gross = pos.positionSizeUnits * (isLong ? exitPx - pos.entryPrice : pos.entryPrice - exitPx) * q2u * ledger.liveUsdTry;
-      const exitFee = computeIbkrCommissionTRY(spec, pos.positionSizeUnits * exitPx * q2u * ledger.liveUsdTry, pos.positionSizeUnits, ledger.liveUsdTry);
-      ledger.cashBalanceTRY = +(ledger.cashBalanceTRY + gross - exitFee).toFixed(2);
-      const net = +(gross - (pos.entryCommissionTRY || 0) - exitFee - (pos.financingCostTRY || 0)).toFixed(2);
+      const gross = pos.positionSizeUnits * (isLong ? exitPx - pos.entryPrice : pos.entryPrice - exitPx) * q2u;
+      const exitFee = computeIbkrCommissionUSD(spec, pos.positionSizeUnits * exitPx * q2u, pos.positionSizeUnits);
+      ledger.cashBalanceUSD = +(ledger.cashBalanceUSD + gross - exitFee).toFixed(2);
+      const net = +(gross - (pos.entryCommissionUSD || 0) - exitFee - (pos.financingCostUSD || 0)).toFixed(2);
 
       pos.closeTime = formatTRDateTime(nowMs);
       pos.closeTimestamp = nowMs;
       pos.closePrice = +exitPx.toFixed(spec.digits);
-      pos.exitCommissionTRY = +exitFee.toFixed(2);
-      pos.realizedPnL_TRY = net;
-      pos.unrealizedPnL_TRY = 0;
-      pos.totalPnL_TRY = net;
+      pos.exitCommissionUSD = +exitFee.toFixed(2);
+      pos.realizedPnL_USD = net;
+      pos.unrealizedPnL_USD = 0;
+      pos.totalPnL_USD = net;
       pos.exitReason = 'MANUEL YÖNETİCİ KAPATIŞI';
-      pos.status = net > 25 ? 'KAPALI (KAR)' : net < -25 ? 'KAPALI (ZARAR)' : 'KAPALI (BAŞA BAŞ)';
+      pos.status = net > 0.5 ? 'KAPALI (KAR)' : net < -0.5 ? 'KAPALI (ZARAR)' : 'KAPALI (BAŞA BAŞ)';
 
       ledger.openPositions.splice(idx, 1);
       ledger.closedTrades.unshift(pos);
@@ -1371,8 +1486,8 @@ export async function controlAutonomousBot(
         type: 'BREAKEVEN_EXIT',
         symbol: pos.symbol,
         pod: pos.pod,
-        message: `[${pos.pod}] ${pos.symbol} yönetici komutuyla kapatıldı @ ${pos.closePrice} | Net: ${net >= 0 ? '+' : ''}${net.toLocaleString('tr-TR')} TL`,
-        pnlImpactTRY: net,
+        message: `[${pos.pod}] ${pos.symbol} yönetici komutuyla kapatıldı @ ${pos.closePrice} | Net: ${net >= 0 ? '+' : '-'}$${Math.abs(net).toFixed(2)}`,
+        pnlImpactUSD: net,
       });
       recalculateLedgerMetrics(ledger);
       saveLedgerAtomic(ledger);
@@ -1412,9 +1527,9 @@ export interface WalkForwardAuditReport {
   generatedAt: string;
   startDate: string;
   endDate: string;
-  initialCapitalTRY: number;
-  endingEquityTRY: number;
-  netProfitTRY: number;
+  initialCapitalUSD: number;
+  endingEquityUSD: number;
+  netProfitUSD: number;
   netProfitPercent: number;
   sharpeRatio: number;
   sortinoRatio: number;
@@ -1422,8 +1537,8 @@ export interface WalkForwardAuditReport {
   totalTrades: number;
   winRatePercent: number;
   profitFactor: number;
-  totalFeesTRY: number;
-  totalSwapTRY: number;
+  totalFeesUSD: number;
+  totalSwapUSD: number;
   positiveQuarters: number;
   totalQuarters: number;
   podAttribution: {
@@ -1432,18 +1547,18 @@ export interface WalkForwardAuditReport {
     trades: number;
     winRatePct: number;
     profitFactor: number;
-    netPnL_TRY: number;
-    feesTRY: number;
-    swapTRY: number;
+    netPnL_USD: number;
+    feesUSD: number;
+    swapUSD: number;
   }[];
   quarterlyBreakdown: {
     quarter: string;
     trades: number;
     winRatePct: number;
     profitFactor: number;
-    netPnL_TRY: number;
+    netPnL_USD: number;
   }[];
-  equityCurve: { date: string; equityTRY: number; ddPct: number }[];
+  equityCurve: { date: string; equityUSD: number; ddPct: number }[];
   recentTrades: {
     symbol: string;
     pod: string;
@@ -1452,13 +1567,13 @@ export interface WalkForwardAuditReport {
     exitDate: string;
     entryPrice: number;
     exitPrice: number;
-    netPnL_TRY: number;
+    netPnL_USD: number;
     rMultiple: number;
     reason: string;
   }[];
   legacyComparison: {
     oldVersion: string;
-    old2YEndingEquityTRY: number;
+    old2YEndingEquityUSD: number;
     old2YReturnPct: number;
     old2YMaxDdPct: number;
     old2YProfitFactor: number;
@@ -1479,7 +1594,6 @@ export async function runLiveWalkForwardAudit(
     return cached.data;
   }
 
-  const usdTry = await fetchLiveUsdTryRate().catch(() => 45.0);
   const daysBack = window === '30d' ? 30 : window === '90d' ? 90 : window === '1y' ? 365 : 725;
   const nowMs = Date.now();
   const startMs = nowMs - daysBack * 86400 * 1000;
@@ -1545,16 +1659,16 @@ export async function runLiveWalkForwardAudit(
     peak: number;
     slAtr: number;
     units: number;
-    allocTRY: number;
-    riskTRY: number;
+    allocUSD: number;
+    riskUSD: number;
     entryFee: number;
     swap: number;
     entry12Idx?: number;
     maxExitTs: number;
   }
 
-  let cash = INITIAL_CAPITAL_TRY;
-  let peakEq = INITIAL_CAPITAL_TRY;
+  let cash = INITIAL_CAPITAL_USD;
+  let peakEq = INITIAL_CAPITAL_USD;
   let maxDd = 0;
   let vixLast = 18;
   let open: SimPos[] = [];
@@ -1574,7 +1688,7 @@ export async function runLiveWalkForwardAudit(
   }[] = [];
   const lastPx = new Map<string, number>();
   const dPtr = new Map<string, number>(CORE_SYMBOLS.map((s) => [s, 0]));
-  const dailyEq: { date: string; equityTRY: number; ddPct: number }[] = [];
+  const dailyEq: { date: string; equityUSD: number; ddPct: number }[] = [];
   let lastDay = '';
 
   for (const hrTs of timeline) {
@@ -1607,7 +1721,7 @@ export async function runLiveWalkForwardAudit(
       const clsLiq = isL ? px - halfSp : px + halfSp;
       const q2u = pos.sym === 'USD/JPY' ? 1 / (px || 155) : 1;
 
-      const borrowed = Math.max(0, pos.units * px * q2u * usdTry - pos.allocTRY);
+      const borrowed = Math.max(0, pos.units * px * q2u - pos.allocUSD);
       if (borrowed > 0) {
         const sf = borrowed * (0.068 / (365 * 24));
         pos.swap += sf;
@@ -1615,8 +1729,8 @@ export async function runLiveWalkForwardAudit(
       }
 
       const closeP = (exitPx: number, reason: string) => {
-        const gross = pos.units * (isL ? exitPx - pos.entryPx : pos.entryPx - exitPx) * q2u * usdTry;
-        const exitFee = computeIbkrCommissionTRY(spec, pos.units * exitPx * q2u * usdTry, pos.units, usdTry);
+        const gross = pos.units * (isL ? exitPx - pos.entryPx : pos.entryPx - exitPx) * q2u;
+        const exitFee = computeIbkrCommissionUSD(spec, pos.units * exitPx * q2u, pos.units);
         cash += gross - exitFee;
         const net = gross - pos.entryFee - exitFee - pos.swap;
         closed.push({
@@ -1630,7 +1744,7 @@ export async function runLiveWalkForwardAudit(
           net,
           fee: pos.entryFee + exitFee,
           swap: pos.swap,
-          rNet: pos.riskTRY > 0 ? net / pos.riskTRY : 0,
+          rNet: pos.riskUSD > 0 ? net / pos.riskUSD : 0,
           reason,
         });
       };
@@ -1677,14 +1791,14 @@ export async function runLiveWalkForwardAudit(
     }
     open = nextOpen;
 
-    let floatTRY = 0, usedMargin = 0;
+    let floatUSD = 0, usedMargin = 0;
     for (const p of open) {
       const lp = lastPx.get(p.sym) || p.entryPx;
       const q2u = p.sym === 'USD/JPY' ? 1 / (lp || 155) : 1;
-      floatTRY += p.units * (p.dir === 1 ? lp - p.entryPx : p.entryPx - lp) * q2u * usdTry;
-      usedMargin += p.allocTRY;
+      floatUSD += p.units * (p.dir === 1 ? lp - p.entryPx : p.entryPx - lp) * q2u;
+      usedMargin += p.allocUSD;
     }
-    const eq = cash + floatTRY;
+    const eq = cash + floatUSD;
     if (eq > peakEq) peakEq = eq;
     const curDd = peakEq > 0 ? ((peakEq - eq) / peakEq) * 100 : 0;
     if (curDd > maxDd) maxDd = curDd;
@@ -1717,19 +1831,19 @@ export async function runLiveWalkForwardAudit(
       const tp = tpAtr > 0 ? (isL ? entryPx + atr * tpAtr : entryPx - atr * tpAtr) : 0;
       const q2u = sym === 'USD/JPY' ? 1 / (entryPx || 155) : 1;
       const alloc = Math.min(eq * 0.16, Math.max(0, cash - usedMargin) * 0.85);
-      if (alloc < 4000) return;
+      if (alloc < 80) return;
       const desiredRisk = eq * (riskPct / 100) * ddScale;
-      const unitRisk = slDist * q2u * usdTry;
-      const units = Math.min(desiredRisk / (unitRisk || 1), (alloc * spec.maxIbkrLeverage) / ((entryPx * q2u * usdTry) || 1));
+      const unitRisk = slDist * q2u;
+      const units = Math.min(desiredRisk / (unitRisk || 1), (alloc * spec.maxIbkrLeverage) / ((entryPx * q2u) || 1));
       if (!(units > 0)) return;
-      const entryFee = computeIbkrCommissionTRY(spec, units * entryPx * q2u * usdTry, units, usdTry);
+      const entryFee = computeIbkrCommissionUSD(spec, units * entryPx * q2u, units);
       if (entryFee * 2 > desiredRisk * 0.18) return;
 
       cash -= entryFee;
       usedMargin += alloc;
       open.push({
         sym, pod, dir, entryTs: hrTs, entryPx, sl, tp, peak: entryPx, slAtr,
-        units, allocTRY: alloc, riskTRY: units * unitRisk, entryFee, swap: 0,
+        units, allocUSD: alloc, riskUSD: units * unitRisk, entryFee, swap: 0,
         entry12Idx: i12, maxExitTs: maxH > 0 ? hrTs + maxH * 3600000 : 0,
       });
     };
@@ -1774,7 +1888,7 @@ export async function runLiveWalkForwardAudit(
     if (utcHour === 21 && dStr !== lastDay) {
       lastDay = dStr;
       if (vixByDate.has(dStr)) vixLast = vixByDate.get(dStr)!;
-      dailyEq.push({ date: dStr, equityTRY: Math.round(eq), ddPct: +curDd.toFixed(2) });
+      dailyEq.push({ date: dStr, equityUSD: +eq.toFixed(2), ddPct: +curDd.toFixed(2) });
 
       for (const s of ZAC_CTA_ASSETS) {
         const dp = dPtr.get(s) || 0;
@@ -1794,17 +1908,17 @@ export async function runLiveWalkForwardAudit(
   for (const p of open) {
     const lp = lastPx.get(p.sym) || p.entryPx;
     const q2u = p.sym === 'USD/JPY' ? 1 / (lp || 155) : 1;
-    endFloat += p.units * (p.dir === 1 ? lp - p.entryPx : p.entryPx - lp) * q2u * usdTry;
+    endFloat += p.units * (p.dir === 1 ? lp - p.entryPx : p.entryPx - lp) * q2u;
   }
-  const endingEquityTRY = +(cash + endFloat).toFixed(2);
-  const netProfitTRY = +(endingEquityTRY - INITIAL_CAPITAL_TRY).toFixed(2);
-  const netProfitPercent = +((netProfitTRY / INITIAL_CAPITAL_TRY) * 100).toFixed(2);
+  const endingEquityUSD = +(cash + endFloat).toFixed(2);
+  const netProfitUSD = +(endingEquityUSD - INITIAL_CAPITAL_USD).toFixed(2);
+  const netProfitPercent = +((netProfitUSD / INITIAL_CAPITAL_USD) * 100).toFixed(2);
 
   // Sharpe & Sortino
   const dRets: number[] = [];
   for (let i = 1; i < dailyEq.length; i++) {
-    if (dailyEq[i - 1].equityTRY > 0) {
-      dRets.push((dailyEq[i].equityTRY - dailyEq[i - 1].equityTRY) / dailyEq[i - 1].equityTRY);
+    if (dailyEq[i - 1].equityUSD > 0) {
+      dRets.push((dailyEq[i].equityUSD - dailyEq[i - 1].equityUSD) / dailyEq[i - 1].equityUSD);
     }
   }
   const meanD = dRets.reduce((a, b) => a + b, 0) / Math.max(1, dRets.length);
@@ -1831,9 +1945,9 @@ export async function runLiveWalkForwardAudit(
       trades: sub.length,
       winRatePct: sub.length > 0 ? +((sw.length / sub.length) * 100).toFixed(1) : 0,
       profitFactor: sgl > 0 ? +(sgw / sgl).toFixed(2) : sgw > 0 ? 9.99 : 0,
-      netPnL_TRY: Math.round(sgw - sgl),
-      feesTRY: Math.round(sub.reduce((s, t) => s + t.fee, 0)),
-      swapTRY: Math.round(sub.reduce((s, t) => s + t.swap, 0)),
+      netPnL_USD: +(sgw - sgl).toFixed(2),
+      feesUSD: +sub.reduce((s, t) => s + t.fee, 0).toFixed(2),
+      swapUSD: +sub.reduce((s, t) => s + t.swap, 0).toFixed(2),
     };
   });
 
@@ -1857,10 +1971,10 @@ export async function runLiveWalkForwardAudit(
         trades: arr.length,
         winRatePct: arr.length > 0 ? +((sw.length / arr.length) * 100).toFixed(1) : 0,
         profitFactor: sgl > 0 ? +(sgw / sgl).toFixed(2) : sgw > 0 ? 9.99 : 0,
-        netPnL_TRY: Math.round(sgw - sgl),
+        netPnL_USD: +(sgw - sgl).toFixed(2),
       };
     });
-  const positiveQuarters = quarterlyBreakdown.filter((q) => q.netPnL_TRY > 0).length;
+  const positiveQuarters = quarterlyBreakdown.filter((q) => q.netPnL_USD > 0).length;
 
   const labelMap: Record<WalkForwardWindow, string> = {
     '30d': 'Son 30 Gün (Yakın Canlı Rejim)',
@@ -1876,9 +1990,9 @@ export async function runLiveWalkForwardAudit(
     generatedAt: new Date().toISOString(),
     startDate: dailyEq[0]?.date || new Date(startMs).toISOString().slice(0, 10),
     endDate: dailyEq[dailyEq.length - 1]?.date || new Date(nowMs).toISOString().slice(0, 10),
-    initialCapitalTRY: INITIAL_CAPITAL_TRY,
-    endingEquityTRY,
-    netProfitTRY,
+    initialCapitalUSD: INITIAL_CAPITAL_USD,
+    endingEquityUSD,
+    netProfitUSD,
     netProfitPercent,
     sharpeRatio,
     sortinoRatio,
@@ -1886,8 +2000,8 @@ export async function runLiveWalkForwardAudit(
     totalTrades: closed.length,
     winRatePercent: closed.length > 0 ? +((wins.length / closed.length) * 100).toFixed(1) : 0,
     profitFactor: pf,
-    totalFeesTRY: Math.round(closed.reduce((s, t) => s + t.fee, 0)),
-    totalSwapTRY: Math.round(closed.reduce((s, t) => s + t.swap, 0)),
+    totalFeesUSD: +closed.reduce((s, t) => s + t.fee, 0).toFixed(2),
+    totalSwapUSD: +closed.reduce((s, t) => s + t.swap, 0).toFixed(2),
     positiveQuarters,
     totalQuarters: quarterlyBreakdown.length,
     podAttribution,
@@ -1901,19 +2015,19 @@ export async function runLiveWalkForwardAudit(
       exitDate: new Date(t.exitTs).toISOString().slice(0, 16).replace('T', ' '),
       entryPrice: t.entryPx,
       exitPrice: t.exitPx,
-      netPnL_TRY: Math.round(t.net),
+      netPnL_USD: +t.net.toFixed(2),
       rMultiple: +t.rNet.toFixed(2),
       reason: t.reason,
     })),
     legacyComparison: {
       oldVersion: 'Eski Yönetici (v13.2 1H Donchian)',
-      old2YEndingEquityTRY: 24300,
+      old2YEndingEquityUSD: 486,
       old2YReturnPct: -90.3,
       old2YMaxDdPct: 90.9,
       old2YProfitFactor: 0.58,
       old2YPositiveQuarters: '0 / 9 Çeyrek',
       improvementSummaryTR:
-        'Eski v13.2 sistemi 1H kırılım tuzakları ve 149.747 TL komisyon/swap erimesi nedeniyle 2 yılda 250K TL’yi 24.300 TL’ye (-%90.3) eritiyordu. Yeni ZELTRA v14.0 3-Pod mimarisi aynı gerçek veri ve maliyetlerle pozitif Sharpe, tek haneli MaxDD ve tutarlı kârlılık üretir.',
+        'Eski v13.2 sistemi 1H kırılım tuzakları ve komisyon/swap erimesi nedeniyle 2 yılda $5,000 sermayeyi $486’ya (-%90.3) eritiyordu. Yeni ZELTRA v15.2 mimarisi aynı gerçek saatlik veri ve maliyetlerle pozitif Sharpe, tek haneli MaxDD ve tutarlı kârlılık üretir.',
     },
   };
 

@@ -34,21 +34,21 @@ interface AutonomousTradeItem {
   takeProfit1: number;
   takeProfit2: number;
   stopLoss: number;
-  allocatedCapitalTRY: number;
-  notionalValueTRY?: number;
+  allocatedCapitalUSD: number;
+  notionalValueUSD?: number;
   effectiveLeverage?: number;
   positionSizeUnits: number;
   unitLabel?: string;
-  spot1xEquivalentPnL_TRY?: number;
-  executionCostTRY?: number;
-  entryCommissionTRY?: number;
-  exitCommissionTRY?: number;
-  financingCostTRY?: number;
-  grossUnrealizedPnL_TRY?: number;
+  spot1xEquivalentPnL_USD?: number;
+  executionCostUSD?: number;
+  entryCommissionUSD?: number;
+  exitCommissionUSD?: number;
+  financingCostUSD?: number;
+  grossUnrealizedPnL_USD?: number;
   tp1Hit: boolean;
-  realizedPnL_TRY: number;
-  unrealizedPnL_TRY: number;
-  totalPnL_TRY: number;
+  realizedPnL_USD: number;
+  unrealizedPnL_USD: number;
+  totalPnL_USD: number;
   totalPnL_Percent: number;
   rationale: string;
   exitReason?: string;
@@ -60,7 +60,7 @@ interface ActivityLogItem {
   type: 'ENTRY' | 'TP1_PARTIAL' | 'TP2_FULL' | 'STOP_LOSS' | 'BREAKEVEN_EXIT' | 'SYSTEM';
   symbol: string;
   message: string;
-  pnlImpactTRY?: number;
+  pnlImpactUSD?: number;
 }
 
 interface AutonomousLedgerState {
@@ -70,13 +70,13 @@ interface AutonomousLedgerState {
   startedAt: string;
   lastTickAt: string;
   liveUsdTry: number;
-  initialCapitalTRY: number;
-  cashBalanceTRY: number;
-  allocatedMarginTRY: number;
-  availableCashTRY: number;
-  openFloatingPnL_TRY: number;
-  totalEquityTRY: number;
-  netProfitTRY: number;
+  initialCapitalUSD: number;
+  cashBalanceUSD: number;
+  allocatedMarginUSD: number;
+  availableCashUSD: number;
+  openFloatingPnL_USD: number;
+  totalEquityUSD: number;
+  netProfitUSD: number;
   netProfitPercent: number;
   openPositions: AutonomousTradeItem[];
   closedTrades: AutonomousTradeItem[];
@@ -88,14 +88,14 @@ interface AutonomousLedgerState {
     losingTrades: number;
     winRatePercent: number;
     profitFactor: number;
-    avgWinTRY: number;
-    avgLossTRY: number;
-    expectancyTRY: number;
+    avgWinUSD: number;
+    avgLossUSD: number;
+    expectancyUSD: number;
     maxDrawdownPercent: number;
-    totalSpreadAndCommissionTRY: number;
-    activeNotionalVolumeTRY?: number;
+    totalSpreadAndCommissionUSD: number;
+    activeNotionalVolumeUSD?: number;
     avgMarginLeverage?: number;
-    spot1xTotalNetProfitTRY?: number;
+    spot1xTotalNetProfitUSD?: number;
   };
 }
 
@@ -124,9 +124,9 @@ export interface ArenaUniverseItem {
 }
 
 export interface ArenaComparisonSummary {
-  userEquityTRY: number;
-  botEquityTRY: number;
-  leadTRY: number;
+  userEquityUSD: number;
+  botEquityUSD: number;
+  leadUSD: number;
   leader: 'USER' | 'BOT' | 'TIE';
   userNetPct: number;
   botNetPct: number;
@@ -138,16 +138,16 @@ export interface ArenaComparisonSummary {
   botDirAccuracy: number;
   userPF: number;
   botPF: number;
-  userFeesTRY: number;
-  botFeesTRY: number;
-  userSpot1xTRY: number;
-  botSpot1xTRY: number;
+  userFeesUSD: number;
+  botFeesUSD: number;
+  userSpot1xUSD: number;
+  botSpot1xUSD: number;
   botOpenCount: number;
   botRunning: boolean;
   botLastTickAt: string;
   botStrategyVersion: string;
-  userCurve: { timestamp: number; timeStr: string; equityTRY: number }[];
-  botCurve: { timestamp: number; timeStr: string; equityTRY: number }[];
+  userCurve: { timestamp: number; timeStr: string; equityUSD: number }[];
+  botCurve: { timestamp: number; timeStr: string; equityUSD: number }[];
 }
 
 export interface ManualArenaResponse {
@@ -160,20 +160,18 @@ interface ManualArenaViewProps {
   onGoToBotTest?: () => void;
 }
 
-function formatTRY(value: number): string {
+function formatUSD(value: number): string {
   const safe = Number.isFinite(value) ? value : 0;
-  return (
-    new Intl.NumberFormat('tr-TR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(safe) + ' TL'
-  );
+  return `${safe < 0 ? '-' : ''}$${Math.abs(safe).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
-function formatSignedTRY(value: number): string {
+function formatSignedUSD(value: number): string {
   const safe = Number.isFinite(value) ? value : 0;
   const prefix = safe > 0 ? '+' : '';
-  return prefix + formatTRY(safe);
+  return prefix + formatUSD(safe);
 }
 
 function formatPrice(value: number, digits = 2): string {
@@ -204,7 +202,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const [selectedSymbol, setSelectedSymbol] = useState<string>('BTC/USD');
-  const [marginInput, setMarginInput] = useState<string>('25000');
+  const [marginInput, setMarginInput] = useState<string>('500');
   const [leverageInput, setLeverageInput] = useState<number>(3);
   const [stopLossInput, setStopLossInput] = useState<string>('');
   const [takeProfitInput, setTakeProfitInput] = useState<string>('');
@@ -289,26 +287,24 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
 
   const parsedMargin = Math.max(0, Number(marginInput) || 0);
   const effectiveLeverage = Math.min(leverageInput, selectedAsset?.maxIbkrLeverage ?? 3);
-  const previewNotionalTRY = parsedMargin * effectiveLeverage;
-  const liveUsdTry = userLedger?.liveUsdTry ?? 50.34;
-  const previewNotionalUSD = liveUsdTry > 0 ? previewNotionalTRY / liveUsdTry : 0;
+  const previewNotionalUSD = parsedMargin * effectiveLeverage;
 
-  const estimatedEntryFeeTRY = useMemo(() => {
-    if (!selectedAsset || previewNotionalTRY <= 0) return 0;
-    const minFeeTRY = selectedAsset.ibkrMinFeeUSD * liveUsdTry;
+  const estimatedEntryFeeUSD = useMemo(() => {
+    if (!selectedAsset || previewNotionalUSD <= 0) return 0;
+    const minFeeUSD = selectedAsset.ibkrMinFeeUSD;
     if (selectedAsset.ibkrPerShareUSD && selectedAsset.price > 0) {
       const shares = previewNotionalUSD / selectedAsset.price;
-      const feeUSD = Math.max(selectedAsset.ibkrMinFeeUSD, shares * selectedAsset.ibkrPerShareUSD);
-      return Number((feeUSD * liveUsdTry).toFixed(2));
+      const feeUSD = Math.max(minFeeUSD, shares * selectedAsset.ibkrPerShareUSD);
+      return Number(feeUSD.toFixed(2));
     }
-    const feeTRY = Math.max(minFeeTRY, previewNotionalTRY * selectedAsset.ibkrCommissionRate);
-    return Number(feeTRY.toFixed(2));
-  }, [selectedAsset, previewNotionalTRY, previewNotionalUSD, liveUsdTry]);
+    const feeUSD = Math.max(minFeeUSD, previewNotionalUSD * selectedAsset.ibkrCommissionRate);
+    return Number(feeUSD.toFixed(2));
+  }, [selectedAsset, previewNotionalUSD]);
 
   const handleOpenOrder = async (direction: 'AL (LONG)' | 'SAT (SHORT)') => {
     if (!selectedAsset) return;
-    if (parsedMargin < 500) {
-      setActionMessage({ type: 'err', text: 'Minimum teminat 500 TL olmalıdır.' });
+    if (parsedMargin < 25) {
+      setActionMessage({ type: 'err', text: 'Minimum teminat $25.00 USD olmalıdır.' });
       return;
     }
     const sl = stopLossInput.trim() ? Number(stopLossInput) : undefined;
@@ -318,7 +314,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
         action: 'open',
         symbol: selectedAsset.symbol,
         direction,
-        marginTRY: parsedMargin,
+        marginUSD: parsedMargin,
         leverage: effectiveLeverage,
         stopLoss: Number.isFinite(sl) && (sl ?? 0) > 0 ? sl : undefined,
         takeProfit: Number.isFinite(tp) && (tp ?? 0) > 0 ? tp : undefined,
@@ -370,7 +366,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   };
 
   const handleResetArena = async () => {
-    const ok = await postAction({ action: 'reset' }, 'Manuel Arena hesabın 250.000,00 TL olarak sıfırlandı.');
+    const ok = await postAction({ action: 'reset' }, 'Manuel Arena hesabın $5,000.00 USD olarak sıfırlandı.');
     if (ok) {
       setConfirmReset(false);
     }
@@ -386,10 +382,11 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
     const maxTs = Math.max(...allPts.map((p) => p.timestamp));
     const spanTs = Math.max(1, maxTs - minTs);
 
-    const equities = [250000, ...allPts.map((p) => p.equityTRY)];
+    const baseCap = userLedger?.initialCapitalUSD ?? 5000;
+    const equities = [baseCap, ...allPts.map((p) => p.equityUSD)];
     const minEq = Math.min(...equities);
     const maxEq = Math.max(...equities);
-    const pad = Math.max(500, (maxEq - minEq) * 0.18);
+    const pad = Math.max(25, (maxEq - minEq) * 0.18);
     const yMin = minEq - pad;
     const yMax = maxEq + pad;
     const ySpan = Math.max(1, yMax - yMin);
@@ -399,27 +396,28 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
     const mapX = (ts: number) => 48 + ((ts - minTs) / spanTs) * (W - 68);
     const mapY = (eq: number) => H - 22 - ((eq - yMin) / ySpan) * (H - 36);
 
-    const toPath = (pts: { timestamp: number; equityTRY: number }[]) => {
+    const toPath = (pts: { timestamp: number; equityUSD: number }[]) => {
       if (pts.length === 0) return '';
       if (pts.length === 1) {
-        const y = mapY(pts[0].equityTRY);
+        const y = mapY(pts[0].equityUSD);
         return `M 48 ${y.toFixed(1)} L ${(W - 20).toFixed(1)} ${y.toFixed(1)}`;
       }
       return pts
-        .map((p, i) => `${i === 0 ? 'M' : 'L'} ${mapX(p.timestamp).toFixed(1)} ${mapY(p.equityTRY).toFixed(1)}`)
+        .map((p, i) => `${i === 0 ? 'M' : 'L'} ${mapX(p.timestamp).toFixed(1)} ${mapY(p.equityUSD).toFixed(1)}`)
         .join(' ');
     };
 
     return {
       W,
       H,
-      yBase: mapY(250000),
+      yBase: mapY(baseCap),
       yMin,
       yMax,
+      baseCap,
       userPath: toPath(uCurve),
       botPath: toPath(bCurve),
     };
-  }, [arena]);
+  }, [arena, userLedger]);
 
   const assetComparisonRows = useMemo(() => {
     const map = new Map<
@@ -448,16 +446,16 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
         const row = map.get(p.symbol);
         if (row) {
           row.userTrades += 1;
-          row.userPnL += p.totalPnL_TRY ?? p.unrealizedPnL_TRY;
-          row.userFees += p.executionCostTRY ?? p.entryCommissionTRY ?? 0;
+          row.userPnL += p.totalPnL_USD ?? p.unrealizedPnL_USD;
+          row.userFees += p.executionCostUSD ?? p.entryCommissionUSD ?? 0;
         }
       }
       for (const t of userLedger.closedTrades) {
         const row = map.get(t.symbol);
         if (row) {
           row.userTrades += 1;
-          row.userPnL += t.totalPnL_TRY ?? t.realizedPnL_TRY;
-          row.userFees += t.executionCostTRY ?? 0;
+          row.userPnL += t.totalPnL_USD ?? t.realizedPnL_USD;
+          row.userFees += t.executionCostUSD ?? 0;
         }
       }
     }
@@ -482,12 +480,12 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
     );
   }
 
-  const availCash = userLedger?.availableCashTRY ?? 0;
-  const userEquity = arena?.userEquityTRY ?? 250000;
-  const botEquity = arena?.botEquityTRY ?? 250000;
-  const leadTRY = arena?.leadTRY ?? 0;
-  const totalGrossOpenTRY =
-    userLedger?.openPositions.reduce((s, p) => s + (p.grossUnrealizedPnL_TRY ?? 0), 0) ?? 0;
+  const availCash = userLedger?.availableCashUSD ?? 0;
+  const userEquity = arena?.userEquityUSD ?? 5000;
+  const botEquity = arena?.botEquityUSD ?? 5000;
+  const leadUSD = arena?.leadUSD ?? 0;
+  const totalGrossOpenUSD =
+    userLedger?.openPositions.reduce((s, p) => s + (p.grossUnrealizedPnL_USD ?? 0), 0) ?? 0;
 
   return (
     <div className="space-y-4 text-zinc-100">
@@ -502,17 +500,17 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-zinc-800 text-zinc-300 border border-zinc-700">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                %100 Gerçek Kraken Bid/Ask & IBKR Komisyon Fiziği
+                %100 Gerçek Kraken Bid/Ask & IBKR USD Komisyon Fiziği
               </span>
-              <span className="text-[11px] text-zinc-400">
-                Kur: <strong className="text-zinc-200">{liveUsdTry.toFixed(2)} TL</strong>
+              <span className="text-[11px] text-emerald-300 font-mono">
+                Birim: <strong>USD ($)</strong>
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-bold text-white mt-2">
-              Sen vs Otonom Sistem — 250.000 TL Gerçek Piyasa Düellosu
+              Sen vs Otonom Sistem — $5,000 USD Gerçek Piyasa Düellosu
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Burada kendi 250.000 TL kasanla canlı piyasa spread, kayma, IBKR komisyonu ve %85 marjin likidasyon kurallarıyla işlem açıp kaybedebilir veya kazanabilirsin; sağda otonom botun (/test) anlık skoruyla yarışırsın.
+              Burada kendi $5,000 kasanla canlı piyasa spread, kayma, IBKR komisyonu ve %85 marjin likidasyon kurallarıyla işlem açıp otonom botla birebir yarışabilirsin.
             </p>
           </div>
 
@@ -540,7 +538,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-red-950/60 text-zinc-300 hover:text-red-300 border border-zinc-700 hover:border-red-800/60 transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Kasamı Sıfırla (250k)
+                Kasamı Sıfırla ($5K)
               </button>
             ) : (
               <div className="inline-flex items-center gap-1.5 bg-red-950/60 border border-red-700/70 rounded-lg px-2.5 py-1">
@@ -612,11 +610,11 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               </span>
             )}
           </div>
-          <div className="text-2xl font-bold tracking-tight text-white">{formatTRY(userEquity)}</div>
+          <div className="text-2xl font-bold tracking-tight text-white">{formatUSD(userEquity)}</div>
           <div className="flex items-center gap-3 mt-1 text-xs">
             <span className={(arena?.userNetPct ?? 0) >= 0 ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
               {(arena?.userNetPct ?? 0) >= 0 ? '+' : ''}
-              {(arena?.userNetPct ?? 0).toFixed(2)}% ({formatSignedTRY(userLedger?.netProfitTRY ?? 0)})
+              {(arena?.userNetPct ?? 0).toFixed(2)}% ({formatSignedUSD(userLedger?.netProfitUSD ?? 0)})
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-zinc-800/80 text-[11px]">
@@ -630,7 +628,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             </div>
             <div>
               <div className="text-zinc-500">Ödenen Komisyon</div>
-              <div className="font-semibold text-amber-400">{formatTRY(arena?.userFeesTRY ?? 0)}</div>
+              <div className="font-semibold text-amber-400">{formatUSD(arena?.userFeesUSD ?? 0)}</div>
             </div>
           </div>
         </div>
@@ -641,17 +639,17 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Canlı Düello Farkı</div>
             <div
               className={`text-xl sm:text-2xl font-bold mt-1 ${
-                leadTRY > 0 ? 'text-emerald-400' : leadTRY < 0 ? 'text-sky-400' : 'text-zinc-200'
+                leadUSD > 0 ? 'text-emerald-400' : leadUSD < 0 ? 'text-sky-400' : 'text-zinc-200'
               }`}
             >
-              {leadTRY > 0
-                ? `Sen +${formatTRY(leadTRY)} Öndesin`
-                : leadTRY < 0
-                ? `Bot +${formatTRY(Math.abs(leadTRY))} Önde`
-                : 'Tam Başabaş (0,00 TL)'}
+              {leadUSD > 0
+                ? `Sen +${formatUSD(leadUSD)} Öndesin`
+                : leadUSD < 0
+                ? `Bot +${formatUSD(Math.abs(leadUSD))} Önde`
+                : 'Tam Başabaş ($0.00)'}
             </div>
             <p className="text-[11px] text-zinc-400 mt-1">
-              Başlangıç: 250.000,00 TL vs 250.000,00 TL • Boşta Nakit: <strong className="text-zinc-200">{formatTRY(availCash)}</strong>
+              Boşta Nakit: <strong className="text-zinc-200">{formatUSD(availCash)}</strong>
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-zinc-800/80 text-[11px]">
@@ -661,7 +659,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                 {userLedger?.openPositions.length ?? 0} Açık / {userLedger?.closedTrades.length ?? 0} Kapalı
               </div>
               <div className="text-[10px] text-zinc-400">
-                1x Spot: {formatSignedTRY(arena?.userSpot1xTRY ?? 0)}
+                1x Spot: {formatSignedUSD(arena?.userSpot1xUSD ?? 0)}
               </div>
             </div>
             <div className="bg-zinc-950/60 rounded-lg p-2 border border-zinc-800/70">
@@ -670,7 +668,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                 {arena?.botOpenCount ?? 0} Açık / {Math.max(0, (arena?.botTradesTotal ?? 0) - (arena?.botOpenCount ?? 0))} Kapalı
               </div>
               <div className="text-[10px] text-zinc-400">
-                1x Spot: {formatSignedTRY(arena?.botSpot1xTRY ?? 0)}
+                1x Spot: {formatSignedUSD(arena?.botSpot1xUSD ?? 0)}
               </div>
             </div>
           </div>
@@ -692,7 +690,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               <div>
                 <div className="text-xs font-semibold text-white">ZELTRA BOT (/test Otonom)</div>
                 <div className="text-[11px] text-zinc-400">
-                  {arena?.botStrategyVersion || 'v4.1'} • {arena?.botRunning ? 'Aktif' : 'Duraklatıldı'}
+                  {arena?.botStrategyVersion || 'v15.2'} • {arena?.botRunning ? 'Aktif' : 'Duraklatıldı'}
                 </div>
               </div>
             </div>
@@ -702,11 +700,11 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               </span>
             )}
           </div>
-          <div className="text-2xl font-bold tracking-tight text-white">{formatTRY(botEquity)}</div>
+          <div className="text-2xl font-bold tracking-tight text-white">{formatUSD(botEquity)}</div>
           <div className="flex items-center gap-3 mt-1 text-xs">
             <span className={(arena?.botNetPct ?? 0) >= 0 ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
               {(arena?.botNetPct ?? 0) >= 0 ? '+' : ''}
-              {(arena?.botNetPct ?? 0).toFixed(2)}% ({formatSignedTRY(botEquity - 250000)})
+              {(arena?.botNetPct ?? 0).toFixed(2)}%
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-zinc-800/80 text-[11px]">
@@ -720,7 +718,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             </div>
             <div>
               <div className="text-zinc-500">Ödenen Komisyon</div>
-              <div className="font-semibold text-amber-400">{formatTRY(arena?.botFeesTRY ?? 0)}</div>
+              <div className="font-semibold text-amber-400">{formatUSD(arena?.botFeesUSD ?? 0)}</div>
             </div>
           </div>
         </div>
@@ -736,7 +734,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               Gerçek Piyasa Emir Terminali
             </h2>
             <span className="text-[11px] text-zinc-400">
-              Boşta: <strong className="text-emerald-300">{formatTRY(availCash)}</strong>
+              Boşta: <strong className="text-emerald-300">{formatUSD(availCash)}</strong>
             </span>
           </div>
 
@@ -823,26 +821,26 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
 
           <div>
             <div className="flex items-center justify-between text-[11px] mb-1">
-              <span className="text-zinc-400">Yatırılacak Teminat (TL)</span>
-              <span className="text-zinc-500">Max: {formatTRY(availCash)}</span>
+              <span className="text-zinc-400">Yatırılacak Teminat (USD)</span>
+              <span className="text-zinc-500">Max: {formatUSD(availCash)}</span>
             </div>
             <input
               type="number"
-              min={500}
-              step={500}
+              min={25}
+              step={25}
               value={marginInput}
               onChange={(e) => setMarginInput(e.target.value)}
               className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-500"
             />
             <div className="grid grid-cols-5 gap-1.5 mt-1.5">
-              {[10000, 25000, 50000, 100000].map((amt) => (
+              {[100, 250, 500, 1000].map((amt) => (
                 <button
                   key={amt}
                   type="button"
                   onClick={() => setMarginInput(String(Math.min(amt, Math.floor(availCash))))}
                   className="py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] text-zinc-300 border border-zinc-700"
                 >
-                  {(amt / 1000).toFixed(0)}k
+                  ${amt}
                 </button>
               ))}
               <button
@@ -933,11 +931,11 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
           <div className="bg-zinc-950/70 border border-zinc-800 rounded-lg p-2.5 text-[11px] space-y-1">
             <div className="flex justify-between">
               <span className="text-zinc-400">Kaldıraçlı İşlem Hacmi:</span>
-              <span className="font-semibold text-white">{formatTRY(previewNotionalTRY)}</span>
+              <span className="font-semibold text-white">{formatUSD(previewNotionalUSD)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-400">Tahmini IBKR Giriş Komisyonu:</span>
-              <span className="font-semibold text-amber-300">-{formatTRY(estimatedEntryFeeTRY)}</span>
+              <span className="font-semibold text-amber-300">-{formatUSD(estimatedEntryFeeUSD)}</span>
             </div>
             <div className="text-[10px] text-zinc-500 pt-0.5">
               Emir açıldığı an Ask/Bid spread farkı + IBKR komisyonu gerçek dünyadaki gibi nakitten anında düşülür.
@@ -947,7 +945,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
-              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 500 || availCash < parsedMargin}
+              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 25 || availCash < parsedMargin}
               onClick={() => handleOpenOrder('AL (LONG)')}
               className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition-colors"
             >
@@ -956,7 +954,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             </button>
             <button
               type="button"
-              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 500 || availCash < parsedMargin}
+              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 25 || availCash < parsedMargin}
               onClick={() => handleOpenOrder('SAT (SHORT)')}
               className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition-colors"
             >
@@ -973,7 +971,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <Activity className="w-4 h-4 text-emerald-400" />
-                  1v1 Kasa Büyüme Yarışı (250.000 TL Başlangıç)
+                  1v1 Kasa Büyüme Yarışı (USD)
                 </h2>
                 <p className="text-[11px] text-zinc-400">
                   Yeşil çizgi: Senin Manuel Hesabın (/test2) • Mavi çizgi: Zeltra Otonom Bot (/test)
@@ -981,10 +979,10 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               </div>
               <div className="flex items-center gap-3 text-[11px]">
                 <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
-                  <span className="w-2.5 h-0.5 bg-emerald-400 inline-block" /> Sen: {formatTRY(userEquity)}
+                  <span className="w-2.5 h-0.5 bg-emerald-400 inline-block" /> Sen: {formatUSD(userEquity)}
                 </span>
                 <span className="inline-flex items-center gap-1 text-sky-400 font-semibold">
-                  <span className="w-2.5 h-0.5 bg-sky-400 inline-block" /> Bot: {formatTRY(botEquity)}
+                  <span className="w-2.5 h-0.5 bg-sky-400 inline-block" /> Bot: {formatUSD(botEquity)}
                 </span>
               </div>
             </div>
@@ -1002,13 +1000,13 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                     strokeWidth="1"
                   />
                   <text x="6" y={chartGeom.yBase + 3} fill="#a1a1aa" fontSize="9">
-                    250k
+                    ${Math.round(chartGeom.baseCap)}
                   </text>
                   <text x="6" y="16" fill="#71717a" fontSize="9">
-                    {Math.round(chartGeom.yMax / 1000)}k
+                    ${Math.round(chartGeom.yMax)}
                   </text>
                   <text x="6" y={chartGeom.H - 18} fill="#71717a" fontSize="9">
-                    {Math.round(chartGeom.yMin / 1000)}k
+                    ${Math.round(chartGeom.yMin)}
                   </text>
 
                   {chartGeom.botPath && (
@@ -1030,26 +1028,26 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3">
               <div className="text-[11px] text-zinc-400">Anlık P&L (Açık İşlemler)</div>
-              <div className={`text-sm font-bold mt-0.5 ${(userLedger?.openFloatingPnL_TRY ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {formatSignedTRY(userLedger?.openFloatingPnL_TRY ?? 0)}
+              <div className={`text-sm font-bold mt-0.5 ${(userLedger?.openFloatingPnL_USD ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {formatSignedUSD(userLedger?.openFloatingPnL_USD ?? 0)}
               </div>
               <div className="text-[10px] text-zinc-500 mt-0.5">
-                Brüt: {formatSignedTRY(totalGrossOpenTRY)}
+                Brüt: {formatSignedUSD(totalGrossOpenUSD)}
               </div>
             </div>
 
             <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3">
               <div className="text-[11px] text-zinc-400">Bağlı Teminat / Boşta</div>
               <div className="text-sm font-bold text-white mt-0.5">
-                {formatTRY(userLedger?.allocatedMarginTRY ?? 0)}
+                {formatUSD(userLedger?.allocatedMarginUSD ?? 0)}
               </div>
-              <div className="text-[10px] text-zinc-500 mt-0.5">Boşta: {formatTRY(availCash)}</div>
+              <div className="text-[10px] text-zinc-500 mt-0.5">Boşta: {formatUSD(availCash)}</div>
             </div>
 
             <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3">
               <div className="text-[11px] text-zinc-400">Toplam Kaldıraç Hacmi</div>
               <div className="text-sm font-bold text-white mt-0.5">
-                {formatTRY(userLedger?.metrics?.activeNotionalVolumeTRY ?? 0)}
+                {formatUSD(userLedger?.metrics?.activeNotionalVolumeUSD ?? 0)}
               </div>
               <div className="text-[10px] text-zinc-500 mt-0.5">
                 Ort: {(userLedger?.metrics?.avgMarginLeverage ?? 0).toFixed(2)}x
@@ -1059,7 +1057,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3">
               <div className="text-[11px] text-zinc-400">Ödenen Komisyon & Swap</div>
               <div className="text-sm font-bold text-amber-400 mt-0.5">
-                -{formatTRY(userLedger?.metrics?.totalSpreadAndCommissionTRY ?? 0)}
+                -{formatUSD(userLedger?.metrics?.totalSpreadAndCommissionUSD ?? 0)}
               </div>
               <div className="text-[10px] text-zinc-500 mt-0.5">
                 PF: {(arena?.userPF ?? 0).toFixed(2)}x
@@ -1186,10 +1184,10 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                       const isEditing = editingId === pos.id;
                       const specDigits = pos.digits ?? universe.find((u) => u.symbol === pos.symbol)?.digits ?? 2;
                       const lev = pos.effectiveLeverage ?? 1;
-                      const notional = pos.notionalValueTRY ?? pos.allocatedCapitalTRY * lev;
-                      const netOpenPnL = pos.totalPnL_TRY ?? pos.unrealizedPnL_TRY;
+                      const notional = pos.notionalValueUSD ?? pos.allocatedCapitalUSD * lev;
+                      const netOpenPnL = pos.totalPnL_USD ?? pos.unrealizedPnL_USD;
                       const openPct =
-                        pos.allocatedCapitalTRY > 0 ? (netOpenPnL / pos.allocatedCapitalTRY) * 100 : 0;
+                        pos.allocatedCapitalUSD > 0 ? (netOpenPnL / pos.allocatedCapitalUSD) * 100 : 0;
 
                       return (
                         <tr key={pos.id} className="hover:bg-zinc-800/30">
@@ -1212,13 +1210,13 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                               )}
                             </div>
                             <div className="text-[10px] text-zinc-500 mt-0.5">
-                              {formatTimeTR(pos.entryTime)} • Giriş Kom: -{formatTRY(pos.entryCommissionTRY ?? 0)}
+                              {formatTimeTR(pos.entryTime)} • Giriş Kom: -{formatUSD(pos.entryCommissionUSD ?? 0)}
                             </div>
                           </td>
                           <td className="py-2.5 pr-3">
-                            <div className="font-semibold text-zinc-200">{formatTRY(pos.allocatedCapitalTRY)}</div>
+                            <div className="font-semibold text-zinc-200">{formatUSD(pos.allocatedCapitalUSD)}</div>
                             <div className="text-[10px] text-zinc-400">
-                              {lev}x ({formatTRY(notional)})
+                              {lev}x ({formatUSD(notional)})
                             </div>
                           </td>
                           <td className="py-2.5 pr-3 font-mono text-[11px]">
@@ -1260,11 +1258,11 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                           </td>
                           <td className="py-2.5 pr-3">
                             <div className={`font-bold ${netOpenPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {formatSignedTRY(netOpenPnL)} ({openPct >= 0 ? '+' : ''}
+                              {formatSignedUSD(netOpenPnL)} ({openPct >= 0 ? '+' : ''}
                               {openPct.toFixed(2)}%)
                             </div>
                             <div className="text-[10px] text-zinc-500">
-                              1x Spot: {formatSignedTRY(pos.spot1xEquivalentPnL_TRY ?? 0)}
+                              1x Spot: {formatSignedUSD(pos.spot1xEquivalentPnL_USD ?? 0)}
                             </div>
                           </td>
                           <td className="py-2.5 text-right">
@@ -1350,7 +1348,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                     {userLedger!.closedTrades.map((t) => {
                       const digits = t.digits ?? universe.find((u) => u.symbol === t.symbol)?.digits ?? 2;
                       const marginPct =
-                        t.allocatedCapitalTRY > 0 ? (t.totalPnL_TRY / t.allocatedCapitalTRY) * 100 : t.totalPnL_Percent;
+                        t.allocatedCapitalUSD > 0 ? (t.totalPnL_USD / t.allocatedCapitalUSD) * 100 : t.totalPnL_Percent;
                       return (
                         <tr key={t.id}>
                           <td className="py-2 pr-3">
@@ -1363,12 +1361,12 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                             {formatPrice(t.entryPrice, digits)} → {formatPrice(t.closePrice ?? t.currentPrice, digits)}
                           </td>
                           <td className="py-2 pr-3">
-                            {formatTRY(t.allocatedCapitalTRY)} ({t.effectiveLeverage ?? 1}x)
+                            {formatUSD(t.allocatedCapitalUSD)} ({t.effectiveLeverage ?? 1}x)
                           </td>
-                          <td className="py-2 pr-3 text-amber-400">-{formatTRY(t.executionCostTRY ?? 0)}</td>
+                          <td className="py-2 pr-3 text-amber-400">-{formatUSD(t.executionCostUSD ?? 0)}</td>
                           <td className="py-2 pr-3">
-                            <div className={`font-bold ${t.totalPnL_TRY >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {formatSignedTRY(t.totalPnL_TRY)} ({marginPct >= 0 ? '+' : ''}
+                            <div className={`font-bold ${t.totalPnL_USD >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {formatSignedUSD(t.totalPnL_USD)} ({marginPct >= 0 ? '+' : ''}
                               {marginPct.toFixed(2)}%)
                             </div>
                           </td>
@@ -1390,7 +1388,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               <div className="bg-zinc-950/70 border border-zinc-800 rounded-lg p-3">
                 <div className="text-[11px] text-zinc-400">Komisyon Sürtünmesi Kıyaslaması</div>
                 <div className="text-sm font-bold text-white mt-1">
-                  Sen: -{formatTRY(arena?.userFeesTRY ?? 0)} vs Bot: -{formatTRY(arena?.botFeesTRY ?? 0)}
+                  Sen: -{formatUSD(arena?.userFeesUSD ?? 0)} vs Bot: -{formatUSD(arena?.botFeesUSD ?? 0)}
                 </div>
                 <p className="text-[11px] text-zinc-500 mt-1">
                   Aşırı al-sat yapan taraf komisyonda erir. Botun 'Nakit Kalkanı' filtresi tam olarak bu komisyon kaybını azaltmak için bekliyor.
@@ -1434,7 +1432,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                         <td className="py-2 pr-3 font-semibold text-white">{row.symbol}</td>
                         <td className="py-2 pr-3 text-zinc-300">{row.userTrades}</td>
                         <td className={`py-2 pr-3 font-semibold ${row.userPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {formatSignedTRY(row.userPnL)}
+                          {formatSignedUSD(row.userPnL)}
                         </td>
                         <td className="py-2 pr-3 text-zinc-300">{row.botStatus}</td>
                         <td className="py-2 text-sky-300 font-semibold">{row.botScore}/100</td>

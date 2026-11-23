@@ -111,16 +111,16 @@ interface LiveAuditPayload {
     vixLevel: number;
     tickCount: number;
     lastTickAt: string;
-    initialCapitalTRY: number;
-    totalEquityTRY: number;
-    cashBalanceTRY: number;
-    availableCashTRY: number;
-    allocatedMarginTRY: number;
-    realizedPnL_TRY: number;
-    floatingPnL_TRY: number;
-    netProfitTRY: number;
+    initialCapitalUSD: number;
+    totalEquityUSD: number;
+    cashBalanceUSD: number;
+    availableCashUSD: number;
+    allocatedMarginUSD: number;
+    realizedPnL_USD: number;
+    floatingPnL_USD: number;
+    netProfitUSD: number;
     netProfitPercent: number;
-    totalFeesAndSwapTRY: number;
+    totalFeesAndSwapUSD: number;
     maxDrawdownPercent: number;
     openPositionsCount: number;
     closedTradesCount: number;
@@ -128,7 +128,7 @@ interface LiveAuditPayload {
     profitFactor: number;
     openPositions: any[];
     closedTrades: any[];
-    equityHistory: { timestamp: number; timeStr: string; equityTRY: number; ddPct: number }[];
+    equityHistory: { timestamp: number; timeStr: string; equityUSD: number; ddPct: number }[];
   };
   forecastSummary: {
     totalLocked: number;
@@ -141,7 +141,7 @@ interface LiveAuditPayload {
     directionalSettledCount?: number;
     directionalWinRatePct?: number;
     directionalProfitFactor?: number;
-    simulated250kDirectionalNetTRY?: number;
+    simulated5kDirectionalNetUSD?: number;
     band90CoveragePct: number;
     avgPriceErrorPct: number;
     byHorizon: HorizonStats[];
@@ -169,11 +169,21 @@ const EXPERT_SHORT_NAMES: Record<string, string> = {
   E5_XSMOM_REGIME: 'U5: Kesitsel Liderlik & Rejim',
 };
 
-const fmtTL = (n: number) =>
-  `${n < 0 ? '-' : ''}${Math.abs(Math.round(n)).toLocaleString('tr-TR')} TL`;
+const fmtUSD = (n: number, decimals = 2) => {
+  const safe = Number.isFinite(n) ? n : 0;
+  return `${safe < 0 ? '-' : ''}$${Math.abs(safe).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
+};
 
-const fmtSignedTL = (n: number) =>
-  `${n > 0 ? '+' : n < 0 ? '-' : ''}${Math.abs(Math.round(n)).toLocaleString('tr-TR')} TL`;
+const fmtSignedUSD = (n: number, decimals = 2) => {
+  const safe = Number.isFinite(n) ? n : 0;
+  return `${safe > 0 ? '+' : safe < 0 ? '-' : ''}$${Math.abs(safe).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
+};
 
 function formatCountdown(targetAtMs: number, nowMs: number): string {
   const diff = Math.max(0, targetAtMs - nowMs);
@@ -274,17 +284,18 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   const equitySvg = useMemo(() => {
     const hist = data?.portfolio?.equityHistory || [];
     if (hist.length < 2) return null;
+    const baseCap = data?.portfolio?.initialCapitalUSD || 5_000;
     const W = 860;
     const H = 150;
     const PAD = 18;
-    const vals = hist.map((h) => h.equityTRY);
-    const minV = Math.min(250_000, ...vals) - 500;
-    const maxV = Math.max(250_000, ...vals) + 500;
+    const vals = hist.map((h) => h.equityUSD);
+    const minV = Math.min(baseCap, ...vals) - 15;
+    const maxV = Math.max(baseCap, ...vals) + 15;
     const xOf = (i: number) => PAD + (i / Math.max(1, hist.length - 1)) * (W - PAD * 2);
     const yOf = (v: number) => PAD + ((maxV - v) / Math.max(1, maxV - minV)) * (H - PAD * 2);
-    const path = hist.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(p.equityTRY).toFixed(1)}`).join(' ');
-    const baseY = yOf(250_000);
-    const positive = (data?.portfolio.netProfitTRY ?? 0) >= 0;
+    const path = hist.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(p.equityUSD).toFixed(1)}`).join(' ');
+    const baseY = yOf(baseCap);
+    const positive = (data?.portfolio.netProfitUSD ?? 0) >= 0;
     return { W, H, PAD, path, baseY, color: positive ? '#10b981' : '#f43f5e' };
   }, [data]);
 
@@ -315,7 +326,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
           </span>
           {p && (
             <span className="text-xs font-mono text-zinc-500 hidden sm:inline">
-              USD/TRY <strong className="text-zinc-300">{p.liveUsdTry.toFixed(2)}</strong> • VIX{' '}
+              Hesap <strong className="text-emerald-300">USD</strong> • VIX{' '}
               <strong className="text-zinc-300">{p.vixLevel.toFixed(1)}</strong> • {data?.lastUpdatedAtTR}
             </span>
           )}
@@ -346,7 +357,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
           },
           {
             id: 'portfolio',
-            label: `Portföy (${p ? fmtTL(p.totalEquityTRY) : '250.000 TL'})`,
+            label: `Portföy (${p ? fmtUSD(p.totalEquityUSD) : '$5,000.00'})`,
             sub: p ? `${p.openPositionsCount} Açık` : '',
           },
         ].map((tab) => {
@@ -376,13 +387,13 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         })}
       </div>
 
-      {/* 1. 250.000 TL KASA PERFORMANSI */}
+      {/* 1. USD KASA PERFORMANSI */}
       {activeSection === 'portfolio' && p && (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              Portföy (250.000 TL)
+              Portföy (USD Hesabı)
             </h2>
             <div className="text-[11px] font-mono text-zinc-500">
               Hedef: {data?.liveGoTargetTR} ({data?.daysRemaining} gün)
@@ -392,18 +403,18 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5 font-mono">
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
               <div className="text-[10px] text-zinc-500 uppercase">Canlı Toplam Kasa</div>
-              <div className="text-lg font-black text-white mt-1">{fmtTL(p.totalEquityTRY)}</div>
-              <div className="text-[10px] text-zinc-500">Başlangıç: 250.000 TL</div>
+              <div className="text-lg font-black text-white mt-1">{fmtUSD(p.totalEquityUSD)}</div>
+              <div className="text-[10px] text-zinc-500">Başlangıç: {fmtUSD(p.initialCapitalUSD)}</div>
             </div>
 
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
               <div className="text-[10px] text-zinc-500 uppercase">Gerçek Net Kâr / Zarar</div>
               <div
                 className={`text-lg font-black mt-1 ${
-                  p.netProfitTRY > 0 ? 'text-emerald-400' : p.netProfitTRY < 0 ? 'text-rose-400' : 'text-zinc-200'
+                  p.netProfitUSD > 0 ? 'text-emerald-400' : p.netProfitUSD < 0 ? 'text-rose-400' : 'text-zinc-200'
                 }`}
               >
-                {fmtSignedTL(p.netProfitTRY)}
+                {fmtSignedUSD(p.netProfitUSD)}
               </div>
               <div
                 className={`text-[11px] font-bold ${
@@ -419,10 +430,10 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               <div className="text-[10px] text-zinc-500 uppercase">Kapanan İşlem K/Z</div>
               <div
                 className={`text-base font-bold mt-1 ${
-                  p.realizedPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  p.realizedPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
               >
-                {fmtSignedTL(p.realizedPnL_TRY)}
+                {fmtSignedUSD(p.realizedPnL_USD)}
               </div>
               <div className="text-[10px] text-zinc-500">
                 {p.closedTradesCount} işlem • WR %{p.winRatePercent}
@@ -433,19 +444,19 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               <div className="text-[10px] text-zinc-500 uppercase">Açık Pozisyon K/Z</div>
               <div
                 className={`text-base font-bold mt-1 ${
-                  p.floatingPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  p.floatingPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
               >
-                {fmtSignedTL(p.floatingPnL_TRY)}
+                {fmtSignedUSD(p.floatingPnL_USD)}
               </div>
               <div className="text-[10px] text-zinc-500">
-                {p.openPositionsCount} açık • Teminat {fmtTL(p.allocatedMarginTRY)}
+                {p.openPositionsCount} açık • Teminat {fmtUSD(p.allocatedMarginUSD)}
               </div>
             </div>
 
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
               <div className="text-[10px] text-zinc-500 uppercase">IBKR Komisyon + Swap</div>
-              <div className="text-base font-bold text-amber-300 mt-1">-{fmtTL(p.totalFeesAndSwapTRY)}</div>
+              <div className="text-base font-bold text-amber-300 mt-1">-{fmtUSD(p.totalFeesAndSwapUSD)}</div>
               <div className="text-[10px] text-zinc-500">Gerçek kesintiler</div>
             </div>
 
@@ -462,7 +473,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
               <div className="flex justify-between text-[11px] font-mono text-zinc-400">
                 <span>Gerçek Zamanlı Canlı Kasa Eğrisi ({p.equityHistory.length} anlık kayıt — sıfır simülasyon)</span>
-                <span>250.000 TL referans çizgisi</span>
+                <span>{fmtUSD(p.initialCapitalUSD)} referans çizgisi</span>
               </div>
               <svg viewBox={`0 0 ${equitySvg.W} ${equitySvg.H}`} className="w-full h-32 block">
                 <line
@@ -517,10 +528,10 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                         </div>
                         <span
                           className={`font-bold ${
-                            pos.totalPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                            pos.totalPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'
                           }`}
                         >
-                          {fmtSignedTL(pos.totalPnL_TRY)} ({pos.totalPnL_Percent >= 0 ? '+' : ''}
+                          {fmtSignedUSD(pos.totalPnL_USD)} ({pos.totalPnL_Percent >= 0 ? '+' : ''}
                           {pos.totalPnL_Percent}%)
                         </span>
                       </div>
@@ -574,10 +585,10 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                       </div>
                       <span
                         className={`font-bold shrink-0 ${
-                          t.realizedPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          t.realizedPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'
                         }`}
                       >
-                        {fmtSignedTL(t.realizedPnL_TRY)}
+                        {fmtSignedUSD(t.realizedPnL_USD)}
                       </span>
                     </div>
                   ))}
@@ -819,8 +830,8 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               </div>
               <div className="text-[10px] text-zinc-500">
                 n={fs.highConvictionSettled}
-                {typeof fs.simulated250kDirectionalNetTRY === 'number' && fs.directionalSettledCount
-                  ? ` • ${fmtSignedTL(fs.simulated250kDirectionalNetTRY)} (PF ${fs.directionalProfitFactor ?? '-'})`
+                {typeof fs.simulated5kDirectionalNetUSD === 'number' && fs.directionalSettledCount
+                  ? ` • ${fmtSignedUSD(fs.simulated5kDirectionalNetUSD)} (PF ${fs.directionalProfitFactor ?? '-'})`
                   : ''}
               </div>
             </div>

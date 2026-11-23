@@ -15,10 +15,10 @@ const SYMBOLS = [
 
 export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
   symbol,
-  liveUsdTry,
+  liveUsdTry: _liveUsdTry,
   onSelectSymbol,
 }) => {
-  const [capitalTRY, setCapitalTRY] = useState<number>(250000);
+  const [capitalUSD, setCapitalUSD] = useState<number>(5000);
   const [riskPercent, setRiskPercent] = useState<number>(1.5);
   const [entry, setEntry] = useState<number>(0);
   const [stopLoss, setStopLoss] = useState<number>(0);
@@ -50,24 +50,23 @@ export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
     loadFromZac(symbol);
   }, [symbol]);
 
-  const usdTry = liveUsdTry > 5 ? liveUsdTry : 42.5;
-  const riskTRY = (capitalTRY * riskPercent) / 100;
+  const riskUSD = (capitalUSD * riskPercent) / 100;
   const slDist = Math.abs(entry - stopLoss);
   const tpDist = Math.abs(takeProfit - entry);
   const rr = slDist > 0 ? tpDist / slDist : 0;
   const q2u = symbol === 'USD/JPY' ? 1 / (entry || 155) : 1;
-  const unitRiskTRY = slDist * q2u * usdTry;
-  const recommendedUnits = unitRiskTRY > 0 ? riskTRY / unitRiskTRY : 0;
-  const notionalTRY = recommendedUnits * entry * q2u * usdTry;
-  const effectiveLev = capitalTRY > 0 ? notionalTRY / capitalTRY : 0;
-  const expectedProfitTRY = riskTRY * rr;
+  const unitRiskUSD = slDist * q2u;
+  const recommendedUnits = unitRiskUSD > 0 ? riskUSD / unitRiskUSD : 0;
+  const notionalUSD = recommendedUnits * entry * q2u;
+  const effectiveLev = capitalUSD > 0 ? notionalUSD / capitalUSD : 0;
+  const expectedProfitUSD = riskUSD * rr;
 
   return (
     <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
         <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
           <Calculator className="w-4 h-4 text-cyan-400" />
-          Risk & Pozisyon Hesaplayıcı (USD/TRY: {usdTry.toFixed(2)})
+          Risk & Pozisyon Hesaplayıcı (USD Hesabı)
         </h2>
 
         <div className="flex items-center gap-2">
@@ -102,11 +101,11 @@ export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 font-mono text-xs">
         <div>
-          <label className="block text-[11px] text-zinc-400 mb-1">Portföy Sermayesi (TL)</label>
+          <label className="block text-[11px] text-zinc-400 mb-1">Portföy Sermayesi (USD)</label>
           <input
             type="number"
-            value={capitalTRY}
-            onChange={(e) => setCapitalTRY(Number(e.target.value) || 0)}
+            value={capitalUSD}
+            onChange={(e) => setCapitalUSD(Number(e.target.value) || 0)}
             className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-white"
           />
         </div>
@@ -162,20 +161,20 @@ export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
         <div className="bg-zinc-950 border border-zinc-800 rounded p-3">
           <div className="text-[10px] text-zinc-500 uppercase">Pozisyon Büyüklüğü</div>
           <div className="text-lg font-bold text-cyan-300 mt-1">
-            {Math.round(notionalTRY).toLocaleString('tr-TR')} TL
+            ${notionalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="text-[10px] text-zinc-500">Efektif: {effectiveLev.toFixed(2)}x</div>
         </div>
         <div className="bg-zinc-950 border border-rose-900/40 rounded p-3">
           <div className="text-[10px] text-rose-400 uppercase">Maksimum Zarar (1R)</div>
           <div className="text-lg font-bold text-rose-400 mt-1">
-            -{Math.round(riskTRY).toLocaleString('tr-TR')} TL
+            -${riskUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div className="bg-zinc-950 border border-emerald-900/40 rounded p-3">
           <div className="text-[10px] text-emerald-400 uppercase">Beklenen Kâr (TP)</div>
           <div className="text-lg font-bold text-emerald-400 mt-1">
-            +{Math.round(expectedProfitTRY).toLocaleString('tr-TR')} TL
+            +${expectedProfitUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div className="bg-zinc-950 border border-zinc-800 rounded p-3">

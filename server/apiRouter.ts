@@ -97,7 +97,7 @@ export async function handleZeltraApiRequest(
       liveGoTargetIso: LIVE_GO_TARGET_ISO,
       isRunning: snap.isRunning,
       openPositionsCount: snap.openPositions.length,
-      totalEquityTRY: snap.totalEquityTRY,
+      totalEquityUSD: snap.totalEquityUSD,
       netProfitPercent: snap.netProfitPercent,
       uptimeSec: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
@@ -260,7 +260,7 @@ export async function handleZeltraApiRequest(
               stopLoss: activeTrade.stopLoss,
               takeProfit1: activeTrade.takeProfit1,
               takeProfit2: activeTrade.takeProfit2,
-              totalPnL_TRY: activeTrade.totalPnL_TRY,
+              totalPnL_USD: activeTrade.totalPnL_USD,
             }
           : null,
         universe: CORE_SYMBOLS.map((s) => ({ symbol: s, name: getSpec(s).name, cluster: getSpec(s).cluster })),
@@ -272,7 +272,7 @@ export async function handleZeltraApiRequest(
     return true;
   }
 
-  // 5. 250.000 TL Otonom 3-Pod Fon Motoru (/api/autonomous-test)
+  // 5. USD Otonom 3-Pod + Cortex Fon Motoru (/api/autonomous-test)
   if (pathname === '/api/autonomous-test') {
     try {
       const body = req.method === 'POST' ? await readJsonBody(req) : {};
@@ -347,7 +347,7 @@ export async function handleZeltraApiRequest(
     return true;
   }
 
-  // 7. 250.000 TL Manuel IBKR Arena & Sen vs Bot Yarışı
+  // 7. USD Manuel IBKR Arena & Sen vs Bot Yarışı
   if (pathname === '/api/manual-test') {
     await handleManualTestHttpRequest(req, res);
     return true;

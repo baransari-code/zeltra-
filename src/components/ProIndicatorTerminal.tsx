@@ -162,7 +162,7 @@ interface ProChartPayload {
     stopLoss: number;
     takeProfit1: number;
     takeProfit2: number;
-    totalPnL_TRY: number;
+    totalPnL_USD: number;
   } | null;
   universe?: { symbol: string; name: string; cluster: string }[];
   generatedAt: string;
@@ -566,9 +566,9 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
               {data?.activeTrade ? (
                 <div className="px-3 py-1 rounded bg-emerald-950/60 border border-emerald-600/50 text-xs font-mono">
                   <span className="text-emerald-300 font-bold">BOTTA AÇIK: {data.activeTrade.direction}</span>{' '}
-                  <span className={data.activeTrade.totalPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                    ({data.activeTrade.totalPnL_TRY >= 0 ? '+' : ''}
-                    {data.activeTrade.totalPnL_TRY.toLocaleString('tr-TR')} TL)
+                  <span className={data.activeTrade.totalPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                    ({data.activeTrade.totalPnL_USD >= 0 ? '+' : '-'}$
+                    {Math.abs(data.activeTrade.totalPnL_USD).toFixed(2)})
                   </span>
                 </div>
               ) : (

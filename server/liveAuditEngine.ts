@@ -130,16 +130,16 @@ export interface LiveAuditDashboardPayload {
     vixLevel: number;
     tickCount: number;
     lastTickAt: string;
-    initialCapitalTRY: number;
-    totalEquityTRY: number;
-    cashBalanceTRY: number;
-    availableCashTRY: number;
-    allocatedMarginTRY: number;
-    realizedPnL_TRY: number;
-    floatingPnL_TRY: number;
-    netProfitTRY: number;
+    initialCapitalUSD: number;
+    totalEquityUSD: number;
+    cashBalanceUSD: number;
+    availableCashUSD: number;
+    allocatedMarginUSD: number;
+    realizedPnL_USD: number;
+    floatingPnL_USD: number;
+    netProfitUSD: number;
     netProfitPercent: number;
-    totalFeesAndSwapTRY: number;
+    totalFeesAndSwapUSD: number;
     maxDrawdownPercent: number;
     openPositionsCount: number;
     closedTradesCount: number;
@@ -147,7 +147,7 @@ export interface LiveAuditDashboardPayload {
     profitFactor: number;
     openPositions: any[];
     closedTrades: any[];
-    equityHistory: { timestamp: number; timeStr: string; equityTRY: number; ddPct: number }[];
+    equityHistory: { timestamp: number; timeStr: string; equityUSD: number; ddPct: number }[];
   };
   forecastSummary: {
     totalLocked: number;
@@ -160,7 +160,7 @@ export interface LiveAuditDashboardPayload {
     directionalSettledCount?: number;
     directionalWinRatePct?: number;
     directionalProfitFactor?: number;
-    simulated250kDirectionalNetTRY?: number;
+    simulated5kDirectionalNetUSD?: number;
     band90CoveragePct: number;
     avgPriceErrorPct: number;
     byHorizon: LiveAuditHorizonStats[];
@@ -784,7 +784,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
 
   let grossWinPct = 0;
   let grossLossPct = 0;
-  let simNetTRY = 0;
+  let simNetUSD = 0;
   for (const f of directionalOnly) {
     const sign = f.expectedDirection === 'YÜKSELİŞ' ? 1 : -1;
     const retPct = sign * (f.actualMovePct || 0);
@@ -792,11 +792,11 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
     const netPct = retPct - costPct;
     if (retPct > 0) grossWinPct += retPct;
     else grossLossPct += Math.abs(retPct);
-    simNetTRY += 62500 * (netPct / 100);
+    simNetUSD += 1250 * (netPct / 100);
   }
   const directionalProfitFactor =
     grossLossPct > 0 ? +(grossWinPct / grossLossPct).toFixed(2) : grossWinPct > 0 ? 9.99 : 0;
-  const simulated250kDirectionalNetTRY = Math.round(simNetTRY);
+  const simulated5kDirectionalNetUSD = +simNetUSD.toFixed(2);
   const bandHits = settledAll.filter((f) => f.inside90Band).length;
   const avgErr =
     settledAll.length > 0
@@ -826,7 +826,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
     };
   });
 
-  const realizedPnL = ledger.closedTrades.reduce((s, t) => s + (t.realizedPnL_TRY || 0), 0);
+  const realizedPnL = ledger.closedTrades.reduce((s, t) => s + (t.realizedPnL_USD || 0), 0);
   const msRem = Math.max(0, new Date(LIVE_GO_TARGET_ISO).getTime() - Date.now());
   const daysRemaining = Math.ceil(msRem / (86400 * 1000));
 
@@ -846,17 +846,17 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       vixLevel: ledger.vixLevel ?? 18,
       tickCount: ledger.tickCount ?? 0,
       lastTickAt: ledger.lastTickAt,
-      initialCapitalTRY: ledger.initialCapitalTRY,
-      totalEquityTRY: ledger.totalEquityTRY,
-      cashBalanceTRY: ledger.cashBalanceTRY,
-      availableCashTRY: ledger.availableCashTRY,
-      allocatedMarginTRY: ledger.allocatedMarginTRY,
-      realizedPnL_TRY: +realizedPnL.toFixed(2),
-      floatingPnL_TRY: ledger.openFloatingPnL_TRY,
-      netProfitTRY: ledger.netProfitTRY,
+      initialCapitalUSD: ledger.initialCapitalUSD,
+      totalEquityUSD: ledger.totalEquityUSD,
+      cashBalanceUSD: ledger.cashBalanceUSD,
+      availableCashUSD: ledger.availableCashUSD,
+      allocatedMarginUSD: ledger.allocatedMarginUSD,
+      realizedPnL_USD: +realizedPnL.toFixed(2),
+      floatingPnL_USD: ledger.openFloatingPnL_USD,
+      netProfitUSD: ledger.netProfitUSD,
       netProfitPercent: ledger.netProfitPercent,
-      totalFeesAndSwapTRY: +(
-        (ledger.metrics.totalSpreadAndCommissionTRY || 0) + (ledger.metrics.totalFinancingTRY || 0)
+      totalFeesAndSwapUSD: +(
+        (ledger.metrics.totalSpreadAndCommissionUSD || 0) + (ledger.metrics.totalFinancingUSD || 0)
       ).toFixed(2),
       maxDrawdownPercent: ledger.metrics.maxDrawdownPercent,
       openPositionsCount: ledger.openPositions.length,
@@ -881,7 +881,7 @@ export async function getLiveAuditDashboard(syncNow = false): Promise<LiveAuditD
       directionalWinRatePct:
         directionalOnly.length > 0 ? +((directionalHits / directionalOnly.length) * 100).toFixed(1) : 0,
       directionalProfitFactor,
-      simulated250kDirectionalNetTRY,
+      simulated5kDirectionalNetUSD,
       band90CoveragePct: settledAll.length > 0 ? +((bandHits / settledAll.length) * 100).toFixed(1) : 0,
       avgPriceErrorPct: avgErr,
       byHorizon,

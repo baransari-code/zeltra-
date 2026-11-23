@@ -1,4 +1,4 @@
-// server/manualTrader.ts — ZELTRA /test2 Gerçek Piyasa Manuel İşlem Arenası (Sen vs Otonom Bot 250.000 TL Yarışması)
+// server/manualTrader.ts — ZELTRA /test2 Gerçek Piyasa Manuel İşlem Arenası (Sen vs Otonom Bot $5,000 USD Yarışması)
 import fs from 'fs';
 import path from 'path';
 import type http from 'http';
@@ -7,8 +7,9 @@ import {
   AutonomousLedgerState,
   AutonomousTrade,
   CORE_UNIVERSE,
+  INITIAL_CAPITAL_USD,
   InstrumentMicroSpec,
-  computeIbkrCommissionTRY,
+  computeIbkrCommissionUSD,
   getSpec,
   isMarketOpenForAsset,
   loadOrInitAutonomousLedger,
@@ -42,9 +43,9 @@ export interface ArenaUniverseItem {
 }
 
 export interface ArenaComparisonSummary {
-  userEquityTRY: number;
-  botEquityTRY: number;
-  leadTRY: number; // + ise Sen öndesin, - ise Bot önde
+  userEquityUSD: number;
+  botEquityUSD: number;
+  leadUSD: number; // + ise Sen öndesin, - ise Bot önde
   leader: 'USER' | 'BOT' | 'TIE';
   userNetPct: number;
   botNetPct: number;
@@ -56,16 +57,16 @@ export interface ArenaComparisonSummary {
   botDirAccuracy: number;
   userPF: number;
   botPF: number;
-  userFeesTRY: number;
-  botFeesTRY: number;
-  userSpot1xTRY: number;
-  botSpot1xTRY: number;
+  userFeesUSD: number;
+  botFeesUSD: number;
+  userSpot1xUSD: number;
+  botSpot1xUSD: number;
   botOpenCount: number;
   botRunning: boolean;
   botLastTickAt: string;
   botStrategyVersion: string;
-  userCurve: { timestamp: number; timeStr: string; equityTRY: number }[];
-  botCurve: { timestamp: number; timeStr: string; equityTRY: number }[];
+  userCurve: { timestamp: number; timeStr: string; equityUSD: number }[];
+  botCurve: { timestamp: number; timeStr: string; equityUSD: number }[];
 }
 
 export interface ManualArenaResponse {
@@ -74,23 +75,25 @@ export interface ManualArenaResponse {
   arena: ArenaComparisonSummary;
 }
 
-function createCleanManualLedger(initialCapitalTRY = 250000, usdTry = 50.34): AutonomousLedgerState {
+function createCleanManualLedger(initialCapitalUSD = INITIAL_CAPITAL_USD, usdTry = 50.59): AutonomousLedgerState {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   return {
-    botId: 'ZELTRA-USER-ARENA-250K',
-    strategyVersion: 'manual-ibkr-v1',
+    botId: 'ZELTRA-USER-ARENA-USD',
+    currency: 'USD',
+    strategyVersion: 'manual-ibkr-v2-usd',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
     liveUsdTry: usdTry,
-    initialCapitalTRY,
-    cashBalanceTRY: initialCapitalTRY,
-    allocatedMarginTRY: 0,
-    availableCashTRY: initialCapitalTRY,
-    openFloatingPnL_TRY: 0,
-    totalEquityTRY: initialCapitalTRY,
-    netProfitTRY: 0,
+    initialCapitalUSD,
+    cashBalanceUSD: initialCapitalUSD,
+    allocatedMarginUSD: 0,
+    availableCashUSD: initialCapitalUSD,
+    openFloatingPnL_USD: 0,
+    totalEquityUSD: initialCapitalUSD,
+    peakEquityUSD: initialCapitalUSD,
+    netProfitUSD: 0,
     netProfitPercent: 0,
     metrics: {
       totalClosedTrades: 0,
@@ -98,40 +101,22 @@ function createCleanManualLedger(initialCapitalTRY = 250000, usdTry = 50.34): Au
       winningTrades: 0,
       losingTrades: 0,
       winRatePercent: 0,
-      grossProfitTRY: 0,
-      grossLossTRY: 0,
       profitFactor: 0,
       maxDrawdownPercent: 0,
-      peakEquityTRY: initialCapitalTRY,
-      avgWinTRY: 0,
-      avgLossTRY: 0,
-      payoffRatio: 0,
-      expectancyTRY: 0,
-      expectancyR: 0,
-      realizedRMultipleTotal: 0,
-      sharpeRatio: 0,
-      sortinoRatio: 0,
-      totalSpreadAndCommissionTRY: 0,
-      totalSignalsExecuted: 0,
-      directionCorrectCount: 0,
-      directionAccuracyPercent: 0,
-      netProfitableCount: 0,
-      netProfitablePercent: 0,
-      totalPredictedGrossTRY: 0,
-      totalCumulativeVolumeTRY: 0,
-      activeNotionalVolumeTRY: 0,
+      avgWinUSD: 0,
+      avgLossUSD: 0,
+      expectancyUSD: 0,
+      totalSpreadAndCommissionUSD: 0,
+      totalFinancingUSD: 0,
+      activeNotionalVolumeUSD: 0,
       avgMarginLeverage: 0,
-      portfolioEffectiveLeverage: 0,
-      spot1xTotalNetProfitTRY: 0,
-      currentStreak: { type: 'NONE', count: 0 },
-      maxWinStreak: 0,
-      maxLossStreak: 0,
+      spot1xTotalNetProfitUSD: 0,
     },
     attribution: {
       byAsset: [],
       byDirection: {
-        long: { direction: 'AL (LONG)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
-        short: { direction: 'SAT (SHORT)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_TRY: 0, avgRMultiple: 0, profitFactor: 0 },
+        long: { direction: 'AL (LONG)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_USD: 0, avgRMultiple: 0, profitFactor: 0 },
+        short: { direction: 'SAT (SHORT)', tradesCount: 0, wins: 0, losses: 0, winRatePercent: 0, netPnL_USD: 0, avgRMultiple: 0, profitFactor: 0 },
       },
     },
     marketScanner: [],
@@ -146,8 +131,8 @@ function createCleanManualLedger(initialCapitalTRY = 250000, usdTry = 50.34): Au
           hour: '2-digit',
           minute: '2-digit',
         }),
-        equityTRY: initialCapitalTRY,
-        cashTRY: initialCapitalTRY,
+        equityUSD: initialCapitalUSD,
+        cashUSD: initialCapitalUSD,
         drawdownPercent: 0,
       },
     ],
@@ -157,8 +142,7 @@ function createCleanManualLedger(initialCapitalTRY = 250000, usdTry = 50.34): Au
         timestamp: nowIso,
         type: 'SYSTEM',
         symbol: 'ARENA',
-        message: '250.000,00 TL Manuel IBKR Arena hesabı başlatıldı. Gerçek piyasa fiyatları, spread ve IBKR komisyonlarıyla özgürce işlem açabilirsiniz.',
-        equityAfterTRY: initialCapitalTRY,
+        message: '$5,000.00 USD Manuel IBKR Arena hesabı başlatıldı. Gerçek piyasa fiyatları, spread ve IBKR komisyonlarıyla özgürce işlem açabilirsiniz.',
       },
     ],
   };
@@ -185,17 +169,62 @@ async function loadOrInitManualLedger(): Promise<AutonomousLedgerState> {
   if (fs.existsSync(MANUAL_LEDGER_FILE)) {
     try {
       const raw = fs.readFileSync(MANUAL_LEDGER_FILE, 'utf-8');
-      const parsed: AutonomousLedgerState = JSON.parse(raw);
-      if (parsed && parsed.initialCapitalTRY) {
+      const parsed: any = JSON.parse(raw);
+      if (parsed && parsed.currency === 'USD' && typeof parsed.initialCapitalUSD === 'number') {
         recalculateLedgerMetrics(parsed);
-        return parsed;
+        return parsed as AutonomousLedgerState;
+      }
+      if (parsed && (parsed.openPositions?.length > 0 || parsed.closedTrades?.length > 0)) {
+        const rate = Number(parsed.liveUsdTry) > 5 ? Number(parsed.liveUsdTry) : 50.59;
+        const d = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? +(v / rate).toFixed(2) : 0);
+        const convT = (t: any): AutonomousTrade => ({
+          ...t,
+          allocatedCapitalUSD: d(t.allocatedCapitalUSD ?? t.allocatedCapitalTRY),
+          notionalValueUSD: d(t.notionalValueUSD ?? t.notionalValueTRY),
+          riskUSD: d(t.riskUSD ?? t.riskAmountTRY ?? t.riskTRY),
+          spot1xEquivalentPnL_USD: d(t.spot1xEquivalentPnL_USD ?? t.spot1xEquivalentPnL_TRY),
+          executionCostUSD: d(t.executionCostUSD ?? t.executionCostTRY),
+          entryCommissionUSD: d(t.entryCommissionUSD ?? t.entryCommissionTRY),
+          exitCommissionUSD: d(t.exitCommissionUSD ?? t.exitCommissionTRY),
+          financingCostUSD: d(t.financingCostUSD ?? t.financingCostTRY),
+          grossUnrealizedPnL_USD: d(t.grossUnrealizedPnL_USD ?? t.grossUnrealizedPnL_TRY),
+          realizedPnL_USD: d(t.realizedPnL_USD ?? t.realizedPnL_TRY),
+          unrealizedPnL_USD: d(t.unrealizedPnL_USD ?? t.unrealizedPnL_TRY),
+          totalPnL_USD: d(t.totalPnL_USD ?? t.totalPnL_TRY),
+        });
+        const migrated: AutonomousLedgerState = {
+          ...parsed,
+          botId: 'ZELTRA-USER-ARENA-USD',
+          currency: 'USD',
+          strategyVersion: 'manual-ibkr-v2-usd',
+          initialCapitalUSD: d(parsed.initialCapitalTRY || 250000),
+          cashBalanceUSD: d(parsed.cashBalanceTRY || 250000),
+          allocatedMarginUSD: d(parsed.allocatedMarginTRY),
+          availableCashUSD: d(parsed.availableCashTRY || 250000),
+          openFloatingPnL_USD: d(parsed.openFloatingPnL_TRY),
+          totalEquityUSD: d(parsed.totalEquityTRY || 250000),
+          peakEquityUSD: d(parsed.peakEquityTRY || 250000),
+          netProfitUSD: d(parsed.netProfitTRY),
+          openPositions: (parsed.openPositions || []).map(convT),
+          closedTrades: (parsed.closedTrades || []).map(convT),
+          equityCurve: (parsed.equityCurve || []).map((c: any) => ({
+            timestamp: c.timestamp,
+            timeStr: c.timeStr,
+            equityUSD: typeof c.equityUSD === 'number' ? c.equityUSD : d(c.equityTRY),
+            cashUSD: typeof c.cashUSD === 'number' ? c.cashUSD : d(c.cashTRY),
+            drawdownPercent: c.drawdownPercent ?? 0,
+          })),
+        };
+        recalculateLedgerMetrics(migrated);
+        saveManualLedger(migrated);
+        return migrated;
       }
     } catch {
       // Re-init on corruption
     }
   }
-  const usdTry = await fetchLiveUsdTryRate();
-  const clean = createCleanManualLedger(250000, usdTry);
+  const usdTry = await fetchLiveUsdTryRate().catch(() => 50.59);
+  const clean = createCleanManualLedger(INITIAL_CAPITAL_USD, usdTry);
   saveManualLedger(clean);
   return clean;
 }
@@ -220,7 +249,6 @@ function getLiveBidAsk(market: any, spec: InstrumentMicroSpec): { mid: number; b
 function applyOpenPositionsValuation(
   state: AutonomousLedgerState,
   marketMap: Map<string, any>,
-  usdTry: number,
   now: number,
   nowIso: string
 ): void {
@@ -242,64 +270,62 @@ function applyOpenPositionsValuation(
     const livePrice = isLong ? liveBid : liveAsk;
     pos.currentPrice = livePrice;
 
-    // Günlük IBKR Kaldıraçlı Gecelik Taşıma Maliyeti (UTC 00:00 devri)
+    // Günlük IBKR Kaldıraçlı Gecelik Taşıma Maliyeti (UTC 00:00 devri — doğrudan USD)
     const todayUtc = nowIso.slice(0, 10);
     if (!pos.lastSwapDateUTC) pos.lastSwapDateUTC = (pos.entryTime || nowIso).slice(0, 10);
     if (todayUtc > pos.lastSwapDateUTC) {
-      const remWeight = (pos.tp1Hit ? 0.5 : 1.0);
+      const remWeight = pos.tp1Hit ? 0.5 : 1.0;
       const swapUnits = pos.positionSizeUnits * remWeight;
       const quoteToUsdSwap = pos.symbol === 'USD/JPY' ? 1 / (livePrice || 155) : 1;
-      const curNotional = swapUnits * livePrice * quoteToUsdSwap * usdTry;
-      const borrowed = Math.max(0, curNotional - pos.allocatedCapitalTRY * remWeight);
+      const curNotional = swapUnits * livePrice * quoteToUsdSwap;
+      const borrowed = Math.max(0, curNotional - pos.allocatedCapitalUSD * remWeight);
       if (borrowed > 0) {
         const swapFee = +(borrowed * (0.068 / 365)).toFixed(2);
-        pos.financingCostTRY = +((pos.financingCostTRY || 0) + swapFee).toFixed(2);
-        pos.executionCostTRY = +((pos.entryCommissionTRY || 0) + (pos.exitCommissionTRY || 0) + pos.financingCostTRY).toFixed(2);
-        pos.realizedPnL_TRY = +(pos.realizedPnL_TRY - swapFee).toFixed(2);
-        state.cashBalanceTRY = +(state.cashBalanceTRY - swapFee).toFixed(2);
+        pos.financingCostUSD = +((pos.financingCostUSD || 0) + swapFee).toFixed(2);
+        pos.executionCostUSD = +((pos.entryCommissionUSD || 0) + (pos.exitCommissionUSD || 0) + pos.financingCostUSD).toFixed(2);
+        pos.realizedPnL_USD = +(pos.realizedPnL_USD - swapFee).toFixed(2);
+        state.cashBalanceUSD = +(state.cashBalanceUSD - swapFee).toFixed(2);
       }
       pos.lastSwapDateUTC = todayUtc;
     }
 
     const quoteToUsd = pos.symbol === 'USD/JPY' ? 1 / (livePrice || 155) : 1;
-    const slDist = Math.abs(pos.entryPrice - pos.initialStopLoss) || (pos.entryPrice * 0.02);
+    const slDist = Math.abs(pos.entryPrice - pos.initialStopLoss) || pos.entryPrice * 0.02;
     const priceDiff = isLong ? livePrice - pos.entryPrice : pos.entryPrice - livePrice;
     const remUnits = pos.tp1Hit ? +(pos.positionSizeUnits * 0.5).toFixed(6) : pos.positionSizeUnits;
 
-    const grossTRY = remUnits * priceDiff * quoteToUsd * usdTry;
-    const closeNotional = remUnits * livePrice * quoteToUsd * usdTry;
-    const estExitFeeTRY = computeIbkrCommissionTRY(spec, closeNotional, remUnits, usdTry);
-    const netFloatingTRY = +(grossTRY - estExitFeeTRY).toFixed(2);
-    const totalNetTRY = +(pos.realizedPnL_TRY + netFloatingTRY).toFixed(2);
+    const grossUSD = remUnits * priceDiff * quoteToUsd;
+    const closeNotional = remUnits * livePrice * quoteToUsd;
+    const estExitFeeUSD = computeIbkrCommissionUSD(spec, closeNotional, remUnits);
+    const netFloatingUSD = +(grossUSD - estExitFeeUSD).toFixed(2);
+    const totalNetUSD = +(pos.realizedPnL_USD + netFloatingUSD).toFixed(2);
     const rMult = +(priceDiff / slDist).toFixed(2);
 
-    pos.grossUnrealizedPnL_TRY = +grossTRY.toFixed(2);
+    pos.grossUnrealizedPnL_USD = +grossUSD.toFixed(2);
     pos.mfeR = Math.max(pos.mfeR ?? rMult, rMult);
     pos.maeR = Math.min(pos.maeR ?? rMult, rMult);
-    pos.mfeTRY = Math.max(pos.mfeTRY ?? totalNetTRY, totalNetTRY);
-    pos.maeTRY = Math.min(pos.maeTRY ?? totalNetTRY, totalNetTRY);
+    pos.mfeUSD = Math.max(pos.mfeUSD ?? totalNetUSD, totalNetUSD);
+    pos.maeUSD = Math.min(pos.maeUSD ?? totalNetUSD, totalNetUSD);
 
     const session = isMarketOpenForAsset(pos.symbol, new Date(now));
 
     // Marjin Tasfiyesi (%85 Teminat Erimesi — Gerçek IBKR Likidasyon Kalkanı)
-    const isLiquidated = session.isOpen && netFloatingTRY <= -(pos.allocatedCapitalTRY * 0.85);
-    // Stop Loss Kontrolü (Kullanıcının SL koyduğu pozisyonlarda canlı Bid/Ask tetiklenmesi)
+    const isLiquidated = session.isOpen && netFloatingUSD <= -(pos.allocatedCapitalUSD * 0.85);
     const hasActiveSl = pos.stopLoss > 0;
     const hitSl = session.isOpen && hasActiveSl && (isLong ? livePrice <= pos.stopLoss : livePrice >= pos.stopLoss);
-    // Take Profit Kontrolü
     const hasActiveTp = pos.takeProfit2 > 0;
     const hitTp = session.isOpen && hasActiveTp && (isLong ? livePrice >= pos.takeProfit2 : livePrice <= pos.takeProfit2);
 
     if (isLiquidated || hitSl || hitTp) {
-      const actualExitFee = estExitFeeTRY;
-      const netDelta = +(grossTRY - actualExitFee).toFixed(2);
-      pos.exitCommissionTRY = +((pos.exitCommissionTRY || 0) + actualExitFee).toFixed(2);
-      pos.executionCostTRY = +((pos.entryCommissionTRY || 0) + pos.exitCommissionTRY + (pos.financingCostTRY || 0)).toFixed(2);
-      pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + netDelta).toFixed(2);
-      pos.grossUnrealizedPnL_TRY = 0;
-      pos.unrealizedPnL_TRY = 0;
-      pos.totalPnL_TRY = pos.realizedPnL_TRY;
-      pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
+      const actualExitFee = estExitFeeUSD;
+      const netDelta = +(grossUSD - actualExitFee).toFixed(2);
+      pos.exitCommissionUSD = +((pos.exitCommissionUSD || 0) + actualExitFee).toFixed(2);
+      pos.executionCostUSD = +((pos.entryCommissionUSD || 0) + pos.exitCommissionUSD + (pos.financingCostUSD || 0)).toFixed(2);
+      pos.realizedPnL_USD = +(pos.realizedPnL_USD + netDelta).toFixed(2);
+      pos.grossUnrealizedPnL_USD = 0;
+      pos.unrealizedPnL_USD = 0;
+      pos.totalPnL_USD = pos.realizedPnL_USD;
+      pos.totalPnL_Percent = +((pos.totalPnL_USD / state.initialCapitalUSD) * 100).toFixed(2);
       pos.closePrice = livePrice;
       pos.closeTime = nowIso;
       pos.closeTimestamp = now;
@@ -315,24 +341,24 @@ function applyOpenPositionsValuation(
         pos.exitReason = `Belirlediğiniz Stop Loss (${pos.stopLoss}) @ ${livePrice} seviyesinde tetiklendi (IBKR komisyon dahil).`;
       }
 
-      state.cashBalanceTRY = +(state.cashBalanceTRY + netDelta).toFixed(2);
+      state.cashBalanceUSD = +(state.cashBalanceUSD + netDelta).toFixed(2);
       state.closedTrades.unshift(pos);
       state.activityLog.unshift({
         id: `MAN-AUTOEXIT-${now}-${pos.id}`,
         timestamp: nowIso,
         type: hitTp ? 'TP2_FULL' : 'STOP_LOSS',
         symbol: pos.symbol,
-        message: `${pos.symbol} (${pos.direction}) @ ${livePrice} otomatik kapandı (${hitTp ? 'Kâr Al' : isLiquidated ? 'Likidasyon' : 'Stop Loss'}): ${pos.totalPnL_TRY >= 0 ? '+' : ''}${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL net.`,
-        pnlImpactTRY: netDelta,
+        message: `${pos.symbol} (${pos.direction}) @ ${livePrice} otomatik kapandı (${hitTp ? 'Kâr Al' : isLiquidated ? 'Likidasyon' : 'Stop Loss'}): ${pos.totalPnL_USD >= 0 ? '+' : '-'}$${Math.abs(pos.totalPnL_USD).toFixed(2)} net.`,
+        pnlImpactUSD: netDelta,
       });
       continue;
     }
 
-    pos.unrealizedPnL_TRY = netFloatingTRY;
-    pos.totalPnL_TRY = totalNetTRY;
-    pos.totalPnL_Percent = +((totalNetTRY / state.initialCapitalTRY) * 100).toFixed(2);
-    pos.rMultiple = +(totalNetTRY / (pos.riskAmountTRY || 1)).toFixed(2);
-    pos.spot1xEquivalentPnL_TRY = +(totalNetTRY / Math.max(1, pos.effectiveLeverage || 1)).toFixed(2);
+    pos.unrealizedPnL_USD = netFloatingUSD;
+    pos.totalPnL_USD = totalNetUSD;
+    pos.totalPnL_Percent = +((totalNetUSD / state.initialCapitalUSD) * 100).toFixed(2);
+    pos.rMultiple = +(totalNetUSD / (pos.riskUSD || pos.riskAmountUSD || 1)).toFixed(2);
+    pos.spot1xEquivalentPnL_USD = +(totalNetUSD / Math.max(1, pos.effectiveLeverage || 1)).toFixed(2);
     remaining.push(pos);
   }
 
@@ -393,12 +419,12 @@ function buildArenaResponse(
     };
   });
 
-  const leadTRY = +(userState.totalEquityTRY - botState.totalEquityTRY).toFixed(2);
+  const leadUSD = +(userState.totalEquityUSD - botState.totalEquityUSD).toFixed(2);
   const arena: ArenaComparisonSummary = {
-    userEquityTRY: userState.totalEquityTRY,
-    botEquityTRY: botState.totalEquityTRY,
-    leadTRY,
-    leader: Math.abs(leadTRY) < 1 ? 'TIE' : leadTRY > 0 ? 'USER' : 'BOT',
+    userEquityUSD: userState.totalEquityUSD,
+    botEquityUSD: botState.totalEquityUSD,
+    leadUSD,
+    leader: Math.abs(leadUSD) < 0.25 ? 'TIE' : leadUSD > 0 ? 'USER' : 'BOT',
     userNetPct: userState.netProfitPercent,
     botNetPct: botState.netProfitPercent,
     userTradesTotal: userState.closedTrades.length + userState.openPositions.length,
@@ -409,16 +435,16 @@ function buildArenaResponse(
     botDirAccuracy: botState.metrics.directionAccuracyPercent || 0,
     userPF: userState.metrics.profitFactor,
     botPF: botState.metrics.profitFactor,
-    userFeesTRY: userState.metrics.totalSpreadAndCommissionTRY,
-    botFeesTRY: botState.metrics.totalSpreadAndCommissionTRY,
-    userSpot1xTRY: userState.metrics.spot1xTotalNetProfitTRY || 0,
-    botSpot1xTRY: botState.metrics.spot1xTotalNetProfitTRY || 0,
+    userFeesUSD: userState.metrics.totalSpreadAndCommissionUSD,
+    botFeesUSD: botState.metrics.totalSpreadAndCommissionUSD,
+    userSpot1xUSD: userState.metrics.spot1xTotalNetProfitUSD || 0,
+    botSpot1xUSD: botState.metrics.spot1xTotalNetProfitUSD || 0,
     botOpenCount: botState.openPositions.length,
     botRunning: botState.isRunning,
     botLastTickAt: botState.lastTickAt,
-    botStrategyVersion: botState.strategyVersion || 'v4.1-hedge-alpha',
-    userCurve: (userState.equityCurve || []).map((c) => ({ timestamp: c.timestamp, timeStr: c.timeStr, equityTRY: c.equityTRY })),
-    botCurve: (botState.equityCurve || []).map((c) => ({ timestamp: c.timestamp, timeStr: c.timeStr, equityTRY: c.equityTRY })),
+    botStrategyVersion: botState.strategyVersion || 'v15.2-zeltra-usd',
+    userCurve: (userState.equityCurve || []).map((c) => ({ timestamp: c.timestamp, timeStr: c.timeStr, equityUSD: c.equityUSD })),
+    botCurve: (botState.equityCurve || []).map((c) => ({ timestamp: c.timestamp, timeStr: c.timeStr, equityUSD: c.equityUSD })),
   };
 
   return { userLedger: userState, universe, arena };
@@ -431,7 +457,7 @@ export async function executeManualTradingTick(includeFullUniverse = true): Prom
     const nowIso = new Date(now).toISOString();
     state.lastTickAt = nowIso;
 
-    let usdTry = state.liveUsdTry || 50.34;
+    let usdTry = state.liveUsdTry || 50.59;
     let marketMap = new Map<string, any>();
 
     if (includeFullUniverse) {
@@ -455,18 +481,18 @@ export async function executeManualTradingTick(includeFullUniverse = true): Prom
 
     state.liveUsdTry = usdTry;
     if (state.openPositions.length > 0) {
-      applyOpenPositionsValuation(state, marketMap, usdTry, now, nowIso);
+      applyOpenPositionsValuation(state, marketMap, now, nowIso);
     }
 
     recalculateLedgerMetrics(state);
 
     const lastPt = state.equityCurve[state.equityCurve.length - 1];
-    if (!lastPt || now - lastPt.timestamp >= 60 * 1000 || Math.abs(lastPt.equityTRY - state.totalEquityTRY) >= 15) {
+    if (!lastPt || now - lastPt.timestamp >= 60 * 1000 || Math.abs(lastPt.equityUSD - state.totalEquityUSD) >= 0.5) {
       state.equityCurve.push({
         timestamp: now,
         timeStr: new Date(now).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-        equityTRY: state.totalEquityTRY,
-        cashTRY: state.cashBalanceTRY,
+        equityUSD: state.totalEquityUSD,
+        cashUSD: state.cashBalanceUSD,
       });
       if (state.equityCurve.length > 160) state.equityCurve = state.equityCurve.slice(-160);
       recalculateLedgerMetrics(state);
@@ -482,7 +508,7 @@ export async function executeManualTradingTick(includeFullUniverse = true): Prom
 export interface ManualOpenOrderParams {
   symbol: string;
   direction: 'AL (LONG)' | 'SAT (SHORT)';
-  marginTRY: number;
+  marginUSD: number;
   leverage: number;
   stopLoss?: number | null;
   takeProfit?: number | null;
@@ -503,7 +529,7 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
     state.liveUsdTry = usdTry;
     state.lastTickAt = nowIso;
 
-    applyOpenPositionsValuation(state, snap.marketMap, usdTry, now, nowIso);
+    applyOpenPositionsValuation(state, snap.marketMap, now, nowIso);
     recalculateLedgerMetrics(state);
 
     const spec = getSpec(params.symbol);
@@ -517,12 +543,12 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
       throw new Error(`${params.symbol} için canlı borsa fiyatı şu an alınamadı.`);
     }
 
-    const marginTRY = Number(params.marginTRY);
-    if (!Number.isFinite(marginTRY) || marginTRY < 1000) {
-      throw new Error('Minimum pozisyon teminatı 1.000,00 TL olmalıdır.');
+    const marginUSD = Number(params.marginUSD);
+    if (!Number.isFinite(marginUSD) || marginUSD < 25) {
+      throw new Error('Minimum pozisyon teminatı $25.00 USD olmalıdır.');
     }
-    if (marginTRY > state.availableCashTRY) {
-      throw new Error(`Yetersiz serbest nakit! Kullanılabilir teminat: ${state.availableCashTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL.`);
+    if (marginUSD > state.availableCashUSD) {
+      throw new Error(`Yetersiz serbest nakit! Kullanılabilir teminat: $${state.availableCashUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`);
     }
 
     const lev = Math.max(1, Math.min(spec.maxIbkrLeverage, Number(params.leverage) || 1));
@@ -533,13 +559,13 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
       ? +(liveAsk + spec.slippagePts).toFixed(spec.digits)
       : +(liveBid - spec.slippagePts).toFixed(spec.digits);
 
-    const rawNotionalTRY = marginTRY * lev;
+    const rawNotionalUSD = marginUSD * lev;
     const quoteToUsd = params.symbol === 'USD/JPY' ? 1 / (entryPrice || 155) : 1;
     const unitDecimals = entryPrice >= 1000 ? 5 : entryPrice >= 1 ? 4 : 2;
-    const units = +Math.max(0.00001, rawNotionalTRY / ((entryPrice * quoteToUsd * usdTry) || 1)).toFixed(unitDecimals);
-    const actualNotionalTRY = +(units * entryPrice * quoteToUsd * usdTry).toFixed(2);
-    const effectiveLeverage = +(actualNotionalTRY / marginTRY).toFixed(2);
-    const accountLeverage = +(actualNotionalTRY / Math.max(1, state.totalEquityTRY)).toFixed(2);
+    const units = +Math.max(0.00001, rawNotionalUSD / ((entryPrice * quoteToUsd) || 1)).toFixed(unitDecimals);
+    const actualNotionalUSD = +(units * entryPrice * quoteToUsd).toFixed(2);
+    const effectiveLeverage = +(actualNotionalUSD / marginUSD).toFixed(2);
+    const accountLeverage = +(actualNotionalUSD / Math.max(1, state.totalEquityUSD)).toFixed(2);
 
     // Opsiyonel özel SL / TP doğrulaması
     let customSL = Number(params.stopLoss || 0);
@@ -552,7 +578,7 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
       }
       customSL = +customSL.toFixed(spec.digits);
     } else {
-      customSL = 0; // Kullanıcı açıkça SL koymadıysa yalnızca %85 marjin likidasyon koruması çalışır
+      customSL = 0;
     }
 
     let customTP = Number(params.takeProfit || 0);
@@ -575,20 +601,20 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
       : +(entryPrice * (1 + autoLiqRatio)).toFixed(spec.digits);
     const refSlForStats = customSL > 0 ? customSL : refLiqStop;
     const slDist = Math.abs(entryPrice - refSlForStats) || entryPrice * 0.02;
-    const riskAmountTRY = +(units * slDist * quoteToUsd * usdTry).toFixed(2);
+    const riskUSD = +(units * slDist * quoteToUsd).toFixed(2);
 
     // IBKR Giriş Komisyonunu Peşin Kes
-    const entryCommissionTRY = computeIbkrCommissionTRY(spec, actualNotionalTRY, units, usdTry);
-    state.cashBalanceTRY = +(state.cashBalanceTRY - entryCommissionTRY).toFixed(2);
+    const entryCommissionUSD = +computeIbkrCommissionUSD(spec, actualNotionalUSD, units).toFixed(2);
+    state.cashBalanceUSD = +(state.cashBalanceUSD - entryCommissionUSD).toFixed(2);
 
     const initLiqPrice = isLong ? liveBid : liveAsk;
     const initDiff = isLong ? initLiqPrice - entryPrice : entryPrice - initLiqPrice;
-    const initCloseNotional = units * initLiqPrice * quoteToUsd * usdTry;
-    const estExitFeeTRY = computeIbkrCommissionTRY(spec, initCloseNotional, units, usdTry);
-    const initGrossTRY = +(units * initDiff * quoteToUsd * usdTry).toFixed(2);
-    const initUnrealizedTRY = +(initGrossTRY - estExitFeeTRY).toFixed(2);
-    const initRealizedTRY = +(-entryCommissionTRY).toFixed(2);
-    const initTotalTRY = +(initRealizedTRY + initUnrealizedTRY).toFixed(2);
+    const initCloseNotional = units * initLiqPrice * quoteToUsd;
+    const estExitFeeUSD = computeIbkrCommissionUSD(spec, initCloseNotional, units);
+    const initGrossUSD = +(units * initDiff * quoteToUsd).toFixed(2);
+    const initUnrealizedUSD = +(initGrossUSD - estExitFeeUSD).toFixed(2);
+    const initRealizedUSD = +(-entryCommissionUSD).toFixed(2);
+    const initTotalUSD = +(initRealizedUSD + initUnrealizedUSD).toFixed(2);
 
     const lotSize = +Math.max(0.001, units / spec.contractSize).toFixed(3);
     const trade: AutonomousTrade = {
@@ -609,39 +635,38 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
       takeProfit2: customTP,
       stopLoss: customSL,
       initialStopLoss: refSlForStats,
-      allocatedCapitalTRY: +marginTRY.toFixed(2),
-      riskAmountTRY,
+      allocatedCapitalUSD: +marginUSD.toFixed(2),
+      riskUSD,
       positionSizeUnits: units,
       lotSize,
       contractSize: spec.contractSize,
       unitLabel: spec.unitLabel,
-      notionalValueTRY: actualNotionalTRY,
+      notionalValueUSD: actualNotionalUSD,
       effectiveLeverage,
       accountLeverage,
       isLeveraged: effectiveLeverage > 1.05,
-      spot1xEquivalentPnL_TRY: +(initTotalTRY / Math.max(1, effectiveLeverage)).toFixed(2),
+      spot1xEquivalentPnL_USD: +(initTotalUSD / Math.max(1, effectiveLeverage)).toFixed(2),
       spreadPts: actualSpread,
       slippagePts: spec.slippagePts,
-      executionCostTRY: entryCommissionTRY,
-      entryCommissionTRY,
-      exitCommissionTRY: 0,
-      financingCostTRY: 0,
+      executionCostUSD: entryCommissionUSD,
+      entryCommissionUSD,
+      exitCommissionUSD: 0,
+      financingCostUSD: 0,
       lastSwapDateUTC: nowIso.slice(0, 10),
-      usdTryAtEntry: usdTry,
-      grossUnrealizedPnL_TRY: initGrossTRY,
-      rMultiple: +(initTotalTRY / (riskAmountTRY || 1)).toFixed(2),
-      mfeTRY: initTotalTRY,
+      grossUnrealizedPnL_USD: initGrossUSD,
+      rMultiple: +(initTotalUSD / (riskUSD || 1)).toFixed(2),
+      mfeUSD: initTotalUSD,
       mfeR: +(initDiff / slDist).toFixed(2),
-      maeTRY: initTotalTRY,
+      maeUSD: initTotalUSD,
       maeR: +(initDiff / slDist).toFixed(2),
       tp1Hit: false,
       breakevenActive: false,
       trailingStopActive: false,
-      realizedPnL_TRY: initRealizedTRY,
-      unrealizedPnL_TRY: initUnrealizedTRY,
-      totalPnL_TRY: initTotalTRY,
-      totalPnL_Percent: +((initTotalTRY / state.initialCapitalTRY) * 100).toFixed(2),
-      rationale: params.note?.trim() || `Manuel Kullanıcı Emri (${lev}x Kaldıraç, ${marginTRY.toLocaleString('tr-TR')} TL Teminat)`,
+      realizedPnL_USD: initRealizedUSD,
+      unrealizedPnL_USD: initUnrealizedUSD,
+      totalPnL_USD: initTotalUSD,
+      totalPnL_Percent: +((initTotalUSD / state.initialCapitalUSD) * 100).toFixed(2),
+      rationale: params.note?.trim() || `Manuel Kullanıcı Emri (${lev}x Kaldıraç, $${marginUSD.toLocaleString('en-US')} Teminat)`,
     };
 
     state.openPositions.unshift(trade);
@@ -651,21 +676,21 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
       type: 'ENTRY',
       symbol: trade.symbol,
       direction: trade.direction,
-      allocatedMarginTRY: trade.allocatedCapitalTRY,
-      notionalVolumeTRY: trade.notionalValueTRY,
+      allocatedMarginUSD: trade.allocatedCapitalUSD,
+      notionalVolumeUSD: trade.notionalValueUSD,
       effectiveLeverage: trade.effectiveLeverage,
       entryPrice: trade.entryPrice,
-      executionCostTRY: entryCommissionTRY,
-      pnlImpactTRY: initRealizedTRY,
-      message: `MANUEL EMİR AÇILDI: ${trade.symbol} (${trade.direction} · ${units} ${spec.unitLabel} · ${effectiveLeverage}x) @ ${entryPrice} (IBKR Komisyon: -${entryCommissionTRY} TL)`,
+      executionCostUSD: entryCommissionUSD,
+      pnlImpactUSD: initRealizedUSD,
+      message: `MANUEL EMİR AÇILDI: ${trade.symbol} (${trade.direction} · ${units} ${spec.unitLabel} · ${effectiveLeverage}x) @ ${entryPrice} (IBKR Komisyon: -$${entryCommissionUSD.toFixed(2)})`,
     });
 
     recalculateLedgerMetrics(state);
     state.equityCurve.push({
       timestamp: now,
       timeStr: new Date(now).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-      equityTRY: state.totalEquityTRY,
-      cashTRY: state.cashBalanceTRY,
+      equityUSD: state.totalEquityUSD,
+      cashUSD: state.cashBalanceUSD,
     });
     saveManualLedger(state);
 
@@ -683,8 +708,7 @@ export async function closeManualPosition(tradeId: string, fraction = 1): Promis
 
     const now = Date.now();
     const nowIso = new Date(now).toISOString();
-    const usdTry = snap.usdTry;
-    state.liveUsdTry = usdTry;
+    state.liveUsdTry = snap.usdTry;
     state.lastTickAt = nowIso;
 
     const idx = state.openPositions.findIndex((p) => p.id === tradeId);
@@ -713,15 +737,15 @@ export async function closeManualPosition(tradeId: string, fraction = 1): Promis
     const closeUnits = isPartial ? +(pos.positionSizeUnits * 0.5).toFixed(6) : remUnitsBefore;
     const quoteToUsd = pos.symbol === 'USD/JPY' ? 1 / (closePrice || 155) : 1;
     const priceDiff = isLong ? closePrice - pos.entryPrice : pos.entryPrice - closePrice;
-    const closeNotional = closeUnits * closePrice * quoteToUsd * usdTry;
-    const exitFee = computeIbkrCommissionTRY(spec, closeNotional, closeUnits, usdTry);
-    const grossDelta = closeUnits * priceDiff * quoteToUsd * usdTry;
+    const closeNotional = closeUnits * closePrice * quoteToUsd;
+    const exitFee = +computeIbkrCommissionUSD(spec, closeNotional, closeUnits).toFixed(2);
+    const grossDelta = closeUnits * priceDiff * quoteToUsd;
     const netDelta = +(grossDelta - exitFee).toFixed(2);
 
-    pos.exitCommissionTRY = +((pos.exitCommissionTRY || 0) + exitFee).toFixed(2);
-    pos.executionCostTRY = +((pos.entryCommissionTRY || 0) + pos.exitCommissionTRY + (pos.financingCostTRY || 0)).toFixed(2);
-    pos.realizedPnL_TRY = +(pos.realizedPnL_TRY + netDelta).toFixed(2);
-    state.cashBalanceTRY = +(state.cashBalanceTRY + netDelta).toFixed(2);
+    pos.exitCommissionUSD = +((pos.exitCommissionUSD || 0) + exitFee).toFixed(2);
+    pos.executionCostUSD = +((pos.entryCommissionUSD || 0) + pos.exitCommissionUSD + (pos.financingCostUSD || 0)).toFixed(2);
+    pos.realizedPnL_USD = +(pos.realizedPnL_USD + netDelta).toFixed(2);
+    state.cashBalanceUSD = +(state.cashBalanceUSD + netDelta).toFixed(2);
 
     if (isPartial) {
       pos.tp1Hit = true;
@@ -733,19 +757,19 @@ export async function closeManualPosition(tradeId: string, fraction = 1): Promis
         timestamp: nowIso,
         type: 'TP1_PARTIAL',
         symbol: pos.symbol,
-        pnlImpactTRY: netDelta,
-        message: `MANUEL %50 KISMİ KAPANIŞ: ${pos.symbol} @ ${closePrice} (+%50 kapatıldı, etki: ${netDelta >= 0 ? '+' : ''}${netDelta.toLocaleString('tr-TR')} TL, IBKR çıkış kom: -${exitFee} TL).`,
+        pnlImpactUSD: netDelta,
+        message: `MANUEL %50 KISMİ KAPANIŞ: ${pos.symbol} @ ${closePrice} (+%50 kapatıldı, etki: ${netDelta >= 0 ? '+' : '-'}$${Math.abs(netDelta).toFixed(2)}, IBKR çıkış kom: -$${exitFee.toFixed(2)}).`,
       });
     } else {
-      pos.grossUnrealizedPnL_TRY = 0;
-      pos.unrealizedPnL_TRY = 0;
-      pos.totalPnL_TRY = pos.realizedPnL_TRY;
-      pos.totalPnL_Percent = +((pos.totalPnL_TRY / state.initialCapitalTRY) * 100).toFixed(2);
+      pos.grossUnrealizedPnL_USD = 0;
+      pos.unrealizedPnL_USD = 0;
+      pos.totalPnL_USD = pos.realizedPnL_USD;
+      pos.totalPnL_Percent = +((pos.totalPnL_USD / state.initialCapitalUSD) * 100).toFixed(2);
       pos.closePrice = closePrice;
       pos.closeTime = nowIso;
       pos.closeTimestamp = now;
       pos.status = 'MANUEL_KAPANDI';
-      pos.exitReason = `Kullanıcı tarafından canlı piyasa kotasyonundan (@ ${closePrice}) manuel kapatıldı (Toplam IBKR komisyonu: -${pos.executionCostTRY} TL).`;
+      pos.exitReason = `Kullanıcı tarafından canlı piyasa kotasyonundan (@ ${closePrice}) manuel kapatıldı (Toplam IBKR komisyonu: -$${(pos.executionCostUSD || 0).toFixed(2)}).`;
 
       state.openPositions.splice(idx, 1);
       state.closedTrades.unshift(pos);
@@ -754,20 +778,20 @@ export async function closeManualPosition(tradeId: string, fraction = 1): Promis
         timestamp: nowIso,
         type: 'SYSTEM',
         symbol: pos.symbol,
-        pnlImpactTRY: netDelta,
-        message: `MANUEL KAPANIŞ: ${pos.symbol} (${pos.direction}) ${pos.entryPrice} → ${closePrice} | İşlem Neti: ${pos.totalPnL_TRY >= 0 ? '+' : ''}${pos.totalPnL_TRY.toLocaleString('tr-TR')} TL.`,
+        pnlImpactUSD: netDelta,
+        message: `MANUEL KAPANIŞ: ${pos.symbol} (${pos.direction}) ${pos.entryPrice} → ${closePrice} | İşlem Neti: ${pos.totalPnL_USD >= 0 ? '+' : '-'}$${Math.abs(pos.totalPnL_USD).toFixed(2)}.`,
       });
     }
 
     if (state.openPositions.length > 0) {
-      applyOpenPositionsValuation(state, snap.marketMap, usdTry, now, nowIso);
+      applyOpenPositionsValuation(state, snap.marketMap, now, nowIso);
     }
     recalculateLedgerMetrics(state);
     state.equityCurve.push({
       timestamp: now,
       timeStr: new Date(now).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-      equityTRY: state.totalEquityTRY,
-      cashTRY: state.cashBalanceTRY,
+      equityUSD: state.totalEquityUSD,
+      cashUSD: state.cashBalanceUSD,
     });
     saveManualLedger(state);
 
@@ -817,7 +841,7 @@ export async function updateManualTpSl(params: { tradeId: string; stopLoss?: num
     const now = Date.now();
     const nowIso = new Date(now).toISOString();
     if (state.openPositions.length > 0) {
-      applyOpenPositionsValuation(state, snap.marketMap, snap.usdTry, now, nowIso);
+      applyOpenPositionsValuation(state, snap.marketMap, now, nowIso);
     }
     recalculateLedgerMetrics(state);
     saveManualLedger(state);
@@ -826,10 +850,10 @@ export async function updateManualTpSl(params: { tradeId: string; stopLoss?: num
   });
 }
 
-export async function resetManualArena(initialCapitalTRY = 250000): Promise<ManualArenaResponse> {
+export async function resetManualArena(initialCapitalUSD = INITIAL_CAPITAL_USD): Promise<ManualArenaResponse> {
   return withManualLock(async () => {
     const [botState, snap] = await Promise.all([loadOrInitAutonomousLedger(), fetchUniverseSnapshot()]);
-    const clean = createCleanManualLedger(initialCapitalTRY, snap.usdTry);
+    const clean = createCleanManualLedger(initialCapitalUSD, snap.usdTry);
     saveManualLedger(clean);
     return buildArenaResponse(clean, botState, snap.marketMap, new Date());
   });
@@ -872,7 +896,7 @@ export async function handleManualTestHttpRequest(
       payload = await openManualPosition({
         symbol: String(body.symbol || 'BTC/USD'),
         direction: body.direction === 'SAT (SHORT)' ? 'SAT (SHORT)' : 'AL (LONG)',
-        marginTRY: Number(body.marginTRY),
+        marginUSD: Number(body.marginUSD ?? body.marginTRY),
         leverage: Number(body.leverage || 1),
         stopLoss: body.stopLoss !== undefined && body.stopLoss !== '' ? Number(body.stopLoss) : null,
         takeProfit: body.takeProfit !== undefined && body.takeProfit !== '' ? Number(body.takeProfit) : null,
@@ -889,7 +913,7 @@ export async function handleManualTestHttpRequest(
         takeProfit: body.takeProfit !== undefined && body.takeProfit !== '' ? Number(body.takeProfit) : null,
       });
     } else if (action === 'reset') {
-      payload = await resetManualArena(250000);
+      payload = await resetManualArena(INITIAL_CAPITAL_USD);
     } else {
       payload = await executeManualTradingTick(true);
     }

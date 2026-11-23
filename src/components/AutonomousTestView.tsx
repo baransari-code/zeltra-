@@ -31,17 +31,17 @@ interface AutonomousTrade {
   takeProfit1: number;
   takeProfit2: number;
   stopLoss: number;
-  allocatedCapitalTRY: number;
-  notionalValueTRY?: number;
+  allocatedCapitalUSD: number;
+  notionalValueUSD?: number;
   effectiveLeverage?: number;
   positionSizeUnits: number;
   unitLabel?: string;
-  entryCommissionTRY?: number;
-  exitCommissionTRY?: number;
-  financingCostTRY?: number;
-  realizedPnL_TRY: number;
-  unrealizedPnL_TRY: number;
-  totalPnL_TRY: number;
+  entryCommissionUSD?: number;
+  exitCommissionUSD?: number;
+  financingCostUSD?: number;
+  realizedPnL_USD: number;
+  unrealizedPnL_USD: number;
+  totalPnL_USD: number;
   totalPnL_Percent: number;
   rMultiple?: number;
   rationale: string;
@@ -85,20 +85,20 @@ interface AutonomousLedger {
   tickCount?: number;
   liveUsdTry: number;
   vixLevel?: number;
-  initialCapitalTRY: number;
-  cashBalanceTRY: number;
-  allocatedMarginTRY: number;
-  availableCashTRY: number;
-  openFloatingPnL_TRY: number;
-  totalEquityTRY: number;
-  netProfitTRY: number;
+  initialCapitalUSD: number;
+  cashBalanceUSD: number;
+  allocatedMarginUSD: number;
+  availableCashUSD: number;
+  openFloatingPnL_USD: number;
+  totalEquityUSD: number;
+  netProfitUSD: number;
   netProfitPercent: number;
   drawdownThrottleScale?: number;
   openPositions: AutonomousTrade[];
   closedTrades: AutonomousTrade[];
-  activityLog: { id: string; timestamp: string; type: string; symbol: string; pod?: string; message: string; pnlImpactTRY?: number }[];
+  activityLog: { id: string; timestamp: string; type: string; symbol: string; pod?: string; message: string; pnlImpactUSD?: number }[];
   lastMarketRadar?: MarketRadarItem[];
-  podStats?: { pod: string; label: string; openCount: number; maxSlots: number; closedCount: number; winRatePct: number; netPnL_TRY: number }[];
+  podStats?: { pod: string; label: string; openCount: number; maxSlots: number; closedCount: number; winRatePct: number; netPnL_USD: number }[];
   liveReadiness?: {
     targetDateTR: string;
     daysRemaining: number;
@@ -112,12 +112,12 @@ interface AutonomousLedger {
     losingTrades: number;
     winRatePercent: number;
     profitFactor: number;
-    avgWinTRY: number;
-    avgLossTRY: number;
-    expectancyTRY: number;
+    avgWinUSD: number;
+    avgLossUSD: number;
+    expectancyUSD: number;
     maxDrawdownPercent: number;
-    totalSpreadAndCommissionTRY: number;
-    totalFinancingTRY?: number;
+    totalSpreadAndCommissionUSD: number;
+    totalFinancingUSD?: number;
   };
 }
 
@@ -127,9 +127,9 @@ interface WalkForwardReport {
   strategyVersion: string;
   startDate: string;
   endDate: string;
-  initialCapitalTRY: number;
-  endingEquityTRY: number;
-  netProfitTRY: number;
+  initialCapitalUSD: number;
+  endingEquityUSD: number;
+  netProfitUSD: number;
   netProfitPercent: number;
   sharpeRatio: number;
   sortinoRatio: number;
@@ -137,17 +137,17 @@ interface WalkForwardReport {
   totalTrades: number;
   winRatePercent: number;
   profitFactor: number;
-  totalFeesTRY: number;
-  totalSwapTRY: number;
+  totalFeesUSD: number;
+  totalSwapUSD: number;
   positiveQuarters: number;
   totalQuarters: number;
-  podAttribution: { pod: string; label: string; trades: number; winRatePct: number; profitFactor: number; netPnL_TRY: number; feesTRY: number; swapTRY: number }[];
-  quarterlyBreakdown: { quarter: string; trades: number; winRatePct: number; profitFactor: number; netPnL_TRY: number }[];
-  equityCurve: { date: string; equityTRY: number; ddPct: number }[];
-  recentTrades: { symbol: string; pod: string; direction: string; entryDate: string; exitDate: string; entryPrice: number; exitPrice: number; netPnL_TRY: number; rMultiple: number; reason: string }[];
+  podAttribution: { pod: string; label: string; trades: number; winRatePct: number; profitFactor: number; netPnL_USD: number; feesUSD: number; swapUSD: number }[];
+  quarterlyBreakdown: { quarter: string; trades: number; winRatePct: number; profitFactor: number; netPnL_USD: number }[];
+  equityCurve: { date: string; equityUSD: number; ddPct: number }[];
+  recentTrades: { symbol: string; pod: string; direction: string; entryDate: string; exitDate: string; entryPrice: number; exitPrice: number; netPnL_USD: number; rMultiple: number; reason: string }[];
   legacyComparison: {
     oldVersion: string;
-    old2YEndingEquityTRY: number;
+    old2YEndingEquityUSD: number;
     old2YReturnPct: number;
     old2YMaxDdPct: number;
     old2YProfitFactor: number;
@@ -160,11 +160,21 @@ interface AutonomousTestViewProps {
   onInspectSymbol?: (symbol: string) => void;
 }
 
-const fmtTL = (n: number) =>
-  `${n >= 0 ? '' : '-'}${Math.abs(Math.round(n)).toLocaleString('tr-TR')} TL`;
+const fmtUSD = (n: number, decimals = 2) => {
+  const safe = Number.isFinite(n) ? n : 0;
+  return `${safe < 0 ? '-' : ''}$${Math.abs(safe).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
+};
 
-const fmtSignedTL = (n: number) =>
-  `${n > 0 ? '+' : n < 0 ? '-' : ''}${Math.abs(Math.round(n)).toLocaleString('tr-TR')} TL`;
+const fmtSignedUSD = (n: number, decimals = 2) => {
+  const safe = Number.isFinite(n) ? n : 0;
+  return `${safe > 0 ? '+' : safe < 0 ? '-' : ''}$${Math.abs(safe).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
+};
 
 export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspectSymbol }) => {
   const [ledger, setLedger] = useState<AutonomousLedger | null>(null);
@@ -241,18 +251,19 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
   const wfSvg = useMemo(() => {
     if (!wfReport || !wfReport.equityCurve || wfReport.equityCurve.length < 2) return null;
     const pts = wfReport.equityCurve;
+    const baseCap = wfReport.initialCapitalUSD || 5_000;
     const W = 900;
     const H = 210;
     const PAD = 24;
-    const vals = pts.map((p) => p.equityTRY);
-    const minV = Math.min(250_000, ...vals) * 0.985;
-    const maxV = Math.max(250_000, ...vals) * 1.015;
+    const vals = pts.map((p) => p.equityUSD);
+    const minV = Math.min(baseCap, ...vals) * 0.985;
+    const maxV = Math.max(baseCap, ...vals) * 1.015;
     const xOf = (i: number) => PAD + (i / (pts.length - 1)) * (W - PAD * 2);
     const yOf = (v: number) => PAD + ((maxV - v) / Math.max(1, maxV - minV)) * (H - PAD * 2);
-    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(p.equityTRY).toFixed(1)}`).join(' ');
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(p.equityUSD).toFixed(1)}`).join(' ');
     const area = `${line} L${xOf(pts.length - 1).toFixed(1)},${(H - PAD).toFixed(1)} L${xOf(0).toFixed(1)},${(H - PAD).toFixed(1)} Z`;
-    const baseLineY = yOf(250_000);
-    return { W, H, PAD, line, area, baseLineY, minV, maxV, pts, xOf, yOf };
+    const baseLineY = yOf(baseCap);
+    return { W, H, PAD, line, area, baseLineY, minV, maxV, pts, xOf, yOf, baseCap };
   }, [wfReport]);
 
   if (loading && !ledger) {
@@ -278,9 +289,9 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
             <span className={`w-2 h-2 rounded-full ${ledger?.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
             {ledger?.isRunning ? 'AKTİF' : 'DURAKLATILDI'}
           </span>
-          <span className="text-xs font-bold text-white">3-Pod Otonom Fon</span>
+          <span className="text-xs font-bold text-white">3-Pod + Cortex Otonom Fon (USD)</span>
           <span className="text-xs font-mono text-zinc-400">
-            USD/TRY <strong className="text-zinc-200">{ledger?.liveUsdTry?.toFixed(2)}</strong> • VIX{' '}
+            Hesap <strong className="text-emerald-300">USD</strong> • VIX{' '}
             <strong className="text-zinc-200">{ledger?.vixLevel?.toFixed(1) || '18.0'}</strong> • Hedef:{' '}
             {ledger?.liveReadiness?.targetDateTR || '01.12.2026'}
           </span>
@@ -317,14 +328,14 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
 
           <button
             onClick={() => {
-              if (window.confirm('Test fonu 250.000 TL başlangıç sermayesi ile sıfırlansın mı?')) {
+              if (window.confirm('Test fonu $5,000 USD başlangıç sermayesi ile sıfırlansın mı?')) {
                 fetchLedger('reset');
               }
             }}
             disabled={busyAction !== null}
             className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1.5"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> 250K Sıfırla
+            <RotateCcw className="w-3.5 h-3.5" /> $5K Sıfırla
           </button>
         </div>
       </div>
@@ -336,22 +347,22 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
         </div>
       )}
 
-      {/* 2. CANLI 250.000 TL FON KPI ŞERİDİ */}
+      {/* 2. CANLI USD FON KPI ŞERİDİ */}
       {ledger && (
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5 font-mono">
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
             <div className="text-[10px] text-zinc-500 uppercase">Canlı Toplam Varlık</div>
-            <div className="text-base font-bold text-white mt-1">{fmtTL(ledger.totalEquityTRY)}</div>
-            <div className={`text-[11px] font-semibold mt-0.5 ${ledger.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {fmtSignedTL(ledger.netProfitTRY)} ({ledger.netProfitPercent >= 0 ? '+' : ''}
+            <div className="text-base font-bold text-white mt-1">{fmtUSD(ledger.totalEquityUSD)}</div>
+            <div className={`text-[11px] font-semibold mt-0.5 ${ledger.netProfitUSD >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {fmtSignedUSD(ledger.netProfitUSD)} ({ledger.netProfitPercent >= 0 ? '+' : ''}
               {ledger.netProfitPercent}%)
             </div>
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
             <div className="text-[10px] text-zinc-500 uppercase">Boş Nakit / Teminat</div>
-            <div className="text-base font-bold text-zinc-100 mt-1">{fmtTL(ledger.availableCashTRY)}</div>
-            <div className="text-[11px] text-zinc-400 mt-0.5">Bağlı: {fmtTL(ledger.allocatedMarginTRY)}</div>
+            <div className="text-base font-bold text-zinc-100 mt-1">{fmtUSD(ledger.availableCashUSD)}</div>
+            <div className="text-[11px] text-zinc-400 mt-0.5">Bağlı: {fmtUSD(ledger.allocatedMarginUSD)}</div>
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
@@ -360,7 +371,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
               {ledger.openPositions.length} Açık <span className="text-zinc-500 text-xs">/ {ledger.closedTrades.length}</span>
             </div>
             <div className="text-[11px] text-zinc-400 mt-0.5">
-              Açık K/Z: <span className={ledger.openFloatingPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{fmtSignedTL(ledger.openFloatingPnL_TRY)}</span>
+              Açık K/Z: <span className={ledger.openFloatingPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{fmtSignedUSD(ledger.openFloatingPnL_USD)}</span>
             </div>
           </div>
 
@@ -375,10 +386,10 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
             <div className="text-[10px] text-zinc-500 uppercase">IBKR Komisyon & Swap</div>
             <div className="text-base font-bold text-amber-300 mt-1">
-              {fmtTL(ledger.metrics.totalSpreadAndCommissionTRY)}
+              {fmtUSD(ledger.metrics.totalSpreadAndCommissionUSD)}
             </div>
             <div className="text-[11px] text-zinc-400 mt-0.5">
-              Swap: {fmtTL(ledger.metrics.totalFinancingTRY || 0)}
+              Swap: {fmtUSD(ledger.metrics.totalFinancingUSD || 0)}
             </div>
           </div>
 
@@ -442,8 +453,8 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-zinc-400">Canlı K/Z:</span>
-                    <span className={ps.netPnL_TRY >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                      {fmtSignedTL(ps.netPnL_TRY)}
+                    <span className={ps.netPnL_USD >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                      {fmtSignedUSD(ps.netPnL_USD)}
                     </span>
                   </div>
                 </div>
@@ -541,8 +552,8 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 font-mono">
                   <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
                     <div className="text-[10px] text-zinc-500">Bitiş Sermayesi</div>
-                    <div className="text-sm font-bold text-white mt-0.5">{fmtTL(wfReport.endingEquityTRY)}</div>
-                    <div className={`text-[11px] font-bold ${wfReport.netProfitTRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <div className="text-sm font-bold text-white mt-0.5">{fmtUSD(wfReport.endingEquityUSD)}</div>
+                    <div className={`text-[11px] font-bold ${wfReport.netProfitUSD >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {wfReport.netProfitPercent >= 0 ? '+' : ''}
                       {wfReport.netProfitPercent}%
                     </div>
@@ -578,8 +589,8 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                   </div>
                   <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
                     <div className="text-[10px] text-zinc-500">Ödenen Masraf</div>
-                    <div className="text-sm font-bold text-zinc-200 mt-0.5">{fmtTL(wfReport.totalFeesTRY)}</div>
-                    <div className="text-[10px] text-zinc-500">Swap: {fmtTL(wfReport.totalSwapTRY)}</div>
+                    <div className="text-sm font-bold text-zinc-200 mt-0.5">{fmtUSD(wfReport.totalFeesUSD)}</div>
+                    <div className="text-[10px] text-zinc-500">Swap: {fmtUSD(wfReport.totalSwapUSD)}</div>
                   </div>
                 </div>
 
@@ -588,7 +599,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                   <div className="lg:col-span-8 bg-zinc-950 border border-zinc-800 rounded p-3 space-y-2">
                     <div className="flex justify-between text-[11px] font-mono text-zinc-400">
                       <span>{wfReport.windowLabelTR} ({wfReport.startDate} → {wfReport.endDate})</span>
-                      <span className="text-emerald-400 font-bold">250.000 TL → {fmtTL(wfReport.endingEquityTRY)}</span>
+                      <span className="text-emerald-400 font-bold">{fmtUSD(wfReport.initialCapitalUSD, 0)} → {fmtUSD(wfReport.endingEquityUSD)}</span>
                     </div>
                     {wfSvg && (
                       <svg viewBox={`0 0 ${wfSvg.W} ${wfSvg.H}`} className="w-full h-48 block">
@@ -608,7 +619,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                           strokeWidth="1"
                         />
                         <text x={wfSvg.PAD + 4} y={wfSvg.baseLineY - 4} fill="#71717a" fontSize="10" fontFamily="monospace">
-                          250.000 TL Başlangıç
+                          {fmtUSD(wfSvg.baseCap, 0)} Başlangıç
                         </text>
                         <path d={wfSvg.area} fill="url(#wfGrad)" />
                         <path d={wfSvg.line} fill="none" stroke="#10b981" strokeWidth="2.2" />
@@ -616,22 +627,22 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                     )}
                   </div>
 
-                  {/* Eski Yönetici v13.2 vs Yeni ZELTRA v14.0 Kıyaslama */}
+                  {/* Eski Yönetici v13.2 vs Yeni ZELTRA Kıyaslama */}
                   <div className="lg:col-span-4 bg-zinc-950 border border-zinc-800 rounded p-3.5 flex flex-col justify-between space-y-3">
                     <div className="space-y-2">
                       <div className="text-xs font-bold text-white border-b border-zinc-800 pb-1.5">
-                        Eski Sistem (v13.2) vs Yeni ZELTRA (v14.0)
+                        Eski Sistem (v13.2) vs Yeni ZELTRA (v15.2)
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                         <div className="bg-rose-950/30 border border-rose-900/50 rounded p-2.5 space-y-1">
                           <div className="text-[10px] text-rose-300 font-bold">ESKİ (v13.2) — 2Y</div>
-                          <div className="text-sm font-black text-rose-400">24.300 TL</div>
+                          <div className="text-sm font-black text-rose-400">$486</div>
                           <div className="text-[11px] text-rose-300">-90.3% | DD %90.9</div>
                           <div className="text-[10px] text-zinc-400">PF 0.58 • 0/9 Çeyrek</div>
                         </div>
                         <div className="bg-emerald-950/30 border border-emerald-800/50 rounded p-2.5 space-y-1">
-                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v14.0) — {wfWindow.toUpperCase()}</div>
-                          <div className="text-sm font-black text-emerald-400">{fmtTL(wfReport.endingEquityTRY)}</div>
+                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v15.2) — {wfWindow.toUpperCase()}</div>
+                          <div className="text-sm font-black text-emerald-400">{fmtUSD(wfReport.endingEquityUSD)}</div>
                           <div className="text-[11px] text-emerald-300">
                             {wfReport.netProfitPercent >= 0 ? '+' : ''}{wfReport.netProfitPercent}% | DD %{wfReport.maxDrawdownPercent}
                           </div>
@@ -642,7 +653,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                       </div>
                     </div>
                     <div className="text-[11px] font-mono text-zinc-500">
-                      Net komisyon + gecelik swap düşülmüş gerçek saatlik performans.
+                      Net IBKR komisyon + gecelik swap düşülmüş doğrudan USD saatlik performans.
                     </div>
                   </div>
                 </div>
@@ -668,8 +679,8 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                             <td className="py-2 text-right text-zinc-400">{pa.trades}</td>
                             <td className="py-2 text-right text-zinc-300">%{pa.winRatePct}</td>
                             <td className="py-2 text-right text-cyan-300 font-bold">{pa.profitFactor}</td>
-                            <td className={`py-2 text-right font-bold ${pa.netPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                              {fmtSignedTL(pa.netPnL_TRY)}
+                            <td className={`py-2 text-right font-bold ${pa.netPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {fmtSignedUSD(pa.netPnL_USD)}
                             </td>
                           </tr>
                         ))}
@@ -684,7 +695,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                         <div
                           key={q.quarter}
                           className={`rounded p-2 border ${
-                            q.netPnL_TRY >= 0
+                            q.netPnL_USD >= 0
                               ? 'bg-emerald-950/25 border-emerald-800/40'
                               : 'bg-rose-950/25 border-rose-800/40'
                           }`}
@@ -693,8 +704,8 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                             <span className="font-bold text-zinc-200">{q.quarter}</span>
                             <span>n={q.trades}</span>
                           </div>
-                          <div className={`text-xs font-bold mt-0.5 ${q.netPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {fmtSignedTL(q.netPnL_TRY)}
+                          <div className={`text-xs font-bold mt-0.5 ${q.netPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {fmtSignedUSD(q.netPnL_USD)}
                           </div>
                           <div className="text-[10px] text-zinc-400">PF {q.profitFactor} • WR %{q.winRatePct}</div>
                         </div>
@@ -769,13 +780,13 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                         <td className="py-2.5 px-2 text-right text-emerald-400">
                           {p.takeProfit2 > 0 ? p.takeProfit2.toFixed(p.digits) : 'Trailing'}
                         </td>
-                        <td className="py-2.5 px-2 text-right text-zinc-300">{fmtTL(p.allocatedCapitalTRY)}</td>
+                        <td className="py-2.5 px-2 text-right text-zinc-300">{fmtUSD(p.allocatedCapitalUSD)}</td>
                         <td
                           className={`py-2.5 px-2 text-right font-bold ${
-                            p.totalPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                            p.totalPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'
                           }`}
                         >
-                          {fmtSignedTL(p.totalPnL_TRY)}
+                          {fmtSignedUSD(p.totalPnL_USD)}
                           <div className="text-[10px] font-normal">
                             ({p.totalPnL_Percent >= 0 ? '+' : ''}
                             {p.totalPnL_Percent}%)
@@ -866,10 +877,10 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                           <td className="py-2 px-2 text-zinc-400">{t.exitReason || t.status}</td>
                           <td
                             className={`py-2 pl-2 text-right font-bold ${
-                              t.realizedPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                              t.realizedPnL_USD >= 0 ? 'text-emerald-400' : 'text-rose-400'
                             }`}
                           >
-                            {fmtSignedTL(t.realizedPnL_TRY)}
+                            {fmtSignedUSD(t.realizedPnL_USD)}
                           </td>
                         </tr>
                       ))}
@@ -1057,9 +1068,9 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                   </span>
                   <span className="text-zinc-200 font-sans text-xs">{log.message}</span>
                 </div>
-                {typeof log.pnlImpactTRY === 'number' && (
-                  <span className={log.pnlImpactTRY >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                    {fmtSignedTL(log.pnlImpactTRY)}
+                {typeof log.pnlImpactUSD === 'number' && (
+                  <span className={log.pnlImpactUSD >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                    {fmtSignedUSD(log.pnlImpactUSD)}
                   </span>
                 )}
               </div>
