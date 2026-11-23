@@ -746,7 +746,11 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                           >
                             {p.symbol} <ArrowUpRight className="w-3 h-3" />
                           </button>
-                          <div className="text-[10px] text-cyan-400">{p.pod || 'POD'}</div>
+                          <div className="text-[10px] text-cyan-400">
+                            {p.podLabel && p.podLabel.includes('Cortex')
+                              ? p.podLabel.split('•').slice(1).join('•').trim()
+                              : p.pod || 'POD'}
+                          </div>
                         </td>
                         <td className="py-2.5 px-2">
                           <span
@@ -849,7 +853,11 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                         <tr key={t.id}>
                           <td className="py-2 pr-2">
                             <span className="font-bold text-white">{t.symbol}</span>{' '}
-                            <span className="text-[10px] text-cyan-400">{t.pod}</span>
+                            <span className="text-[10px] text-cyan-400">
+                              {t.podLabel && t.podLabel.includes('Cortex')
+                                ? t.podLabel.split('•').slice(1).join('•').trim()
+                                : t.pod}
+                            </span>
                           </td>
                           <td className="py-2 px-2">{t.direction}</td>
                           <td className="py-2 px-2 text-right text-zinc-300">

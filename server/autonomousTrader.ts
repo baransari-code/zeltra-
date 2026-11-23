@@ -19,6 +19,7 @@ import {
 import {
   build12hIndicatorPack,
   buildDailyIndicatorPack,
+  calcAtrSeries,
   calcEfficiencyRatio,
   calcEwmacAt,
   calcIbs,
@@ -31,6 +32,12 @@ import {
   type ZacPodType,
   type ZacRegime,
 } from './zeltraAlphaIndicator';
+import {
+  analyzeCandlestickAndMicrostructure,
+  buildExpertVector,
+  computeAdaptiveHorizonForecast,
+  loadOrInitAiBrain,
+} from './zeltraSelfLearningAi';
 
 export const STRATEGY_VERSION = 'v14.0-zeltra-alpha-3pod';
 export const INITIAL_CAPITAL_TRY = 250_000;
@@ -616,7 +623,9 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     // 2) 17 Varlık için Gerçek 1H + Temiz Günlük verileri paralel gruplar halinde çek
     const dailyPacks = new Map<string, DailyIndicatorPack>();
     const h12Packs = new Map<string, TwelveHourIndicatorPack>();
+    const h1Map = new Map<string, HourlyBar[]>();
     const livePrices = new Map<string, { price: number; bid: number; ask: number; change24hPct: number }>();
+    const aiBrain = loadOrInitAiBrain();
 
     // 6'lı batch paralel çekim (Yahoo rate-limit dostu + hızlı)
     for (let i = 0; i < CORE_SYMBOLS.length; i += 6) {
@@ -633,6 +642,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             const p12 = build12hIndicatorPack(h1);
             dailyPacks.set(sym, dPack);
             h12Packs.set(sym, p12);
+            h1Map.set(sym, h1);
 
             const spec = getSpec(sym);
             const halfSp = spec.spreadPts / 2;
@@ -751,22 +761,66 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       // Çıkış kontrolleri (sadece piyasa açıksa veya kriptoysa)
       const mkt = isMarketOpenForAsset(pos.symbol, nowMs);
       if (mkt.open && ledger.isRunning) {
-        // 1) Stop-Loss veya İz Süren Stop
+        // 1) Stop-Loss veya İz Süren Stop / Kâr Kilidi
         if (isLong ? liqPrice <= pos.stopLoss : liqPrice >= pos.stopLoss) {
-          closeTrade(liqPrice, 'STOP / İZ SÜREN STOP', 'STOP_LOSS');
+          const isProfitLock =
+            isLong ? pos.stopLoss > pos.entryPrice : pos.stopLoss < pos.entryPrice;
+          closeTrade(
+            liqPrice,
+            isProfitLock ? 'CORTEX KÂR KİLİDİ (İZ SÜREN TP)' : 'STOP / İZ SÜREN STOP',
+            isProfitLock ? 'TP2_FULL' : 'STOP_LOSS'
+          );
           continue;
         }
-        // 2) Sabit Take-Profit (MR12)
-        if (pos.takeProfit2 > 0 && pos.pod === 'MR_SPRING_12H' && (isLong ? liqPrice >= pos.takeProfit2 : liqPrice <= pos.takeProfit2)) {
-          closeTrade(liqPrice, 'HEDEF KÂR AL (TP 3 ATR)', 'TP2_FULL');
+        // 2) Sabit Take-Profit (Tüm Podlar + Cortex +1S/+4S TP)
+        const tpTarget = pos.takeProfit2 > 0 ? pos.takeProfit2 : (pos.maxExitTimestamp || 0) > 0 ? pos.takeProfit1 : 0;
+        if (tpTarget > 0 && (isLong ? liqPrice >= tpTarget : liqPrice <= tpTarget)) {
+          closeTrade(liqPrice, 'HEDEF KÂR AL (CORTEX TP)', 'TP2_FULL');
           continue;
         }
-        // 3) Maksimum Taşıma Süresi
+        // 3) Cortex +1S Vade Sonu Kâr Realizasyonu (>= 45 dk açık ve net kârda iken momentum yavaşlarsa kârı cebe al)
+        const openMins = (nowMs - pos.entryTimestamp) / 60000;
+        if (openMins >= 45 && pos.totalPnL_TRY >= 45) {
+          const h1ForPos = h1Map.get(pos.symbol);
+          if (h1ForPos && h1ForPos.length >= 25 && p12 && p12.bars.length >= 5) {
+            const atr12Now = p12.atr14[p12.bars.length - 1] || Math.abs(pos.entryPrice * 0.006);
+            const microPos = analyzeCandlestickAndMicrostructure(h1ForPos, spec.digits);
+            const expPos = buildExpertVector(
+              0,
+              true,
+              0.5,
+              50,
+              0,
+              rankMap.get(pos.symbol) || 8,
+              CORE_SYMBOLS.length,
+              1,
+              microPos,
+              ZAC_CRYPTO_ASSETS.has(pos.symbol),
+              ZAC_MR12_ASSETS.has(pos.symbol)
+            );
+            const fc1Pos = computeAdaptiveHorizonForecast(
+              1,
+              q.price,
+              atr12Now,
+              spec.digits,
+              expPos,
+              microPos,
+              false,
+              pos.symbol
+            );
+            const lostMom = isLong ? fc1Pos.compositeScore <= 2 : fc1Pos.compositeScore >= -2;
+            if (lostMom) {
+              closeTrade(liqPrice, 'CORTEX +1S VADE KÂR REALİZASYONU', 'TP2_FULL');
+              continue;
+            }
+          }
+        }
+        // 4) Maksimum Taşıma Süresi
         if ((pos.maxExitTimestamp || 0) > 0 && nowMs >= (pos.maxExitTimestamp || 0)) {
-          closeTrade(liqPrice, 'SÜRE LİMİTİ ÇIKIŞI', 'BREAKEVEN_EXIT');
+          closeTrade(liqPrice, 'CORTEX VADE SÜRE ÇIKIŞI', pos.totalPnL_TRY >= 0 ? 'TP2_FULL' : 'BREAKEVEN_EXIT');
           continue;
         }
-        // 4) Pod-1 MR12 Güç Çıkışı (Tamamlanmış 12H mumda önceki 12H tepe üstü kapanış)
+        // 5) Pod-1 MR12 Güç Çıkışı (Tamamlanmış 12H mumda önceki 12H tepe üstü kapanış)
         if (pos.pod === 'MR_SPRING_12H' && p12 && p12.bars.length >= 4) {
           const last12Idx =
             p12.bars[p12.bars.length - 1].timestamp + 12 * 3600000 > nowMs
@@ -782,11 +836,36 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             }
           }
         }
-        // 5) Pod-2 & Pod-3 İz Süren Stop güncellemesi
+        // 6) Zirve Takibi, Akıllı Kâr Kilidi (Breakeven + %45 Peak Lock) & İz Süren Stop
         const curPeak = pos.peakPrice ?? pos.entryPrice;
         pos.peakPrice = isLong ? Math.max(curPeak, liqPrice) : Math.min(curPeak, liqPrice);
+        const peakMove = isLong ? pos.peakPrice - pos.entryPrice : pos.entryPrice - pos.peakPrice;
+        const h1ForTrail = h1Map.get(pos.symbol);
+        const h1AtrArr = h1ForTrail && h1ForTrail.length >= 16 ? calcAtrSeries(h1ForTrail.slice(-24), 14) : [];
+        const realAtr1h = h1AtrArr.length > 0 ? h1AtrArr[h1AtrArr.length - 1] : 0;
+        const atr12Cur = p12 && p12.bars.length >= 5 ? p12.atr14[p12.bars.length - 1] : pos.entryPrice * 0.008;
+        const atr1hCur = Math.max(pos.entryPrice * 0.0014, realAtr1h || (atr12Cur || pos.entryPrice * 0.008) / Math.sqrt(12));
+        const peakGrossTRY = pos.positionSizeUnits * Math.max(0, peakMove) * q2u * ledger.liveUsdTry;
+        const roundTripFeeTRY = entryComm + estExitFee + swapTotal;
+        if (peakMove >= atr1hCur * 0.35 && peakGrossTRY >= roundTripFeeTRY * 1.85) {
+          const lockSl = isLong
+            ? pos.entryPrice + peakMove * 0.45
+            : pos.entryPrice - peakMove * 0.45;
+          if (isLong ? lockSl > pos.stopLoss : lockSl < pos.stopLoss) {
+            pos.stopLoss = +lockSl.toFixed(spec.digits);
+          }
+        }
+        const isCortexTrade =
+          pos.id.startsWith('CORTEX-') ||
+          (pos.podLabel || '').includes('Cortex') ||
+          (pos.rationale || '').includes('[Cortex');
         const trailMult = pos.trailingAtrMult || 3.0;
-        if (pos.pod === 'CRYPTO_MOM_12H' && p12 && p12.bars.length >= 15) {
+        if (isCortexTrade) {
+          const candSl = isLong ? pos.peakPrice - atr1hCur * trailMult : pos.peakPrice + atr1hCur * trailMult;
+          if (isLong ? candSl > pos.stopLoss : candSl < pos.stopLoss) {
+            pos.stopLoss = +candSl.toFixed(spec.digits);
+          }
+        } else if (pos.pod === 'CRYPTO_MOM_12H' && p12 && p12.bars.length >= 15) {
           const atr12 = p12.atr14[p12.bars.length - 1];
           if (atr12 > 0) {
             const candSl = isLong ? pos.peakPrice - atr12 * trailMult : pos.peakPrice + atr12 * trailMult;
@@ -804,7 +883,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             }
           }
           const ewmacNow = calcEwmacAt(dPack.e8, dPack.e16, dPack.e32, dPack.e64, dPack.e128, dPack.atr20, lastD);
-          if (isLong ? ewmacNow <= 0 : ewmacNow >= -2) {
+          if ((pos.maxExitTimestamp || 0) === 0 && (isLong ? ewmacNow <= 0 : ewmacNow >= -2)) {
             closeTrade(liqPrice, 'CTA TREND DÖNÜŞÜ', 'BREAKEVEN_EXIT');
             continue;
           }
@@ -852,10 +931,104 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       );
       const h24 = snap.horizons.find((h) => h.horizonHours === 24)!;
 
-      let statusText = snap.activeSetup.pod !== 'NONE' ? `TETİK: ${snap.activeSetup.pod}` : snap.regimeLabelTR;
+      // Cortex v15.2 +1S / +4S Yüksek İsabetli Varlık (Genellikle Doğru Çıkanlar >= %65) Doğrudan Tetik Entegrasyonu
+      const h1Bars = h1Map.get(sym);
+      const assetProf = aiBrain.assetProfiles?.[sym];
+      const assetAcc = assetProf && assetProf.total >= 3 ? assetProf.accuracyPct : 72.0;
+      const isHighAccuracyAsset = assetAcc >= 65.0 && (assetProf?.consecutiveMisses || 0) === 0;
+      let isCortexIntraday = false;
+      let cortexHorizonHours: 1 | 4 = 1;
+
+      if (h1Bars && h1Bars.length >= 25) {
+        const micro = analyzeCandlestickAndMicrostructure(h1Bars, spec.digits);
+        const experts = buildExpertVector(
+          snap.ewmac,
+          snap.aboveSma200,
+          snap.ibs12h,
+          snap.cumRsi2_12h,
+          snap.mom12hAtr,
+          snap.xsmomRank,
+          CORE_SYMBOLS.length,
+          snap.volRatio,
+          micro,
+          ZAC_CRYPTO_ASSETS.has(sym),
+          ZAC_MR12_ASSETS.has(sym)
+        );
+        const hasPodTrigger = snap.activeSetup.pod !== 'NONE' && snap.activeSetup.direction !== 'BEKLE';
+        const fc1h = computeAdaptiveHorizonForecast(
+          1,
+          q.price,
+          snap.atr12h14,
+          spec.digits,
+          experts,
+          micro,
+          hasPodTrigger,
+          sym
+        );
+        const fc4h = computeAdaptiveHorizonForecast(
+          4,
+          q.price,
+          snap.atr12h14,
+          spec.digits,
+          experts,
+          micro,
+          hasPodTrigger,
+          sym
+        );
+
+        if (!hasPodTrigger && isHighAccuracyAsset) {
+          const strong1h =
+            fc1h.expectedDirection !== 'YATAY' &&
+            Math.abs(fc1h.compositeScore) >= 9 &&
+            (fc1h.expectedDirection === 'YÜKSELİŞ'
+              ? fc4h.expectedDirection !== 'DÜŞÜŞ' && fc4h.compositeScore >= -5
+              : fc4h.expectedDirection !== 'YÜKSELİŞ' && fc4h.compositeScore <= 5);
+          const strong4h =
+            fc4h.expectedDirection !== 'YATAY' &&
+            Math.abs(fc4h.compositeScore) >= 10 &&
+            (fc4h.expectedDirection === 'YÜKSELİŞ'
+              ? fc1h.expectedDirection !== 'DÜŞÜŞ' && fc1h.compositeScore >= -5
+              : fc1h.expectedDirection !== 'YÜKSELİŞ' && fc1h.compositeScore <= 5);
+
+          if (strong1h || strong4h) {
+            const chosenFc = strong1h ? fc1h : fc4h;
+            cortexHorizonHours = strong1h ? 1 : 4;
+            const hzTag = strong1h ? '+1S' : '+4S';
+            const mappedPod: ZacPodType = ZAC_CRYPTO_ASSETS.has(sym)
+              ? 'CRYPTO_MOM_12H'
+              : ZAC_MR12_ASSETS.has(sym)
+                ? 'MR_SPRING_12H'
+                : 'CTA_TREND';
+
+            snap.activeSetup = {
+              pod: mappedPod,
+              podLabelTR: `${POD_CONFIG[mappedPod].label} • Cortex ${hzTag} (%${assetAcc.toFixed(1)} İsabet)`,
+              direction: chosenFc.expectedDirection === 'YÜKSELİŞ' ? 'AL (LONG)' : 'SAT (SHORT)',
+              convictionPercent: Math.min(96, Math.round(58 + Math.abs(chosenFc.compositeScore) * 1.4)),
+              entryPrice: q.price,
+              stopLoss: 0,
+              takeProfit: 0,
+              riskReward: 1.0,
+              trailingAtrMult: strong1h ? 1.15 : 1.35,
+              maxHoldHours: strong1h ? 3 : 6,
+              rationaleTR: `[Cortex ${hzTag} • Varlık İsabeti %${assetAcc.toFixed(1)}] Skor ${chosenFc.compositeScore >= 0 ? '+' : ''}${chosenFc.compositeScore} | ${chosenFc.dominantExpertLabelTR}`,
+            };
+            isCortexIntraday = true;
+          }
+        }
+      }
+
+      let statusText =
+        snap.activeSetup.pod !== 'NONE'
+          ? isCortexIntraday
+            ? `CORTEX TETİK (${snap.activeSetup.direction === 'AL (LONG)' ? 'AL' : 'SAT'} • %${assetAcc.toFixed(0)})`
+            : `TETİK: ${snap.activeSetup.pod}`
+          : snap.regimeLabelTR;
       const alreadyOpen = ledger.openPositions.find((p) => p.symbol === sym);
       if (alreadyOpen) {
-        statusText = `AÇIK (${alreadyOpen.pod})`;
+        statusText = alreadyOpen.podLabel?.includes('Cortex')
+          ? 'AÇIK (Cortex +1S/+4S)'
+          : `AÇIK (${alreadyOpen.pod})`;
       } else if (!mkt.open) {
         statusText = `SEANS KAPALI (${snap.activeSetup.pod !== 'NONE' ? 'Hazır' : 'İzlemede'})`;
       }
@@ -898,7 +1071,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         botReason: snap.activeSetup.rationaleTR,
       });
 
-      // Yeni pozisyon açma (Aktif Test Modu açıksa + piyasa açıksa + Pod tetiği varsa!)
+      // Yeni pozisyon açma (Aktif Test Modu açıksa + piyasa açıksa + Pod veya Cortex +1S/+4S tetiği varsa!)
       if (
         ledger.isRunning &&
         !ledger.observationModeActive &&
@@ -912,24 +1085,36 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         const isLong = dir === 'AL (LONG)';
 
         const podCount = ledger.openPositions.filter((p) => p.pod === pod).length;
-        const maxSlots = POD_CONFIG[pod].maxSlots;
-        const hasSameSymPod = ledger.openPositions.some((p) => p.symbol === sym && p.pod === pod);
+        const maxSlots = isCortexIntraday ? Math.max(POD_CONFIG[pod].maxSlots, 6) : POD_CONFIG[pod].maxSlots;
+        const totalOpenCap = 7;
+        const hasSameSymPod = ledger.openPositions.some((p) => p.symbol === sym);
         const hasOppositeDir = ledger.openPositions.some((p) => p.symbol === sym && p.direction !== dir);
+        const getEffClusterKey = (s: string, d: 'AL (LONG)' | 'SAT (SHORT)') => {
+          const cl = s === 'COPPER' ? 'BASE_METAL' : getSpec(s).cluster;
+          if (cl === 'USD_MAJORS') {
+            const usdLong = s === 'USD/JPY' ? d === 'AL (LONG)' : d === 'SAT (SHORT)';
+            return `USD_MAJORS_${usdLong ? 'USD_UP' : 'USD_DN'}`;
+          }
+          return `${cl}_${d}`;
+        };
+        const effClusterKey = getEffClusterKey(sym, dir);
         const samePodCluster = ledger.openPositions.filter(
-          (p) => p.pod === pod && getSpec(p.symbol).cluster === spec.cluster && p.direction === dir
+          (p) => p.pod === pod && getEffClusterKey(p.symbol, p.direction) === effClusterKey
         ).length;
-        const podClusterCap = pod === 'MR_SPRING_12H' && spec.cluster === 'US_TECH' ? 2 : 1;
+        const podClusterCap = spec.cluster === 'US_TECH' || spec.cluster === 'USD_MAJORS' ? 2 : 1;
         const totalCluster = ledger.openPositions.filter(
-          (p) => getSpec(p.symbol).cluster === spec.cluster && p.direction === dir
+          (p) => getEffClusterKey(p.symbol, p.direction) === effClusterKey
         ).length;
-        const totalClusterCap = spec.cluster === 'US_TECH' ? 3 : 2;
+        const totalClusterCap = spec.cluster === 'US_TECH' || spec.cluster === 'USD_MAJORS' ? 3 : 2;
 
-        // Aynı bar/12H içinde yeni kapanmış sembole tekrar girme soğuma süresi (6 saat)
+        // Aynı sembole tekrar girme soğuma süresi (Cortex +1S/+4S için 1 saat, 12H Pod için 4 saat)
+        const cooldownMs = isCortexIntraday ? 1 * 3600000 : 4 * 3600000;
         const recentlyClosed = ledger.closedTrades.some(
-          (t) => t.symbol === sym && t.pod === pod && t.closeTimestamp && nowMs - t.closeTimestamp < 6 * 3600000
+          (t) => t.symbol === sym && t.closeTimestamp && nowMs - t.closeTimestamp < cooldownMs
         );
 
         if (
+          ledger.openPositions.length < totalOpenCap &&
           podCount < maxSlots &&
           !hasSameSymPod &&
           !hasOppositeDir &&
@@ -938,12 +1123,20 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           !recentlyClosed
         ) {
           const entryPx = isLong ? q.ask + spec.slippagePts : q.bid - spec.slippagePts;
-          const atrRef = pod === 'CTA_TREND' ? snap.dailyAtr14 : snap.atr12h14;
-          const slMult = snap.activeSetup.trailingAtrMult;
+          const h1AtrArr = h1Bars && h1Bars.length >= 16 ? calcAtrSeries(h1Bars.slice(-24), 14) : [];
+          const realAtr1h = h1AtrArr.length > 0 ? h1AtrArr[h1AtrArr.length - 1] : 0;
+          const atr1h = Math.max(entryPx * 0.0014, realAtr1h || snap.atr12h14 / Math.sqrt(12));
+          const atrRef = isCortexIntraday ? atr1h : pod === 'CTA_TREND' ? snap.dailyAtr14 : snap.atr12h14;
+          const slMult = isCortexIntraday ? (cortexHorizonHours === 4 ? 1.35 : 1.15) : snap.activeSetup.trailingAtrMult;
           const slDist = atrRef * slMult;
           const sl = isLong ? entryPx - slDist : entryPx + slDist;
-          const tp2 = pod === 'MR_SPRING_12H' ? entryPx + atrRef * POD_CONFIG.MR_SPRING_12H.tpAtr : 0;
-          const tp1 = isLong ? entryPx + slDist : entryPx - slDist;
+          const tpDist = isCortexIntraday
+            ? atr1h * (cortexHorizonHours === 4 ? 1.2 : 0.9)
+            : pod === 'MR_SPRING_12H'
+              ? atrRef * POD_CONFIG.MR_SPRING_12H.tpAtr
+              : slDist * 0.9;
+          const tp2 = isLong ? entryPx + tpDist : entryPx - tpDist;
+          const tp1 = isLong ? entryPx + tpDist * 0.75 : entryPx - tpDist * 0.75;
 
           const riskPct =
             pod === 'MR_SPRING_12H'
@@ -956,7 +1149,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
 
           const q2u = sym === 'USD/JPY' ? 1 / (entryPx || 155) : 1;
           const freeMargin = Math.max(0, ledger.cashBalanceTRY - ledger.allocatedMarginTRY);
-          const allocTRY = Math.min(curEq * 0.16, freeMargin * 0.85);
+          const allocTRY = Math.min(curEq * 0.14, freeMargin * 0.85);
           const desiredRiskTRY = curEq * (riskPct / 100) * ddScale;
           const unitRiskTRY = slDist * q2u * ledger.liveUsdTry;
           const maxUnitsByMargin = (allocTRY * spec.maxIbkrLeverage) / Math.max(1e-6, entryPx * q2u * ledger.liveUsdTry);
@@ -965,16 +1158,29 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           if (allocTRY >= 4000 && units > 0) {
             const notionalTRY = units * entryPx * q2u * ledger.liveUsdTry;
             const entryFee = computeIbkrCommissionTRY(spec, notionalTRY, units, ledger.liveUsdTry);
-            if (entryFee * 2 <= desiredRiskTRY * 0.22) {
+            const roundTripCostPct = (entryFee * 2) / Math.max(1, notionalTRY) + spec.spreadPts / Math.max(1e-6, entryPx);
+            const expectedTpPct = tpDist / Math.max(1e-6, entryPx);
+            const passesCostGate = isCortexIntraday ? expectedTpPct >= roundTripCostPct * 2.0 : true;
+            if (entryFee * 2 <= desiredRiskTRY * 0.25 && passesCostGate) {
               ledger.cashBalanceTRY = +(ledger.cashBalanceTRY - entryFee).toFixed(2);
               const latest12Ts = p12.bars[completed12Idx]?.timestamp || nowMs;
+              const initLiqPx = isLong ? q.bid : q.ask;
+              const initGrossTRY = (isLong ? initLiqPx - entryPx : entryPx - initLiqPx) * units * q2u * ledger.liveUsdTry;
+              const initEstExitFee = computeIbkrCommissionTRY(
+                spec,
+                units * initLiqPx * q2u * ledger.liveUsdTry,
+                units,
+                ledger.liveUsdTry
+              );
+              const initUnrealizedTRY = +(initGrossTRY - initEstExitFee).toFixed(2);
+              const initTotalPnL_TRY = +(initGrossTRY - entryFee - initEstExitFee).toFixed(2);
               const newTrade: AutonomousTrade = {
-                id: `Z14-${nowMs}-${sym.replace(/[^A-Z0-9]/g, '')}`,
+                id: `${isCortexIntraday ? 'CORTEX' : 'Z14'}-${nowMs}-${sym.replace(/[^A-Z0-9]/g, '')}`,
                 symbol: sym,
                 name: spec.name,
                 digits: spec.digits,
                 pod,
-                podLabel: POD_CONFIG[pod].label,
+                podLabel: snap.activeSetup.podLabelTR || POD_CONFIG[pod].label,
                 direction: dir,
                 status: 'AÇIK',
                 entryTime: formatTRDateTime(nowMs),
@@ -1002,19 +1208,21 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
                 entryCommissionTRY: +entryFee.toFixed(2),
                 exitCommissionTRY: 0,
                 financingCostTRY: 0,
-                grossUnrealizedPnL_TRY: 0,
+                grossUnrealizedPnL_TRY: +initGrossTRY.toFixed(2),
                 tp1Hit: false,
                 realizedPnL_TRY: 0,
-                unrealizedPnL_TRY: +(-entryFee).toFixed(2),
-                totalPnL_TRY: +(-entryFee).toFixed(2),
-                totalPnL_Percent: +((-entryFee / allocTRY) * 100).toFixed(2),
+                unrealizedPnL_TRY: initUnrealizedTRY,
+                totalPnL_TRY: initTotalPnL_TRY,
+                totalPnL_Percent: +((initTotalPnL_TRY / allocTRY) * 100).toFixed(2),
                 rationale: snap.activeSetup.rationaleTR,
                 lastSwapAccrualMs: nowMs,
               };
               ledger.openPositions.unshift(newTrade);
               const curRadarRow = radar[radar.length - 1];
               if (curRadarRow && curRadarRow.symbol === sym) {
-                curRadarRow.status = `AÇIK (${pod})`;
+                curRadarRow.status = isCortexIntraday
+                  ? `AÇIK (Cortex +${cortexHorizonHours}S)`
+                  : `AÇIK (${pod})`;
                 curRadarRow.botStatus = curRadarRow.status;
               }
               ledger.activityLog.unshift({
@@ -1022,8 +1230,8 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
                 timestamp: formatTRDateTime(nowMs),
                 type: 'ENTRY',
                 symbol: sym,
-                pod,
-                message: `[${pod}] ${sym} ${dir} AÇILDI @ ${newTrade.entryPrice} | Teminat: ${Math.round(allocTRY).toLocaleString('tr-TR')} TL | SL: ${newTrade.stopLoss}${tp2 > 0 ? ` | TP: ${newTrade.takeProfit2}` : ' | Trailing Stop'}`,
+                pod: isCortexIntraday ? `CORTEX_${cortexHorizonHours}S` : pod,
+                message: `[${isCortexIntraday ? `Cortex +${cortexHorizonHours}S (%${assetAcc.toFixed(0)})` : pod}] ${sym} ${dir} AÇILDI @ ${newTrade.entryPrice} | Teminat: ${Math.round(allocTRY).toLocaleString('tr-TR')} TL | SL: ${newTrade.stopLoss}${tp2 > 0 ? ` | TP: ${newTrade.takeProfit2}` : ' | Trailing Stop'}`,
               });
               recalculateLedgerMetrics(ledger);
             }
