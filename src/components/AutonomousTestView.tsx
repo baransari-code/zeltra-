@@ -178,7 +178,14 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
   const [wfLoading, setWfLoading] = useState<boolean>(false);
 
   // Alt görünüm sekmesi
-  const [deskTab, setDeskTab] = useState<'positions' | 'proof' | 'radar' | 'logs'>('proof');
+  const [deskTab, setDeskTab] = useState<'positions' | 'proof' | 'radar' | 'architecture' | 'logs'>('proof');
+  const [closedPage, setClosedPage] = useState<number>(1);
+  const [radarPage, setRadarPage] = useState<number>(1);
+  const [logPage, setLogPage] = useState<number>(1);
+
+  const CLOSED_PER_PAGE = 6;
+  const RADAR_PER_PAGE = 6;
+  const LOGS_PER_PAGE = 8;
 
   const fetchLedger = useCallback(async (action?: string, tradeId?: string) => {
     try {
@@ -387,17 +394,40 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
         </div>
       )}
 
-      {/* 3. 3-POD SERMAYE MİMARİSİ & 01.12.2026 CANLIYA HAZIRLIK KAPILARI */}
-      {ledger && (
+      {/* 3. ANA ÇALIŞMA SEKMELERİ (SAYFA SAYFA ODAKLI GÖRÜNÜM) */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 pb-2 text-xs font-semibold">
+        {[
+          { id: 'proof', label: 'Walk-Forward Testi' },
+          { id: 'positions', label: `Pozisyonlar (${ledger?.openPositions.length || 0}) & Defter (${ledger?.closedTrades.length || 0})` },
+          { id: 'radar', label: `Piyasa Radarı (17)` },
+          { id: 'architecture', label: `3-Pod & Geçiş Kapıları` },
+          { id: 'logs', label: `Günlük (${ledger?.activityLog.length || 0})` },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setDeskTab(t.id as any)}
+            className={`px-3.5 py-2 rounded transition-colors ${
+              deskTab === t.id
+                ? 'bg-white text-zinc-950 font-bold'
+                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* SEKME: 3-POD SERMAYE MİMARİSİ & 01.12.2026 CANLIYA HAZIRLIK KAPILARI */}
+      {deskTab === 'architecture' && ledger && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           {/* 3-Pod Canlı Slot Durumu */}
           <div className="lg:col-span-6 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
               <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <Cpu className="w-4 h-4 text-cyan-400" />
-                Citadel Tarzı 3-Pod Ayrık Sermaye Mimarisi
+                3-Pod Sermaye Mimarisi
               </h2>
-              <span className="text-[11px] font-mono text-zinc-500">Maks 8 Eşzamanlı Slot</span>
+              <span className="text-[11px] font-mono text-zinc-500">Maks 8 Slot</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {(ledger.podStats || []).map((ps) => (
@@ -426,7 +456,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
             <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
               <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                01.12.2026 Canlıya Geçiş Kanıt Kapıları
+                01.12.2026 Canlıya Geçiş Kapıları
               </h2>
               <span className="text-[11px] font-mono text-emerald-400">
                 {ledger.liveReadiness?.overallStatus}
@@ -466,28 +496,6 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
           </div>
         </div>
       )}
-
-      {/* 4. ANA ÇALIŞMA SEKMELERİ */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 pb-2 text-xs font-semibold">
-        {[
-          { id: 'proof', label: 'Walk-Forward Testi' },
-          { id: 'positions', label: `Pozisyonlar (${ledger?.openPositions.length || 0}) & Defter (${ledger?.closedTrades.length || 0})` },
-          { id: 'radar', label: `Piyasa Radarı (17)` },
-          { id: 'logs', label: `Günlük (${ledger?.activityLog.length || 0})` },
-        ].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setDeskTab(t.id as any)}
-            className={`px-3.5 py-2 rounded transition-colors ${
-              deskTab === t.id
-                ? 'bg-white text-zinc-950 font-bold'
-                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       {/* SEKME A: GERÇEK VERİ WALK-FORWARD KANIT MOTORU */}
       {deskTab === 'proof' && (
@@ -786,14 +794,41 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
             )}
           </div>
 
-          {/* Kapanan İşlemler */}
+          {/* Kapanan İşlemler (Sayfa Sayfa) */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
-            <h2 className="text-sm font-bold text-white">
-              Kapanan Test İşlemleri Defteri ({ledger.closedTrades.length})
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-white">
+                Kapanan İşlemler ({ledger.closedTrades.length})
+              </h2>
+              {ledger.closedTrades.length > CLOSED_PER_PAGE && (
+                <div className="flex items-center gap-1.5 font-mono text-xs">
+                  <button
+                    onClick={() => setClosedPage((p) => Math.max(1, p - 1))}
+                    disabled={closedPage <= 1}
+                    className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                  >
+                    ← Önceki
+                  </button>
+                  <span className="text-zinc-400">
+                    Sayfa {closedPage} / {Math.ceil(ledger.closedTrades.length / CLOSED_PER_PAGE)}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setClosedPage((p) =>
+                        Math.min(Math.ceil(ledger.closedTrades.length / CLOSED_PER_PAGE), p + 1)
+                      )
+                    }
+                    disabled={closedPage >= Math.ceil(ledger.closedTrades.length / CLOSED_PER_PAGE)}
+                    className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                  >
+                    Sonraki →
+                  </button>
+                </div>
+              )}
+            </div>
             {ledger.closedTrades.length === 0 ? (
               <div className="p-5 text-center text-xs text-zinc-500 bg-zinc-950 rounded border border-zinc-800">
-                Henüz kapanan canlı test işlemi yok. Açılan pozisyonlar hedef veya iz süren stop ile kapandığında net IBKR komisyon ve swap kesilmiş sonuçlar burada listelenir.
+                Henüz kapanan işlem yok.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -808,26 +843,28 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
-                    {ledger.closedTrades.slice(0, 40).map((t) => (
-                      <tr key={t.id}>
-                        <td className="py-2 pr-2">
-                          <span className="font-bold text-white">{t.symbol}</span>{' '}
-                          <span className="text-[10px] text-cyan-400">{t.pod}</span>
-                        </td>
-                        <td className="py-2 px-2">{t.direction}</td>
-                        <td className="py-2 px-2 text-right text-zinc-300">
-                          {t.entryPrice.toFixed(t.digits)} → {(t.closePrice || t.currentPrice).toFixed(t.digits)}
-                        </td>
-                        <td className="py-2 px-2 text-zinc-400">{t.exitReason || t.status}</td>
-                        <td
-                          className={`py-2 pl-2 text-right font-bold ${
-                            t.realizedPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                          }`}
-                        >
-                          {fmtSignedTL(t.realizedPnL_TRY)}
-                        </td>
-                      </tr>
-                    ))}
+                    {ledger.closedTrades
+                      .slice((closedPage - 1) * CLOSED_PER_PAGE, closedPage * CLOSED_PER_PAGE)
+                      .map((t) => (
+                        <tr key={t.id}>
+                          <td className="py-2 pr-2">
+                            <span className="font-bold text-white">{t.symbol}</span>{' '}
+                            <span className="text-[10px] text-cyan-400">{t.pod}</span>
+                          </td>
+                          <td className="py-2 px-2">{t.direction}</td>
+                          <td className="py-2 px-2 text-right text-zinc-300">
+                            {t.entryPrice.toFixed(t.digits)} → {(t.closePrice || t.currentPrice).toFixed(t.digits)}
+                          </td>
+                          <td className="py-2 px-2 text-zinc-400">{t.exitReason || t.status}</td>
+                          <td
+                            className={`py-2 pl-2 text-right font-bold ${
+                              t.realizedPnL_TRY >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                            }`}
+                          >
+                            {fmtSignedTL(t.realizedPnL_TRY)}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -836,17 +873,42 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
         </div>
       )}
 
-      {/* SEKME C: 17 VARLIK ZAC v14 CANLI PİYASA RADARI */}
+      {/* SEKME C: 17 VARLIK ZAC v14 CANLI PİYASA RADARI (SAYFA SAYFA) */}
       {deskTab === 'radar' && ledger && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
               <Activity className="w-4 h-4 text-cyan-400" />
-              17 Küresel Enstrüman — ZAC v14 Canlı Tarama Radarı
+              Piyasa Radarı ({(ledger.lastMarketRadar || []).length})
             </h2>
-            <span className="text-[11px] font-mono text-zinc-400">
-              İndikatörde incelemek için satıra tıklayın
-            </span>
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              <button
+                onClick={() => setRadarPage((p) => Math.max(1, p - 1))}
+                disabled={radarPage <= 1}
+                className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+              >
+                ← Önceki
+              </button>
+              <span className="text-zinc-400">
+                Sayfa {radarPage} / {Math.max(1, Math.ceil((ledger.lastMarketRadar || []).length / RADAR_PER_PAGE))}
+              </span>
+              <button
+                onClick={() =>
+                  setRadarPage((p) =>
+                    Math.min(
+                      Math.max(1, Math.ceil((ledger.lastMarketRadar || []).length / RADAR_PER_PAGE)),
+                      p + 1
+                    )
+                  )
+                }
+                disabled={
+                  radarPage >= Math.max(1, Math.ceil((ledger.lastMarketRadar || []).length / RADAR_PER_PAGE))
+                }
+                className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+              >
+                Sonraki →
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono">
@@ -864,7 +926,9 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
-                {(ledger.lastMarketRadar || []).map((r) => (
+                {(ledger.lastMarketRadar || [])
+                  .slice((radarPage - 1) * RADAR_PER_PAGE, radarPage * RADAR_PER_PAGE)
+                  .map((r) => (
                   <tr key={r.symbol} className="hover:bg-zinc-800/40 transition-colors">
                     <td className="py-2.5 pr-2">
                       <div className="font-bold text-white flex items-center gap-1.5">
@@ -937,14 +1001,43 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
         </div>
       )}
 
-      {/* SEKME D: SİSTEM AKTİVİTE GÜNLÜĞÜ */}
+      {/* SEKME D: SİSTEM AKTİVİTE GÜNLÜĞÜ (SAYFA SAYFA) */}
       {deskTab === 'logs' && ledger && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-2">
-          <h2 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
-            Gerçek Zamanlı Emir & Tarama Günlüğü
-          </h2>
-          <div className="space-y-1.5 max-h-[420px] overflow-y-auto font-mono text-xs">
-            {ledger.activityLog.map((log) => (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+              Emir & Tarama Günlüğü ({ledger.activityLog.length})
+            </h2>
+            {ledger.activityLog.length > LOGS_PER_PAGE && (
+              <div className="flex items-center gap-1.5 font-mono text-xs">
+                <button
+                  onClick={() => setLogPage((p) => Math.max(1, p - 1))}
+                  disabled={logPage <= 1}
+                  className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                >
+                  ← Önceki
+                </button>
+                <span className="text-zinc-400">
+                  Sayfa {logPage} / {Math.ceil(ledger.activityLog.length / LOGS_PER_PAGE)}
+                </span>
+                <button
+                  onClick={() =>
+                    setLogPage((p) =>
+                      Math.min(Math.ceil(ledger.activityLog.length / LOGS_PER_PAGE), p + 1)
+                    )
+                  }
+                  disabled={logPage >= Math.ceil(ledger.activityLog.length / LOGS_PER_PAGE)}
+                  className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                >
+                  Sonraki →
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="space-y-1.5 font-mono text-xs">
+            {ledger.activityLog
+              .slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE)
+              .map((log) => (
               <div
                 key={log.id}
                 className="bg-zinc-950 border border-zinc-800/80 rounded px-3 py-2 flex flex-wrap items-center justify-between gap-2"

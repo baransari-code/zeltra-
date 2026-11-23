@@ -23,12 +23,22 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
   onSelectAsset,
 }) => {
   const [sourceFilter, setSourceFilter] = useState<string>('TÜMÜ');
+  const [activeTab, setActiveTab] = useState<'opportunities' | 'feed'>('opportunities');
+  const [newsPage, setNewsPage] = useState<number>(1);
+  const NEWS_PER_PAGE = 5;
 
   const availableSources = ['TÜMÜ', ...new Set(news.map((n) => n.source))];
 
   const filteredNews = news.filter((n) => {
     return sourceFilter === 'TÜMÜ' || n.source === sourceFilter;
   });
+
+  const totalNewsPages = Math.max(1, Math.ceil(filteredNews.length / NEWS_PER_PAGE));
+  const safeNewsPage = Math.min(newsPage, totalNewsPages);
+  const pagedNews = filteredNews.slice(
+    (safeNewsPage - 1) * NEWS_PER_PAGE,
+    safeNewsPage * NEWS_PER_PAGE
+  );
 
   // Son 24 saatteki tüm haberleri Yapay Zeka Nedensel Motoru ile varlık bazında sentezle ve en güçlü fırsatları çıkar
   const aiOpportunities = useMemo<SynthesizedOpportunity[]>(() => {
@@ -121,7 +131,28 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* SAYFA SEKMELERİ */}
+      <div className="flex items-center gap-1.5 border-b border-zinc-800/80 pb-2 text-xs font-semibold">
+        {[
+          { id: 'opportunities', label: `Fırsat Sentezi (${aiOpportunities.length})` },
+          { id: 'feed', label: `Haber Akışı (${news.length})` },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id as any)}
+            className={`px-3.5 py-2 rounded-md transition-colors ${
+              activeTab === t.id
+                ? 'bg-white text-zinc-950 font-bold'
+                : 'bg-zinc-900/70 text-zinc-400 hover:text-white border border-zinc-800'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* 1. HABER FIRSAT SENTEZİ */}
+      {activeTab === 'opportunities' && (
       <div className="border border-zinc-800/80 bg-zinc-900/60 rounded-lg p-4 space-y-3">
         <div className="border-b border-zinc-800/80 pb-2">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
@@ -183,13 +214,36 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
           </div>
         )}
       </div>
+      )}
 
-      {/* 2. SON 24 SAAT CANLI HABER AKIŞI */}
+      {/* 2. SON 24 SAAT CANLI HABER AKIŞI (SAYFA SAYFA) */}
+      {activeTab === 'feed' && (
       <div className="border border-zinc-800/80 bg-zinc-900/60 rounded-lg p-4 space-y-3.5">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-            Küresel Haber Akışı ({news.length})
+            Küresel Haber Akışı ({filteredNews.length})
           </h2>
+          {totalNewsPages > 1 && (
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              <button
+                onClick={() => setNewsPage((p) => Math.max(1, p - 1))}
+                disabled={safeNewsPage <= 1}
+                className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+              >
+                ← Önceki
+              </button>
+              <span className="text-zinc-400">
+                Sayfa {safeNewsPage} / {totalNewsPages}
+              </span>
+              <button
+                onClick={() => setNewsPage((p) => Math.min(totalNewsPages, p + 1))}
+                disabled={safeNewsPage >= totalNewsPages}
+                className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+              >
+                Sonraki →
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -199,7 +253,10 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
               {availableSources.map((src) => (
                 <button
                   key={src}
-                  onClick={() => setSourceFilter(src)}
+                  onClick={() => {
+                    setSourceFilter(src);
+                    setNewsPage(1);
+                  }}
                   className={`px-2.5 py-1 rounded text-[11px] whitespace-nowrap transition-colors border ${
                     sourceFilter === src
                       ? 'bg-zinc-800 text-white font-medium border-zinc-700'
@@ -213,12 +270,12 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
 
             {/* News List */}
             <div className="divide-y divide-zinc-800/80">
-              {filteredNews.length === 0 ? (
+              {pagedNews.length === 0 ? (
                 <div className="py-8 text-center text-xs text-zinc-500">
-                  Son 24 saat içerisinde yayınlanmış haber bulunamadı veya akış yükleniyor...
+                  Haber bulunamadı.
                 </div>
               ) : (
-                filteredNews.map((n) => (
+                pagedNews.map((n) => (
                   <div key={n.id} className="py-3.5 first:pt-1 last:pb-1 space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
                       <div className="flex flex-wrap items-center gap-2">
@@ -308,6 +365,7 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
             </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

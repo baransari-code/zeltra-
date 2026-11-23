@@ -190,9 +190,17 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
   const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [activeSection, setActiveSection] = useState<'forecasts' | 'ai' | 'portfolio'>('forecasts');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'SETTLED'>('ALL');
   const [horizonFilter, setHorizonFilter] = useState<0 | 1 | 4 | 24>(0);
   const [brainHorizonTab, setBrainHorizonTab] = useState<'1' | '4' | '24'>('1');
+  const [forecastPage, setForecastPage] = useState<number>(1);
+  const [lessonPage, setLessonPage] = useState<number>(1);
+  const [closedPage, setClosedPage] = useState<number>(1);
+
+  const FORECASTS_PER_PAGE = 8;
+  const LESSONS_PER_PAGE = 4;
+  const CLOSED_PER_PAGE = 5;
 
   const loadAudit = useCallback(async (sync = false) => {
     if (sync) setSyncing(true);
@@ -235,6 +243,33 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
       return true;
     });
   }, [data, statusFilter, horizonFilter]);
+
+  const totalForecastPages = Math.max(1, Math.ceil(filteredForecasts.length / FORECASTS_PER_PAGE));
+  const safeForecastPage = Math.min(forecastPage, totalForecastPages);
+  const pagedForecasts = useMemo(
+    () =>
+      filteredForecasts.slice(
+        (safeForecastPage - 1) * FORECASTS_PER_PAGE,
+        safeForecastPage * FORECASTS_PER_PAGE
+      ),
+    [filteredForecasts, safeForecastPage]
+  );
+
+  const lessons = data?.aiBrain?.recentLessons || [];
+  const totalLessonPages = Math.max(1, Math.ceil(lessons.length / LESSONS_PER_PAGE));
+  const safeLessonPage = Math.min(lessonPage, totalLessonPages);
+  const pagedLessons = lessons.slice(
+    (safeLessonPage - 1) * LESSONS_PER_PAGE,
+    safeLessonPage * LESSONS_PER_PAGE
+  );
+
+  const closedTrades = data?.portfolio?.closedTrades || [];
+  const totalClosedPages = Math.max(1, Math.ceil(closedTrades.length / CLOSED_PER_PAGE));
+  const safeClosedPage = Math.min(closedPage, totalClosedPages);
+  const pagedClosedTrades = closedTrades.slice(
+    (safeClosedPage - 1) * CLOSED_PER_PAGE,
+    safeClosedPage * CLOSED_PER_PAGE
+  );
 
   const equitySvg = useMemo(() => {
     const hist = data?.portfolio?.equityHistory || [];
@@ -296,8 +331,53 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         </button>
       </div>
 
+      {/* SAYFA SEKMELERİ (TEK ODAKLI GÖRÜNÜM) */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800/80 pb-2 text-xs font-semibold">
+        {[
+          {
+            id: 'forecasts',
+            label: `Tahminler (${fs?.totalLocked || 0})`,
+            sub: fs?.settledCount ? `%${fs.directionHitRatePct} İsabet` : '',
+          },
+          {
+            id: 'ai',
+            label: `Yapay Zeka & Öz-Eleştiri (${brain?.totalPostMortems || 0})`,
+            sub: '5-Uzman Modeli',
+          },
+          {
+            id: 'portfolio',
+            label: `Portföy (${p ? fmtTL(p.totalEquityTRY) : '250.000 TL'})`,
+            sub: p ? `${p.openPositionsCount} Açık` : '',
+          },
+        ].map((tab) => {
+          const active = activeSection === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSection(tab.id as any)}
+              className={`px-3.5 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                active
+                  ? 'bg-white text-zinc-950 font-bold'
+                  : 'bg-zinc-900/70 text-zinc-400 hover:text-white border border-zinc-800'
+              }`}
+            >
+              <span>{tab.label}</span>
+              {tab.sub && (
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                    active ? 'bg-zinc-900 text-emerald-300' : 'bg-zinc-950 text-zinc-400'
+                  }`}
+                >
+                  {tab.sub}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* 1. 250.000 TL KASA PERFORMANSI */}
-      {p && (
+      {activeSection === 'portfolio' && p && (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
@@ -465,16 +545,20 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
 
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-2">
               <div className="text-xs font-bold text-white flex justify-between">
-                <span>Gerçekleşmiş Kapanan Canlı İşlemler ({p.closedTrades.length})</span>
-                <span className="text-[10px] font-mono text-zinc-500">Kesinleşmiş net TL sonuçları</span>
+                <span>Kapanan İşlemler ({p.closedTrades.length})</span>
+                {p.closedTrades.length > CLOSED_PER_PAGE && (
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    Sayfa {safeClosedPage} / {totalClosedPages}
+                  </span>
+                )}
               </div>
               {p.closedTrades.length === 0 ? (
-                <div className="text-xs text-zinc-500 py-4 text-center leading-relaxed">
-                  Henüz kapanan canlı işlem yok. Açılan pozisyonlar hedef (TP) veya iz süren stop ile kapandığında gerçek kâr/zarar kalıcı olarak buraya işlenir.
+                <div className="text-xs text-zinc-500 py-4 text-center">
+                  Henüz kapanan canlı işlem yok.
                 </div>
               ) : (
-                <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                  {p.closedTrades.slice(0, 20).map((t: any) => (
+                <div className="space-y-1.5">
+                  {pagedClosedTrades.map((t: any) => (
                     <div
                       key={t.id}
                       className="bg-zinc-900 border border-zinc-800 rounded p-2 text-xs font-mono flex items-center justify-between gap-2"
@@ -497,6 +581,27 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                       </span>
                     </div>
                   ))}
+                  {totalClosedPages > 1 && (
+                    <div className="flex items-center justify-between pt-2 text-[11px] font-mono">
+                      <button
+                        onClick={() => setClosedPage((p) => Math.max(1, p - 1))}
+                        disabled={safeClosedPage <= 1}
+                        className="px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                      >
+                        ← Önceki
+                      </button>
+                      <span className="text-zinc-500">
+                        {safeClosedPage} / {totalClosedPages}
+                      </span>
+                      <button
+                        onClick={() => setClosedPage((p) => Math.min(totalClosedPages, p + 1))}
+                        disabled={safeClosedPage >= totalClosedPages}
+                        className="px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                      >
+                        Sonraki →
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -505,7 +610,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
       )}
 
       {/* 2. CORTEX v15.2 MODEL AĞIRLIKLARI & ÖZ-ELEŞTİRİ */}
-      {brain && activeBrainProf && (
+      {activeSection === 'ai' && brain && activeBrainProf && (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
@@ -597,22 +702,43 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             </div>
           </div>
 
-          {/* Yapay Zeka Öz-Eleştiri & Öğrenilen Dersler Akışı */}
-          <div className="space-y-2">
+          {/* Yapay Zeka Öz-Eleştiri & Öğrenilen Dersler Akışı (Sayfa Sayfa) */}
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-zinc-300 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Son Öz-Eleştiriler ({brain.recentLessons.length})
+                Öz-Eleştiriler ({lessons.length})
               </span>
+              {totalLessonPages > 1 && (
+                <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                  <button
+                    onClick={() => setLessonPage((p) => Math.max(1, p - 1))}
+                    disabled={safeLessonPage <= 1}
+                    className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                  >
+                    ← Önceki
+                  </button>
+                  <span className="text-zinc-400">
+                    Sayfa {safeLessonPage} / {totalLessonPages}
+                  </span>
+                  <button
+                    onClick={() => setLessonPage((p) => Math.min(totalLessonPages, p + 1))}
+                    disabled={safeLessonPage >= totalLessonPages}
+                    className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
+                  >
+                    Sonraki →
+                  </button>
+                </div>
+              )}
             </div>
 
-            {brain.recentLessons.length === 0 ? (
+            {lessons.length === 0 ? (
               <div className="p-4 text-xs text-zinc-500 bg-zinc-950 rounded border border-zinc-800 text-center">
-                Henüz sonuçlanan tahmin yok; ilk vade dolduğunda yapay zeka öz-eleştirisi burada görünecek.
+                Henüz sonuçlanan tahmin yok.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-96 overflow-y-auto pr-1">
-                {brain.recentLessons.slice(0, 12).map((pm) => {
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {pagedLessons.map((pm) => {
                   const isOk = pm.outcome === 'DOĞRU' || pm.outcome === 'YATAY_NÖTR';
                   return (
                     <div
@@ -658,8 +784,8 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         </div>
       )}
 
-      {/* 3. TAHMİN PERFORMANSI & KAYITLAR */}
-      {fs && data && (
+      {/* 3. TAHMİN PERFORMANSI & KAYITLAR (SAYFA SAYFA) */}
+      {activeSection === 'forecasts' && fs && data && (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
@@ -744,7 +870,10 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               ] as const).map(([id, lbl]) => (
                 <button
                   key={id}
-                  onClick={() => setStatusFilter(id)}
+                  onClick={() => {
+                    setStatusFilter(id);
+                    setForecastPage(1);
+                  }}
                   className={`px-2.5 py-1 rounded border transition-colors ${
                     statusFilter === id
                       ? 'bg-white text-zinc-950 font-bold border-white'
@@ -760,7 +889,10 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               {([0, 1, 4, 24] as const).map((h) => (
                 <button
                   key={h}
-                  onClick={() => setHorizonFilter(h)}
+                  onClick={() => {
+                    setHorizonFilter(h);
+                    setForecastPage(1);
+                  }}
                   className={`px-2.5 py-1 rounded border transition-colors ${
                     horizonFilter === h
                       ? 'bg-cyan-500/20 text-cyan-300 font-bold border-cyan-500/40'
@@ -786,14 +918,14 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
-                {filteredForecasts.length === 0 ? (
+                {pagedForecasts.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-zinc-500">
                       Seçili filtrede kilitli tahmin bulunmuyor.
                     </td>
                   </tr>
                 ) : (
-                  filteredForecasts.map((f) => {
+                  pagedForecasts.map((f) => {
                     const isPending = f.status === 'BEKLİYOR';
                     const liveOrActual = isPending ? f.currentLivePrice : (f.actualPrice ?? f.currentLivePrice);
                     const movePct = isPending ? f.currentMovePct : (f.actualMovePct ?? f.currentMovePct);
@@ -930,6 +1062,62 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               </tbody>
             </table>
           </div>
+
+          {/* TAHMİN TABLOSU SAYFALAMA ÇUBUĞU */}
+          {totalForecastPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-zinc-800/80 text-xs font-mono">
+              <div className="text-zinc-500">
+                Sayfa <strong className="text-zinc-200">{safeForecastPage}</strong> / {totalForecastPages} •{' '}
+                Toplam {filteredForecasts.length} kayıt ({(safeForecastPage - 1) * FORECASTS_PER_PAGE + 1}–
+                {Math.min(filteredForecasts.length, safeForecastPage * FORECASTS_PER_PAGE)})
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setForecastPage((p) => Math.max(1, p - 1))}
+                  disabled={safeForecastPage <= 1}
+                  className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 hover:text-white disabled:opacity-40"
+                >
+                  ← Önceki
+                </button>
+
+                {Array.from({ length: totalForecastPages }, (_, i) => i + 1)
+                  .filter(
+                    (pg) =>
+                      pg === 1 ||
+                      pg === totalForecastPages ||
+                      Math.abs(pg - safeForecastPage) <= 2
+                  )
+                  .map((pg, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && pg - prev > 1;
+                    return (
+                      <React.Fragment key={pg}>
+                        {showEllipsis && <span className="px-1 text-zinc-600">…</span>}
+                        <button
+                          onClick={() => setForecastPage(pg)}
+                          className={`w-7 h-7 rounded border transition-colors ${
+                            pg === safeForecastPage
+                              ? 'bg-white text-zinc-950 font-bold border-white'
+                              : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                          }`}
+                        >
+                          {pg}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+
+                <button
+                  onClick={() => setForecastPage((p) => Math.min(totalForecastPages, p + 1))}
+                  disabled={safeForecastPage >= totalForecastPages}
+                  className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 hover:text-white disabled:opacity-40"
+                >
+                  Sonraki →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

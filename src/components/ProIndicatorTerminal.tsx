@@ -203,6 +203,7 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
   const [showSma200, setShowSma200] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showCone, setShowCone] = useState(true);
+  const [subTab, setSubTab] = useState<'smart_money' | 'cones' | 'pillars'>('smart_money');
 
   const loadChart = useCallback(async (sym: string, timeframe: string) => {
     setLoading(true);
@@ -948,8 +949,29 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
         ) : null}
       </div>
 
+      {/* GRAFİK ALTI SAYFA SEKMELERİ (TEK ODAKLI PANEL) */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800/80 pb-2 text-xs font-semibold">
+        {[
+          { id: 'smart_money', label: 'Smart Money & Mum Analizi' },
+          { id: 'cones', label: 'Tahmin Konileri & Kalibrasyon' },
+          { id: 'pillars', label: '5-Sütun Detayı' },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSubTab(t.id as any)}
+            className={`px-3.5 py-2 rounded-md transition-colors ${
+              subTab === t.id
+                ? 'bg-white text-zinc-950 font-bold'
+                : 'bg-zinc-900/70 text-zinc-400 hover:text-white border border-zinc-800'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* 3b. MUM ANATOMİSİ, VSA & LİKİDİTE HAVUZLARI */}
-      {data?.microstructure && (
+      {subTab === 'smart_money' && data?.microstructure && (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
             <h2 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -998,7 +1020,7 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
       )}
 
       {/* 4. ZAC v14 5-SÜTUNLU ÖZET KARTLARI */}
-      {snap && (
+      {subTab === 'pillars' && snap && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
           {snap.pillars.map((p) => (
             <div key={p.id} className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-3 space-y-1.5">
@@ -1025,7 +1047,7 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
       )}
 
       {/* 5. ÇOKLU-UFUK İSTATİSTİKSEL TAHMİN MATRİSİ + DÜRÜST GERÇEK ZAMANLI OOS DENETİM */}
-      {data && snap && (
+      {subTab === 'cones' && data && snap && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           {/* Sol: +4S / +12S / +24S / +72S Tahmin Tablosu */}
           <div className="lg:col-span-8 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
