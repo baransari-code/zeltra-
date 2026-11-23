@@ -63,17 +63,12 @@ export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
   const expectedProfitTRY = riskTRY * rr;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-        <div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-cyan-400" />
-            Kurumsal Volatilite-Hedefli Risk & Pozisyon Hesaplayıcı (TL / IBKR)
-          </h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            ZELTRA v14.0 canlı ATR & Stop-Loss seviyeleriyle birebir senkron pozisyon boyutlandırması (USD/TRY: {usdTry.toFixed(2)})
-          </p>
-        </div>
+    <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+          <Calculator className="w-4 h-4 text-cyan-400" />
+          Risk & Pozisyon Hesaplayıcı (USD/TRY: {usdTry.toFixed(2)})
+        </h2>
 
         <div className="flex items-center gap-2">
           <select

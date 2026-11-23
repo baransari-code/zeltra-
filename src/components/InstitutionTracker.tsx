@@ -121,15 +121,12 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 1. YAPAY ZEKA HABER KARAR MOTORU VE FIRSAT DEĞERLENDİRMESİ */}
-      <div className="border border-zinc-800 bg-zinc-900 rounded p-4 sm:p-5 space-y-3">
-        <div className="border-b border-zinc-800 pb-3">
-          <h2 className="text-base font-bold text-white">
-            Yapay Zeka Haber Analizi ve Fırsat Kararları
+      {/* 1. HABER FIRSAT SENTEZİ */}
+      <div className="border border-zinc-800/80 bg-zinc-900/60 rounded-lg p-4 space-y-3">
+        <div className="border-b border-zinc-800/80 pb-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+            Haber Fırsat Sentezi
           </h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            14 küresel kaynaktan gelen son 24 saatlik haberler neden-sonuç (faiz, enflasyon, arz-talep ve kurumsal para girişi) ilişkisiyle analiz edilerek hangi varlıkta ne yönde fırsat oluştuğu aşağıda listelenir.
-          </p>
         </div>
 
         {aiOpportunities.length === 0 ? (
@@ -188,16 +185,11 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
       </div>
 
       {/* 2. SON 24 SAAT CANLI HABER AKIŞI */}
-      <div className="border border-zinc-800 bg-zinc-900 rounded p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-          <div>
-            <h2 className="text-base font-bold text-white">
-              Son 24 Saat Canlı Küresel Haber Akışı ({news.length} Haber)
-            </h2>
-            <span className="text-xs text-zinc-400">
-              Gerçek RSS kaynaklarından çekilir; her haberin altında yapay zeka neden-sonuç özeti ve etkilenen varlık kararları yer alır
-            </span>
-          </div>
+      <div className="border border-zinc-800/80 bg-zinc-900/60 rounded-lg p-4 space-y-3.5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+            Küresel Haber Akışı ({news.length})
+          </h2>
         </div>
 
         <div className="space-y-3">

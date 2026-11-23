@@ -13,12 +13,12 @@ interface NavbarProps {
 }
 
 const NAV_ITEMS: { id: AppTab; label: string; accent?: boolean }[] = [
-  { id: 'canli', label: 'Canlı Takip (/canli)', accent: true },
-  { id: 'fund', label: 'Otonom Fon (v14)' },
-  { id: 'indicator', label: 'ZAC v14 İndikatör' },
-  { id: 'arena', label: 'Manuel Arena' },
-  { id: 'news', label: 'Haber & Makro AI' },
-  { id: 'calculator', label: 'Risk & Lot' },
+  { id: 'canli', label: 'Canlı Takip', accent: true },
+  { id: 'fund', label: 'Otonom Fon' },
+  { id: 'indicator', label: 'İndikatör' },
+  { id: 'arena', label: 'Arena' },
+  { id: 'news', label: 'Haberler' },
+  { id: 'calculator', label: 'Risk' },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,21 +32,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <header className="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+    <header className="border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 h-13 flex items-center justify-between">
         <div className="flex items-center space-x-6">
           <button
-            onClick={() => setActiveTab('fund')}
-            className="text-base font-bold tracking-tight text-white flex items-center space-x-2.5"
+            onClick={() => setActiveTab('canli')}
+            className="text-sm font-bold tracking-tight text-white flex items-center space-x-2"
           >
             <img
               src="/zeltra-logo.png?v=2"
-              alt="ZELTRA Logo"
-              className="h-8 w-auto object-contain select-none"
+              alt="ZELTRA"
+              className="h-7 w-auto object-contain select-none"
             />
             <span>ZELTRA</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 hidden sm:inline">
-              QUANT v14.0
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hidden sm:inline">
+              v15.2
             </span>
           </button>
 
@@ -57,14 +57,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`px-3 py-1.5 rounded transition-colors ${
+                  className={`px-3 py-1.5 rounded-md transition-colors ${
                     active
-                      ? item.accent
-                        ? 'text-emerald-300 font-semibold bg-emerald-950/60 border border-emerald-700/50'
-                        : 'text-white font-semibold bg-zinc-800'
-                      : item.accent
-                        ? 'text-emerald-400/90 hover:text-emerald-300'
-                        : 'text-zinc-400 hover:text-white'
+                      ? 'text-white font-semibold bg-zinc-800/90'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
                   }`}
                 >
                   {item.label}

@@ -154,8 +154,8 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="border-t border-zinc-900 py-3 px-4 text-center text-[11px] font-mono text-zinc-500">
-        ZELTRA QUANT v14.0 — 3-Pod Kurumsal Otonom Fon & ZAC v14 İndikatör Terminali • Gerçek Piyasa Verisi • Canlı Geçiş Hedefi: 01.12.2026
+      <footer className="border-t border-zinc-900/80 py-3 px-4 text-center text-[11px] font-mono text-zinc-600">
+        ZELTRA Cortex v15.2 • Canlı Geçiş: 01.12.2026
       </footer>
     </div>
   );

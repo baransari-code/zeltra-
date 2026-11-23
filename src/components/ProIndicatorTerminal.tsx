@@ -948,16 +948,16 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
         ) : null}
       </div>
 
-      {/* 3b. KURUMSAL MUM ANATOMİSİ, VSA, LİKİDİTE HAVUZLARI (BSL/SSL) & ORDER BLOCK / FVG KOKPİTİ */}
+      {/* 3b. MUM ANATOMİSİ, VSA & LİKİDİTE HAVUZLARI */}
       {data?.microstructure && (
-        <div className="bg-zinc-900 border border-cyan-800/40 rounded-lg p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
+            <h2 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-cyan-400" />
-              Kurumsal Mum Anatomisi, VSA Hacim-Yayılım & Likidite Havuzları (Smart Money)
+              Smart Money & Mikroyapı
             </h2>
             <span className="text-[11px] font-mono text-cyan-300">
-              Mum/VSA Skoru: {data.microstructure.candleVsaScore >= 0 ? `+${data.microstructure.candleVsaScore}` : data.microstructure.candleVsaScore} • 1H Yay: {data.microstructure.meanRev1hScore >= 0 ? `+${data.microstructure.meanRev1hScore}` : data.microstructure.meanRev1hScore}
+              VSA: {data.microstructure.candleVsaScore >= 0 ? `+${data.microstructure.candleVsaScore}` : data.microstructure.candleVsaScore} • 1H Yay: {data.microstructure.meanRev1hScore >= 0 ? `+${data.microstructure.meanRev1hScore}` : data.microstructure.meanRev1hScore}
             </span>
           </div>
 
@@ -997,13 +997,13 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
         </div>
       )}
 
-      {/* 4. ZAC v14 5-SÜTUNLU KURUMSAL AYRINTI KARTLARI */}
+      {/* 4. ZAC v14 5-SÜTUNLU ÖZET KARTLARI */}
       {snap && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
           {snap.pillars.map((p) => (
-            <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3.5 space-y-2">
+            <div key={p.id} className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-3 space-y-1.5">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[11px] font-semibold text-zinc-300 leading-tight">{p.label}</span>
+                <span className="text-[11px] font-semibold text-zinc-400 leading-tight">{p.label}</span>
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ${
                     p.status === 'POZİTİF'
@@ -1019,7 +1019,6 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                 </span>
               </div>
               <div className="text-xs font-mono font-bold text-white">{p.rawValue}</div>
-              <p className="text-[11px] text-zinc-400 leading-snug">{p.detail}</p>
             </div>
           ))}
         </div>
@@ -1101,9 +1100,9 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
           <div className="lg:col-span-4 bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3 flex flex-col justify-between">
             <div className="space-y-2.5">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  Dürüst +24S OOS Kalibrasyon
+                  +24S OOS Kalibrasyon
                 </h2>
                 <span className="text-[10px] font-mono text-zinc-400">
                   N={data.oosSelfAudit.sampleSize}
@@ -1112,7 +1111,7 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
 
               <div className="grid grid-cols-2 gap-2 font-mono">
                 <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
-                  <div className="text-[10px] text-zinc-500">Yüksek İnanç (|ZAC|≥35)</div>
+                  <div className="text-[10px] text-zinc-500">Yüksek İnanç</div>
                   <div className="text-lg font-bold text-emerald-400 mt-0.5">
                     {data.oosSelfAudit.highConvictionCount > 0
                       ? `%${data.oosSelfAudit.highConvictionHitRatePct}`
@@ -1132,10 +1131,6 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                   </div>
                 </div>
               </div>
-
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                {data.oosSelfAudit.methodologyNoteTR}
-              </p>
             </div>
 
             {data.newsContext?.impactingHeadline && (

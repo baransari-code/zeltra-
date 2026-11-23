@@ -259,40 +259,24 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
   return (
     <div className="space-y-4">
       {/* 1. YÖNETİCİ KONTROL & CANLI DURUM ŞERİDİ */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono font-bold ${
-                ledger?.isRunning
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40'
-                  : 'bg-amber-500/15 text-amber-400 border border-amber-500/40'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${ledger?.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              {ledger?.isRunning ? 'AKTİF TEST MODU — CANLI EMİR AÇIK' : 'DURAKLATILDI'}
-            </span>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
-              {ledger?.strategyVersion || 'v14.0-zeltra-alpha-3pod'}
-            </span>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-300 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              Canlı Geçiş Hedefi: {ledger?.liveReadiness?.targetDateTR || '01.12.2026'} (
-              {ledger?.liveReadiness?.daysRemaining ?? 11} gün)
-            </span>
-          </div>
-          <h1 className="text-lg font-bold text-white">
-            ZELTRA Kurumsal 3-Pod Otonom Fon & Gerçek Veri Kanıt Merkezi
-          </h1>
-          <p className="text-xs text-zinc-400">
-            USD/TRY: <strong className="text-zinc-200 font-mono">{ledger?.liveUsdTry?.toFixed(2)}</strong> •
-            VIX: <strong className="text-zinc-200 font-mono">{ledger?.vixLevel?.toFixed(1) || '18.0'}</strong> •
-            Son Tarama:{' '}
-            <strong className="text-zinc-200 font-mono">
-              {ledger?.lastTickAt ? new Date(ledger.lastTickAt).toLocaleTimeString('tr-TR') : '-'}
-            </strong>{' '}
-            ({ledger?.tickCount || 0} tarama)
-          </p>
+      <div className="bg-zinc-900/70 border border-zinc-800/80 rounded-lg px-4 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono font-bold ${
+              ledger?.isRunning
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40'
+                : 'bg-amber-500/15 text-amber-400 border border-amber-500/40'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${ledger?.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            {ledger?.isRunning ? 'AKTİF' : 'DURAKLATILDI'}
+          </span>
+          <span className="text-xs font-bold text-white">3-Pod Otonom Fon</span>
+          <span className="text-xs font-mono text-zinc-400">
+            USD/TRY <strong className="text-zinc-200">{ledger?.liveUsdTry?.toFixed(2)}</strong> • VIX{' '}
+            <strong className="text-zinc-200">{ledger?.vixLevel?.toFixed(1) || '18.0'}</strong> • Hedef:{' '}
+            {ledger?.liveReadiness?.targetDateTR || '01.12.2026'}
+          </span>
         </div>
 
         {/* Kontrol Butonları */}
@@ -486,10 +470,10 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
       {/* 4. ANA ÇALIŞMA SEKMELERİ */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 pb-2 text-xs font-semibold">
         {[
-          { id: 'proof', label: 'Gerçek Veri Kanıtı (30G / 90G / 1Y / 2Y)' },
-          { id: 'positions', label: `Canlı Pozisyonlar (${ledger?.openPositions.length || 0}) & Defter (${ledger?.closedTrades.length || 0})` },
-          { id: 'radar', label: `17 Varlık ZAC v14 Radarı` },
-          { id: 'logs', label: `Sistem Günlüğü (${ledger?.activityLog.length || 0})` },
+          { id: 'proof', label: 'Walk-Forward Testi' },
+          { id: 'positions', label: `Pozisyonlar (${ledger?.openPositions.length || 0}) & Defter (${ledger?.closedTrades.length || 0})` },
+          { id: 'radar', label: `Piyasa Radarı (17)` },
+          { id: 'logs', label: `Günlük (${ledger?.activityLog.length || 0})` },
         ].map((t) => (
           <button
             key={t.id}
@@ -509,16 +493,11 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
       {deskTab === 'proof' && (
         <div className="space-y-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-              <div>
-                <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-emerald-400" />
-                  Gerçek Saatlik Borsa Verisi Walk-Forward Denetimi (Sıfır Look-Ahead)
-                </h2>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Her saatlik mumda en kötü durum Stop-Loss, spread, kayma, gerçek IBKR komisyonu ve %6.8/yıl gecelik finansman dahildir.
-                </p>
-              </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-2.5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-emerald-400" />
+                Walk-Forward Performansı
+              </h2>
               <div className="flex items-center gap-1.5 font-mono text-xs">
                 {(['30d', '90d', '1y', '2y'] as const).map((w) => (
                   <button
@@ -654,9 +633,9 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                         </div>
                       </div>
                     </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
-                      {wfReport.legacyComparison.improvementSummaryTR}
-                    </p>
+                    <div className="text-[11px] font-mono text-zinc-500">
+                      Net komisyon + gecelik swap düşülmüş gerçek saatlik performans.
+                    </div>
                   </div>
                 </div>
 

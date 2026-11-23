@@ -267,55 +267,45 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   const activeBrainProf = brain?.horizons?.[brainHorizonTab];
 
   return (
-    <div className="space-y-5">
-      {/* 1. SIFIR BACKTEST & CORTEX v15.0 ÖZ-ÖĞRENEN AI BAŞLIĞI */}
-      <div className="bg-gradient-to-r from-emerald-950/50 via-zinc-900 to-zinc-900 border border-emerald-700/40 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono font-bold">
-              <Radio className="w-3.5 h-3.5 animate-pulse" />
-              %100 GERÇEK ZAMANLI — SIFIR GEÇMİŞ SİMÜLASYON (/canli)
+    <div className="space-y-4">
+      {/* ÜST DURUM & SENKRON ŞERİDİ */}
+      <div className="bg-zinc-900/70 border border-zinc-800/80 rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-semibold">
+            <Radio className="w-3.5 h-3.5 animate-pulse" />
+            Canlı Takip
+          </span>
+          <span className="text-xs font-mono text-zinc-400">
+            Cortex v15.2 ({brain?.totalPostMortems || 0} analiz)
+          </span>
+          {p && (
+            <span className="text-xs font-mono text-zinc-500 hidden sm:inline">
+              USD/TRY <strong className="text-zinc-300">{p.liveUsdTry.toFixed(2)}</strong> • VIX{' '}
+              <strong className="text-zinc-300">{p.vixLevel.toFixed(1)}</strong> • {data?.lastUpdatedAtTR}
             </span>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 flex items-center gap-1 font-bold">
-              <Brain className="w-3.5 h-3.5" />
-              CORTEX v15.0 ÖZ-ÖĞRENEN YAPAY ZEKA ({brain?.totalPostMortems || 0} Öz-Eleştiri)
-            </span>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-300">
-              Canlı Geçiş: {data?.liveGoTargetTR} ({data?.daysRemaining} gün)
-            </span>
-          </div>
-          <h1 className="text-lg font-bold text-white">
-            Gerçek Zamanlı Kâr / Zarar, Mühürlü Tahminler & Yapay Zeka Öz-Eleştiri Merkezi
-          </h1>
-          <p className="text-xs text-zinc-300 max-w-3xl leading-relaxed">
-            {data?.zeroBacktestGuaranteeTR}
-          </p>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => loadAudit(true)}
-            disabled={syncing}
-            className="px-3.5 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Canlı Senkronize Ediliyor...' : 'Anlık Fiyatla Güncelle & Öğren'}
-          </button>
-        </div>
+        <button
+          onClick={() => loadAudit(true)}
+          disabled={syncing}
+          className="px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Güncelleniyor...' : 'Güncelle'}
+        </button>
       </div>
 
-      {/* 2. BÖLÜM 1 — GERÇEK ZAMANLI 250.000 TL KASA PERFORMANSI */}
+      {/* 1. 250.000 TL KASA PERFORMANSI */}
       {p && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              1. Gerçek Zamanlı 250.000 TL Kasa Performansı (İleriye Dönük Canlı Emirler)
+              Portföy (250.000 TL)
             </h2>
-            <div className="text-[11px] font-mono text-zinc-400">
-              USD/TRY: <strong className="text-zinc-200">{p.liveUsdTry.toFixed(2)}</strong> •
-              VIX: <strong className="text-zinc-200">{p.vixLevel.toFixed(1)}</strong> •
-              Son Güncelleme: <strong className="text-zinc-200">{data?.lastUpdatedAtTR}</strong>
+            <div className="text-[11px] font-mono text-zinc-500">
+              Hedef: {data?.liveGoTargetTR} ({data?.daysRemaining} gün)
             </div>
           </div>
 
@@ -514,19 +504,14 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         </div>
       )}
 
-      {/* 3. BÖLÜM 2 — ZELTRA CORTEX v15.0 ÖZ-ÖĞRENEN YAPAY ZEKA BEYNİ & KÖK-NEDEN ÖZ-ELEŞTİRİ DEFTERİ */}
+      {/* 2. CORTEX v15.2 MODEL AĞIRLIKLARI & ÖZ-ELEŞTİRİ */}
       {brain && activeBrainProf && (
-        <div className="bg-zinc-900 border border-cyan-800/40 rounded-lg p-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-            <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <Brain className="w-4 h-4 text-cyan-400" />
-                2. ZELTRA Cortex v15.0 — Öz-Öğrenen 5-Uzmanlı Yapay Zeka Mimarisi & Kök-Neden Öz-Eleştiri
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Her tahmin sonuçlandığında yapay zeka hangi uzmanın yanıldığını tespit eder, L2-Multiplicative Weights ile uzman ağırlıklarını günceller ve öğrendiği dersi kaydeder.
-              </p>
-            </div>
+        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+              <Brain className="w-4 h-4 text-cyan-400" />
+              Cortex v15.2 Model Ağırlıkları
+            </h2>
 
             <div className="flex items-center gap-1 font-mono text-xs">
               {(['1', '4', '24'] as const).map((hk) => (
@@ -539,7 +524,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                       : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
                   }`}
                 >
-                  +{hk} SAAT BEYNİ
+                  +{hk}S
                 </button>
               ))}
             </div>
@@ -615,12 +600,9 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
           {/* Yapay Zeka Öz-Eleştiri & Öğrenilen Dersler Akışı */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-white flex items-center gap-1.5">
+              <span className="font-bold text-zinc-300 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Yapay Zeka Kök-Neden Durum Analizi & Öğrenilen Dersler ({brain.recentLessons.length})
-              </span>
-              <span className="text-[11px] font-mono text-zinc-500">
-                Her sonuçlanan tahminde otomatik üretilir
+                Son Öz-Eleştiriler ({brain.recentLessons.length})
               </span>
             </div>
 
@@ -676,19 +658,14 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         </div>
       )}
 
-      {/* 4. BÖLÜM 3 — MÜHÜRLÜ İLERİ-DÖNÜK TAHMİN vs GERÇEKLEŞEN FİYAT DEFTERİ */}
+      {/* 3. TAHMİN PERFORMANSI & KAYITLAR */}
       {fs && data && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
-            <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <Lock className="w-4 h-4 text-cyan-400" />
-                3. Mühürlü İleri-Dönük Tahminler vs Gerçekleşen Piyasa Fiyatları (+1S / +4S / +24S)
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Her tahmin vadesi gelmeden önce kilitlenir; vade dolduğunda hedef saatin gerçek piyasa fiyatıyla otomatik karşılaştırılır.
-              </p>
-            </div>
+        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+              <Lock className="w-4 h-4 text-cyan-400" />
+              Tahminler (+1S / +4S / +24S)
+            </h2>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5 font-mono">
