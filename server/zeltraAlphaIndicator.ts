@@ -17,7 +17,6 @@ export type ZacRegime =
 
 export const ZAC_MR12_ASSETS = new Set([
   'NAS100', 'SPX500', 'US30', 'NVDA', 'AAPL', 'MSFT', 'XAU/USD', 'XAG/USD', 'COPPER',
-  'USD/JPY', 'EUR/USD', 'GBP/USD',
 ]);
 
 export const ZAC_CRYPTO_ASSETS = new Set(['BTC/USD', 'ETH/USD', 'SOL/USD']);

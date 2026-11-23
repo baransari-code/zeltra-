@@ -1379,7 +1379,7 @@ export async function runLiveWalkForwardAudit(
       const dpObj = dPackMap.get(s);
       if (!dpObj) continue;
       let ptr = dPtr.get(s) || 0;
-      while (ptr + 1 < dpObj.bars.length && dpObj.bars[ptr + 1].timestamp + 86400000 <= hrTs) ptr++;
+      while (ptr + 1 < dpObj.bars.length && dpObj.bars[ptr + 1].timestamp + 21 * 3600000 <= hrTs) ptr++;
       dPtr.set(s, ptr);
     }
 
@@ -1455,10 +1455,11 @@ export async function runLiveWalkForwardAudit(
           const dP = dPackMap.get(pos.sym)!;
           const atr = dP.atr20[dp] || dP.atr14[dp];
           if (atr > 0) {
-            const cand = pos.peak - atr * pos.slAtr;
-            if (cand > pos.sl) pos.sl = cand;
+            const cand = isL ? pos.peak - atr * pos.slAtr : pos.peak + atr * pos.slAtr;
+            if (isL ? cand > pos.sl : cand < pos.sl) pos.sl = cand;
           }
-          if (calcEwmacAt(dP.e8, dP.e16, dP.e32, dP.e64, dP.e128, dP.atr20, dp) <= 0) {
+          const ewNow = calcEwmacAt(dP.e8, dP.e16, dP.e32, dP.e64, dP.e128, dP.atr20, dp);
+          if (isL ? ewNow <= 0 : ewNow >= -2) {
             closeP(clsLiq, 'CTA TREND FLIP');
             continue;
           }
