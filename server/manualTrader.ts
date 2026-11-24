@@ -28,6 +28,7 @@ export interface ArenaUniverseItem {
   ibkrCommissionRate: number;
   ibkrMinFeeUSD: number;
   ibkrPerShareUSD?: number;
+  ibkrMaxFeePct?: number;
   spreadPts: number;
   slippagePts: number;
   price: number;
@@ -364,6 +365,7 @@ function buildArenaResponse(
       ibkrCommissionRate: spec.ibkrCommissionRate,
       ibkrMinFeeUSD: spec.ibkrMinFeeUSD,
       ibkrPerShareUSD: spec.ibkrPerShareUSD,
+      ibkrMaxFeePct: spec.ibkrMaxFeePct,
       spreadPts: spec.spreadPts,
       slippagePts: spec.slippagePts,
       price: mid || scan?.price || 0,

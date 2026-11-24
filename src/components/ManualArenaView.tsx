@@ -109,6 +109,7 @@ export interface ArenaUniverseItem {
   ibkrCommissionRate: number;
   ibkrMinFeeUSD: number;
   ibkrPerShareUSD?: number;
+  ibkrMaxFeePct?: number;
   spreadPts: number;
   slippagePts: number;
   price: number;
@@ -292,12 +293,13 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   const estimatedEntryFeeUSD = useMemo(() => {
     if (!selectedAsset || previewNotionalUSD <= 0) return 0;
     const minFeeUSD = selectedAsset.ibkrMinFeeUSD;
-    if (selectedAsset.ibkrPerShareUSD && selectedAsset.price > 0) {
-      const shares = previewNotionalUSD / selectedAsset.price;
-      const feeUSD = Math.max(minFeeUSD, shares * selectedAsset.ibkrPerShareUSD);
-      return Number(feeUSD.toFixed(2));
+    let feeUSD =
+      selectedAsset.ibkrPerShareUSD && selectedAsset.price > 0
+        ? Math.max(minFeeUSD, (previewNotionalUSD / selectedAsset.price) * selectedAsset.ibkrPerShareUSD)
+        : Math.max(minFeeUSD, previewNotionalUSD * selectedAsset.ibkrCommissionRate);
+    if (selectedAsset.ibkrMaxFeePct) {
+      feeUSD = Math.min(feeUSD, previewNotionalUSD * selectedAsset.ibkrMaxFeePct);
     }
-    const feeUSD = Math.max(minFeeUSD, previewNotionalUSD * selectedAsset.ibkrCommissionRate);
     return Number(feeUSD.toFixed(2));
   }, [selectedAsset, previewNotionalUSD]);
 

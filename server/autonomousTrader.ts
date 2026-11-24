@@ -39,7 +39,7 @@ import {
   loadOrInitAiBrain,
 } from './zeltraSelfLearningAi';
 
-export const STRATEGY_VERSION = 'v15.3-cortex-1k-usd';
+export const STRATEGY_VERSION = 'v15.4-ibkr-exact-usd';
 export const INITIAL_CAPITAL_USD = 1_000;
 export const LIVE_GO_TARGET_ISO = '2026-12-01T00:00:00.000Z';
 const LEDGER_FILE = path.resolve(process.cwd(), 'data', 'autonomous_trader_ledger.json');
@@ -106,25 +106,27 @@ export interface InstrumentMicroSpec {
   ibkrCommissionRate: number;
   ibkrMinFeeUSD: number;
   ibkrPerShareUSD?: number;
+  ibkrMaxFeePct?: number;
   maxIbkrLeverage: number;
   cluster: 'CRYPTO_MAJOR' | 'CRYPTO_L1' | 'PRECIOUS' | 'USD_MAJORS' | 'US_TECH' | 'ENERGY';
 }
 
+// Birebir Resmi IBKR Pro Tiered (US Hisse) + Index/Oil/Metal CFD + Spot FX + Paxos/ZeroHash Tier-1 Tarifesi
 export const INSTRUMENT_SPECS: Record<string, InstrumentMicroSpec> = {
-  'BTC/USD': { symbol: 'BTC/USD', name: 'Bitcoin', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
-  'ETH/USD': { symbol: 'ETH/USD', name: 'Ethereum', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
-  'SOL/USD': { symbol: 'SOL/USD', name: 'Solana', digits: 2, contractSize: 100, unitLabel: 'SOL', spreadPts: 0.05, slippagePts: 0.01, ibkrCommissionRate: 0.0012, ibkrMinFeeUSD: 1.75, maxIbkrLeverage: 3, cluster: 'CRYPTO_L1' },
+  'BTC/USD': { symbol: 'BTC/USD', name: 'Bitcoin', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
+  'ETH/USD': { symbol: 'ETH/USD', name: 'Ethereum', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
+  'SOL/USD': { symbol: 'SOL/USD', name: 'Solana', digits: 2, contractSize: 100, unitLabel: 'SOL', spreadPts: 0.05, slippagePts: 0.01, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 3, cluster: 'CRYPTO_L1' },
   'XAU/USD': { symbol: 'XAU/USD', name: 'Ons Altın', digits: 2, contractSize: 100, unitLabel: 'Ons', spreadPts: 0.25, slippagePts: 0.05, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
-  'XAG/USD': { symbol: 'XAG/USD', name: 'Ons Gümüş', digits: 3, contractSize: 5000, unitLabel: 'Ons', spreadPts: 0.025, slippagePts: 0.005, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
+  'XAG/USD': { symbol: 'XAG/USD', name: 'Ons Gümüş', digits: 3, contractSize: 5000, unitLabel: 'Ons', spreadPts: 0.025, slippagePts: 0.005, ibkrCommissionRate: 0.0003, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
   'COPPER': { symbol: 'COPPER', name: 'Bakır', digits: 4, contractSize: 25000, unitLabel: 'Lb', spreadPts: 0.002, slippagePts: 0.0005, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
-  'NAS100': { symbol: 'NAS100', name: 'Nasdaq 100', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 1.15, slippagePts: 0.30, ibkrCommissionRate: 0.0001, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
-  'SPX500': { symbol: 'SPX500', name: 'S&P 500', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 0.45, slippagePts: 0.12, ibkrCommissionRate: 0.0001, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
-  'US30': { symbol: 'US30', name: 'Dow Jones 30', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 1.80, slippagePts: 0.40, ibkrCommissionRate: 0.0001, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
-  'NVDA': { symbol: 'NVDA', name: 'NVIDIA', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.04, slippagePts: 0.01, ibkrCommissionRate: 0.0002, ibkrMinFeeUSD: 1.0, ibkrPerShareUSD: 0.005, maxIbkrLeverage: 2, cluster: 'US_TECH' },
-  'AAPL': { symbol: 'AAPL', name: 'Apple', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.0002, ibkrMinFeeUSD: 1.0, ibkrPerShareUSD: 0.005, maxIbkrLeverage: 2, cluster: 'US_TECH' },
-  'MSFT': { symbol: 'MSFT', name: 'Microsoft', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.04, slippagePts: 0.01, ibkrCommissionRate: 0.0002, ibkrMinFeeUSD: 1.0, ibkrPerShareUSD: 0.005, maxIbkrLeverage: 2, cluster: 'US_TECH' },
-  'WTI': { symbol: 'WTI', name: 'WTI Petrol', digits: 2, contractSize: 100, unitLabel: 'Varil', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'ENERGY' },
-  'BRENT': { symbol: 'BRENT', name: 'Brent Petrol', digits: 2, contractSize: 100, unitLabel: 'Varil', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'ENERGY' },
+  'NAS100': { symbol: 'NAS100', name: 'Nasdaq 100', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 1.15, slippagePts: 0.30, ibkrCommissionRate: 0.0001, ibkrMinFeeUSD: 1.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
+  'SPX500': { symbol: 'SPX500', name: 'S&P 500', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 0.45, slippagePts: 0.12, ibkrCommissionRate: 0.00005, ibkrMinFeeUSD: 1.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
+  'US30': { symbol: 'US30', name: 'Dow Jones 30', digits: 2, contractSize: 1, unitLabel: 'Kontrat', spreadPts: 1.80, slippagePts: 0.40, ibkrCommissionRate: 0.00005, ibkrMinFeeUSD: 1.0, maxIbkrLeverage: 10, cluster: 'US_TECH' },
+  'NVDA': { symbol: 'NVDA', name: 'NVIDIA', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.04, slippagePts: 0.01, ibkrCommissionRate: 0.0002, ibkrMinFeeUSD: 0.35, ibkrPerShareUSD: 0.0035, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 2, cluster: 'US_TECH' },
+  'AAPL': { symbol: 'AAPL', name: 'Apple', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.0002, ibkrMinFeeUSD: 0.35, ibkrPerShareUSD: 0.0035, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 2, cluster: 'US_TECH' },
+  'MSFT': { symbol: 'MSFT', name: 'Microsoft', digits: 2, contractSize: 1, unitLabel: 'Hisse', spreadPts: 0.04, slippagePts: 0.01, ibkrCommissionRate: 0.0002, ibkrMinFeeUSD: 0.35, ibkrPerShareUSD: 0.0035, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 2, cluster: 'US_TECH' },
+  'WTI': { symbol: 'WTI', name: 'WTI Petrol', digits: 2, contractSize: 100, unitLabel: 'Varil', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 1.0, maxIbkrLeverage: 10, cluster: 'ENERGY' },
+  'BRENT': { symbol: 'BRENT', name: 'Brent Petrol', digits: 2, contractSize: 100, unitLabel: 'Varil', spreadPts: 0.03, slippagePts: 0.01, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 1.0, maxIbkrLeverage: 10, cluster: 'ENERGY' },
   'EUR/USD': { symbol: 'EUR/USD', name: 'Euro / USD', digits: 4, contractSize: 100000, unitLabel: 'EUR', spreadPts: 0.00012, slippagePts: 0.00003, ibkrCommissionRate: 0.00002, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 20, cluster: 'USD_MAJORS' },
   'USD/JPY': { symbol: 'USD/JPY', name: 'USD / JPY', digits: 2, contractSize: 100000, unitLabel: 'USD', spreadPts: 0.014, slippagePts: 0.004, ibkrCommissionRate: 0.00002, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 20, cluster: 'USD_MAJORS' },
   'GBP/USD': { symbol: 'GBP/USD', name: 'GBP / USD', digits: 4, contractSize: 100000, unitLabel: 'GBP', spreadPts: 0.00016, slippagePts: 0.00004, ibkrCommissionRate: 0.00002, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 20, cluster: 'USD_MAJORS' },
@@ -144,7 +146,7 @@ export function getSpec(symbol: string): InstrumentMicroSpec {
       spreadPts: 0.05,
       slippagePts: 0.01,
       ibkrCommissionRate: 0.0002,
-      ibkrMinFeeUSD: 2.0,
+      ibkrMinFeeUSD: 1.0,
       maxIbkrLeverage: 5,
       cluster: 'US_TECH',
     }
@@ -156,10 +158,13 @@ export function computeIbkrCommissionUSD(
   notionalUSD: number,
   units: number
 ): number {
-  if (spec.ibkrPerShareUSD) {
-    return Math.max(spec.ibkrMinFeeUSD, Math.abs(units) * spec.ibkrPerShareUSD);
+  const raw = spec.ibkrPerShareUSD
+    ? Math.max(spec.ibkrMinFeeUSD, Math.abs(units) * spec.ibkrPerShareUSD)
+    : Math.max(spec.ibkrMinFeeUSD, Math.abs(notionalUSD) * spec.ibkrCommissionRate);
+  if (spec.ibkrMaxFeePct && notionalUSD > 0) {
+    return Math.min(raw, Math.abs(notionalUSD) * spec.ibkrMaxFeePct);
   }
-  return Math.max(spec.ibkrMinFeeUSD, Math.abs(notionalUSD) * spec.ibkrCommissionRate);
+  return raw;
 }
 
 export function isMarketOpenForAsset(
@@ -924,6 +929,10 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       };
 
       // Çıkış kontrolleri (sadece piyasa açıksa veya kriptoysa)
+      const isCortexTrade =
+        pos.id.startsWith('CORTEX-') ||
+        (pos.podLabel || '').includes('Cortex') ||
+        (pos.rationale || '').includes('[Cortex');
       const mkt = isMarketOpenForAsset(pos.symbol, nowMs);
       if (mkt.open && ledger.isRunning) {
         // 1) Stop-Loss veya İz Süren Stop / Kâr Kilidi
@@ -985,8 +994,8 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           closeTrade(liqPrice, 'CORTEX VADE SÜRE ÇIKIŞI', pos.totalPnL_USD >= 0 ? 'TP2_FULL' : 'BREAKEVEN_EXIT');
           continue;
         }
-        // 5) Pod-1 MR12 Güç Çıkışı (Tamamlanmış 12H mumda önceki 12H tepe üstü kapanış)
-        if (pos.pod === 'MR_SPRING_12H' && p12 && p12.bars.length >= 4) {
+        // 5) Pod-1 MR12 Güç Çıkışı (Yalnızca klasik 12H swing işlemlerinde çalışır, Cortex +1S/+4S işlemlere dokunmaz)
+        if (!isCortexTrade && pos.pod === 'MR_SPRING_12H' && p12 && p12.bars.length >= 4) {
           const last12Idx =
             p12.bars[p12.bars.length - 1].timestamp + 12 * 3600000 > nowMs
               ? p12.bars.length - 2
@@ -1025,10 +1034,6 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             pos.stopLoss = +lockSl.toFixed(spec.digits);
           }
         }
-        const isCortexTrade =
-          pos.id.startsWith('CORTEX-') ||
-          (pos.podLabel || '').includes('Cortex') ||
-          (pos.rationale || '').includes('[Cortex');
         const trailMult = pos.trailingAtrMult || 3.0;
         if (isCortexTrade) {
           const candSl = isLong ? pos.peakPrice - atr1hCur * trailMult : pos.peakPrice + atr1hCur * trailMult;
@@ -1170,7 +1175,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         );
 
         const sealed = pendingSeals.get(sym);
-        const minSealedScore = assetAcc >= 72.0 ? 7 : 9;
+        const minSealedScore = assetAcc >= 75.0 ? 9 : 10;
         const mappedPod: Exclude<ZacPodType, 'NONE'> = ZAC_CRYPTO_ASSETS.has(sym)
           ? 'CRYPTO_MOM_12H'
           : ZAC_MR12_ASSETS.has(sym)
@@ -1421,7 +1426,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       const totalClusterCap = 2;
 
       const lastSymTrade = ledger.closedTrades.find((t) => t.symbol === sym && t.closeTimestamp);
-      const cooldownMs = lastSymTrade && lastSymTrade.realizedPnL_USD < 0 ? 60 * 60000 : 25 * 60000;
+      const cooldownMs = lastSymTrade && lastSymTrade.realizedPnL_USD < 0 ? 90 * 60000 : 45 * 60000;
       const recentlyClosed = lastSymTrade?.closeTimestamp ? nowMs - lastSymTrade.closeTimestamp < cooldownMs : false;
 
       if (
