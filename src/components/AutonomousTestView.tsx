@@ -641,7 +641,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                           <div className="text-[10px] text-zinc-400">PF 0.58 • 0/9 Çeyrek</div>
                         </div>
                         <div className="bg-emerald-950/30 border border-emerald-800/50 rounded p-2.5 space-y-1">
-                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v15.3) — {wfWindow.toUpperCase()}</div>
+                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v15.5) — {wfWindow.toUpperCase()}</div>
                           <div className="text-sm font-black text-emerald-400">{fmtUSD(wfReport.endingEquityUSD)}</div>
                           <div className="text-[11px] text-emerald-300">
                             {wfReport.netProfitPercent >= 0 ? '+' : ''}{wfReport.netProfitPercent}% | DD %{wfReport.maxDrawdownPercent}

@@ -39,7 +39,7 @@ import {
   loadOrInitAiBrain,
 } from './zeltraSelfLearningAi';
 
-export const STRATEGY_VERSION = 'v15.4-ibkr-exact-usd';
+export const STRATEGY_VERSION = 'v15.5-cortex-opt-usd';
 export const INITIAL_CAPITAL_USD = 1_000;
 export const LIVE_GO_TARGET_ISO = '2026-12-01T00:00:00.000Z';
 const LEDGER_FILE = path.resolve(process.cwd(), 'data', 'autonomous_trader_ledger.json');
@@ -53,6 +53,46 @@ interface PendingCortexSeal {
   expectedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ';
   zacScore: number;
   dominantExpertLabelTR?: string;
+}
+
+function readAssetDirectionalStats(): Map<string, { dirAccPct: number; sampleCount: number }> {
+  const res = new Map<string, { dirAccPct: number; sampleCount: number }>();
+  try {
+    if (!fs.existsSync(LIVE_AUDIT_FILE)) return res;
+    const raw = JSON.parse(fs.readFileSync(LIVE_AUDIT_FILE, 'utf-8'));
+    const list: any[] = Array.isArray(raw?.forecasts) ? raw.forecasts : [];
+    const bySym = new Map<string, any[]>();
+    for (const f of list) {
+      if (
+        !f ||
+        (f.horizonHours !== 1 && f.horizonHours !== 4) ||
+        f.status === 'BEKLİYOR' ||
+        (f.expectedDirection !== 'YÜKSELİŞ' && f.expectedDirection !== 'DÜŞÜŞ') ||
+        Math.abs(Number(f.zacScore || 0)) < 8
+      ) {
+        continue;
+      }
+      // YATAY_NÖTR dahil edilmez — yalnızca gerçek yönlü tahminlerin (YÜKSELİŞ/DÜŞÜŞ) isabetini ölçer
+      const arr = bySym.get(f.symbol) || [];
+      arr.push(f);
+      bySym.set(f.symbol, arr);
+    }
+    for (const [sym, arr] of bySym.entries()) {
+      arr.sort((a, b) => Number(a.settledAtMs || 0) - Number(b.settledAtMs || 0));
+      const recent = arr.slice(-25);
+      if (recent.length < 4) {
+        res.set(sym, { dirAccPct: 65, sampleCount: recent.length });
+        continue;
+      }
+      const hits = recent.filter((f) =>
+        f.expectedDirection === 'YÜKSELİŞ' ? Number(f.actualMovePct || 0) > 0 : Number(f.actualMovePct || 0) < 0
+      ).length;
+      res.set(sym, { dirAccPct: +((hits / recent.length) * 100).toFixed(1), sampleCount: recent.length });
+    }
+  } catch {
+    // Okuma hatasında varsayılan nötr profil
+  }
+  return res;
 }
 
 function readPendingCortexForecasts(nowMs: number): Map<string, { f1?: PendingCortexSeal; f4?: PendingCortexSeal }> {
@@ -666,7 +706,7 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
     peakVal > 0
       ? Math.max(0, ((peakVal - ledger.totalEquityUSD) / peakVal) * 100)
       : 0;
-  ledger.drawdownThrottleScale = curDd >= 8.0 ? 0.5 : curDd >= 5.0 ? 0.75 : 1.0;
+  ledger.drawdownThrottleScale = curDd >= 15.0 ? 0.65 : curDd >= 8.0 ? 0.85 : 1.0;
 
   const closed = ledger.closedTrades || [];
   const wins = closed.filter((t) => t.realizedPnL_USD > 0);
@@ -952,9 +992,10 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           closeTrade(liqPrice, 'HEDEF KÂR AL (CORTEX TP)', 'TP2_FULL');
           continue;
         }
-        // 3) Cortex +1S Vade Sonu Kâr Realizasyonu (>= 45 dk açık ve net ≥ $1 kârda iken momentum yavaşlarsa kârı cebe al)
+        // 3) Cortex Erken Kâr Realizasyonu (Yalnızca ≥%50 R kâr elde edildikten sonra momentum sönümünde cebe al)
         const openMins = (nowMs - pos.entryTimestamp) / 60000;
-        if (openMins >= 45 && pos.totalPnL_USD >= 1.0) {
+        const earlyBankFloor = Math.max(8, (pos.riskUSD || 15) * 0.5);
+        if (openMins >= 50 && pos.totalPnL_USD >= earlyBankFloor) {
           const h1ForPos = h1Map.get(pos.symbol);
           if (h1ForPos && h1ForPos.length >= 25 && p12 && p12.bars.length >= 5) {
             const atr12Now = p12.atr14[p12.bars.length - 1] || Math.abs(pos.entryPrice * 0.006);
@@ -982,9 +1023,9 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
               false,
               pos.symbol
             );
-            const lostMom = isLong ? fc1Pos.compositeScore <= 2 : fc1Pos.compositeScore >= -2;
+            const lostMom = isLong ? fc1Pos.compositeScore <= 0 : fc1Pos.compositeScore >= 0;
             if (lostMom) {
-              closeTrade(liqPrice, 'CORTEX +1S VADE KÂR REALİZASYONU', 'TP2_FULL');
+              closeTrade(liqPrice, 'CORTEX MOMENTUM KÂR REALİZASYONU', 'TP2_FULL');
               continue;
             }
           }
@@ -1010,7 +1051,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             }
           }
         }
-        // 6) Zirve Takibi, Akıllı Kâr Kilidi (Komisyon Üstü Garantili Kâr Kilidi) & İz Süren Stop
+        // 6) Zirve Takibi & Asimetrik Akıllı Kâr Kilidi (0.80 ATR sonrası gerçek komisyon üstü %65 kâr kilidi)
         const curPeak = pos.peakPrice ?? pos.entryPrice;
         pos.peakPrice = isLong ? Math.max(curPeak, liqPrice) : Math.min(curPeak, liqPrice);
         const peakMove = isLong ? pos.peakPrice - pos.entryPrice : pos.entryPrice - pos.peakPrice;
@@ -1024,11 +1065,11 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         const unitValueUSD = Math.max(1e-9, pos.positionSizeUnits * q2u);
         const feeBreakEvenMove = roundTripFeeUSD / unitValueUSD;
         if (
-          peakMove >= atr1hCur * 0.35 &&
-          peakMove >= feeBreakEvenMove * 1.45 &&
-          peakGrossUSD >= roundTripFeeUSD * 1.85
+          peakMove >= atr1hCur * 0.8 &&
+          peakMove >= feeBreakEvenMove * 2.2 &&
+          peakGrossUSD >= roundTripFeeUSD * 2.4
         ) {
-          const lockedMove = Math.max(peakMove * 0.5, feeBreakEvenMove * 1.15);
+          const lockedMove = Math.max(peakMove * 0.65, feeBreakEvenMove * 2.2);
           const lockSl = isLong ? pos.entryPrice + lockedMove : pos.entryPrice - lockedMove;
           if (isLong ? lockSl > pos.stopLoss : lockSl < pos.stopLoss) {
             pos.stopLoss = +lockSl.toFixed(spec.digits);
@@ -1036,9 +1077,11 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         }
         const trailMult = pos.trailingAtrMult || 3.0;
         if (isCortexTrade) {
-          const candSl = isLong ? pos.peakPrice - atr1hCur * trailMult : pos.peakPrice + atr1hCur * trailMult;
-          if (isLong ? candSl > pos.stopLoss : candSl < pos.stopLoss) {
-            pos.stopLoss = +candSl.toFixed(spec.digits);
+          if (peakMove >= atr1hCur * 0.8) {
+            const candSl = isLong ? pos.peakPrice - atr1hCur * trailMult : pos.peakPrice + atr1hCur * trailMult;
+            if (isLong ? candSl > pos.stopLoss : candSl < pos.stopLoss) {
+              pos.stopLoss = +candSl.toFixed(spec.digits);
+            }
           }
         } else if (pos.pod === 'CRYPTO_MOM_12H' && p12 && p12.bars.length >= 15) {
           const atr12 = p12.atr14[p12.bars.length - 1];
@@ -1129,12 +1172,14 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       );
       const h24 = snap.horizons.find((h) => h.horizonHours === 24)!;
 
-      // Cortex v15.3 /canli +1S ve +4S Tahmin Doğrudan İcra Seçicisi
+      // Cortex v15.5 Gerçek Yönlü İsabet (YATAY_NÖTR hariç) + Geniş Asimetrik SL/TP Seçicisi
       const h1Bars = h1Map.get(sym);
+      const dirStatsMap = readAssetDirectionalStats();
+      const dirProf = dirStatsMap.get(sym);
       const assetProf = aiBrain.assetProfiles?.[sym];
-      const assetAcc = assetProf && assetProf.total >= 3 ? assetProf.accuracyPct : 70.0;
+      const assetAcc = dirProf && dirProf.sampleCount >= 4 ? dirProf.dirAccPct : assetProf && assetProf.total >= 3 ? assetProf.accuracyPct : 65.0;
       const misses = assetProf?.consecutiveMisses || 0;
-      const isHighAccuracyAsset = assetAcc >= 60.0 && (assetAcc >= 70.0 ? misses <= 1 : misses === 0);
+      const isHighAccuracyAsset = assetAcc >= 58.0 && (assetAcc >= 62.0 || misses < 4);
 
       let chosenCand: CortexEntryCandidate | null = null;
       if (h1Bars && h1Bars.length >= 25 && isHighAccuracyAsset) {
@@ -1175,7 +1220,8 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         );
 
         const sealed = pendingSeals.get(sym);
-        const minSealedScore = assetAcc >= 75.0 ? 9 : 10;
+        const minSealed1h = 12;
+        const minSealed4h = 10;
         const mappedPod: Exclude<ZacPodType, 'NONE'> = ZAC_CRYPTO_ASSETS.has(sym)
           ? 'CRYPTO_MOM_12H'
           : ZAC_MR12_ASSETS.has(sym)
@@ -1185,6 +1231,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         const h1AtrArr = calcAtrSeries(h1Bars.slice(-24), 14);
         const realAtr1h = h1AtrArr.length > 0 ? h1AtrArr[h1AtrArr.length - 1] : 0;
         const atr1hEst = Math.max(q.price * 0.0014, realAtr1h || snap.atr12h14 / Math.sqrt(12));
+        const minRiskFloor = Math.max(6, 10 * ddScale);
 
         const buildOption = (
           horizonHours: 1 | 4,
@@ -1194,11 +1241,10 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           targetAtMs: number,
           expLabel?: string
         ): CortexEntryCandidate | null => {
-          const isFx = spec.cluster === 'USD_MAJORS';
-          const slMult = horizonHours === 4 ? (isFx ? 1.6 : 1.25) : 1.1;
-          const tpMult = horizonHours === 4 ? (isFx ? 2.4 : 1.95) : 1.6;
-          const riskPct = horizonHours === 1 ? 2.2 : 2.5;
-          const estAlloc = Math.min(curEq * 0.3, curEq * 0.9);
+          const slMult = 2.4;
+          const tpMult = 2.8;
+          const riskPct = 3.0;
+          const estAlloc = Math.min(curEq * 0.32, curEq * 0.92);
           const estSlDist = atr1hEst * slMult;
           const estTpDist = atr1hEst * tpMult;
           const q2uEst = sym === 'USD/JPY' ? 1 / (q.price || 155) : 1;
@@ -1212,11 +1258,10 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           const estExpectedTpPct = estTpDist / Math.max(1e-6, q.price);
           const roundTripCostPct =
             (estFee * 2) / Math.max(1, estNotional) + spec.spreadPts / Math.max(1e-6, q.price);
-          // $1K kasada komisyon tuzağını kesin engelle: gerçek risk >= $11, RT komisyon <= riskin %28'i
           if (
-            estActualRisk < 11 ||
+            estActualRisk < minRiskFloor ||
             estFee * 2 > estActualRisk * 0.28 ||
-            estExpectedTpPct < roundTripCostPct * 1.5
+            estExpectedTpPct < roundTripCostPct * 2.5
           ) {
             return null;
           }
@@ -1225,9 +1270,9 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           const dir: 'AL (LONG)' | 'SAT (SHORT)' = dirWord === 'YÜKSELİŞ' ? 'AL (LONG)' : 'SAT (SHORT)';
           const priority =
             (fromSealedAudit ? 120 : 0) +
-            (horizonHours === 1 ? 25 : 10) +
+            (horizonHours === 1 ? 25 : 15) +
             Math.abs(score) * 2 +
-            (assetAcc - 60);
+            (assetAcc - 58);
 
           return {
             sym,
@@ -1237,22 +1282,22 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             completed12Idx,
             h1Bars,
             pod: mappedPod,
-            podLabel: `Cortex ${hzTag} (%${assetAcc.toFixed(1)} İsabet)`,
+            podLabel: `Cortex ${hzTag} (%${assetAcc.toFixed(1)} Yönlü)`,
             dir,
             horizonHours,
             score,
             assetAcc,
             fromSealedAudit,
             targetAtMs,
-            rationaleTR: `[Cortex ${hzTag} ${fromSealedAudit ? 'MÜHÜR' : 'CANLI'} • %${assetAcc.toFixed(1)} İsabet] Skor ${score >= 0 ? '+' : ''}${score} | ${expLabel || '5-Uzman Mutabakatı'}`,
+            rationaleTR: `[Cortex ${hzTag} ${fromSealedAudit ? 'MÜHÜR' : 'CANLI'} • %${assetAcc.toFixed(1)} Yönlü İsabet] Skor ${score >= 0 ? '+' : ''}${score} | ${expLabel || '5-Uzman Mutabakatı'}`,
             slMult,
             tpMult,
             priority,
           };
         };
 
-        // 1) Öncelik: /canli Sayfasındaki Mühürlü +1S Tahmini
-        if (sealed?.f1 && Math.abs(sealed.f1.zacScore) >= minSealedScore) {
+        // 1) Öncelik: /canli Sayfasındaki Mühürlü +1S Tahmini (|Skor| >= 12)
+        if (sealed?.f1 && Math.abs(sealed.f1.zacScore) >= minSealed1h) {
           const d1 = sealed.f1.expectedDirection;
           const noMajorConflict = d1 === 'YÜKSELİŞ' ? fc4h.compositeScore >= -7 : fc4h.compositeScore <= 7;
           if (noMajorConflict) {
@@ -1266,8 +1311,8 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             );
           }
         }
-        // 2) /canli Sayfasındaki Mühürlü +4S Tahmini (+1S yoksa veya masraf kapısına takıldıysa)
-        if (!chosenCand && sealed?.f4 && Math.abs(sealed.f4.zacScore) >= minSealedScore) {
+        // 2) /canli Sayfasındaki Mühürlü +4S Tahmini (|Skor| >= 10)
+        if (!chosenCand && sealed?.f4 && Math.abs(sealed.f4.zacScore) >= minSealed4h) {
           const d4 = sealed.f4.expectedDirection;
           const noMajorConflict = d4 === 'YÜKSELİŞ' ? fc1h.compositeScore >= -7 : fc1h.compositeScore <= 7;
           if (noMajorConflict) {
@@ -1285,7 +1330,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         if (!chosenCand) {
           const strong1h =
             fc1h.expectedDirection !== 'YATAY' &&
-            Math.abs(fc1h.compositeScore) >= 9 &&
+            Math.abs(fc1h.compositeScore) >= minSealed1h &&
             (fc1h.expectedDirection === 'YÜKSELİŞ'
               ? fc4h.expectedDirection !== 'DÜŞÜŞ' && fc4h.compositeScore >= -5
               : fc4h.expectedDirection !== 'YÜKSELİŞ' && fc4h.compositeScore <= 5);
@@ -1303,7 +1348,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         if (!chosenCand) {
           const strong4h =
             fc4h.expectedDirection !== 'YATAY' &&
-            Math.abs(fc4h.compositeScore) >= 9 &&
+            Math.abs(fc4h.compositeScore) >= minSealed4h &&
             (fc4h.expectedDirection === 'YÜKSELİŞ'
               ? fc1h.expectedDirection !== 'DÜŞÜŞ' && fc1h.compositeScore >= -5
               : fc1h.expectedDirection !== 'YÜKSELİŞ' && fc1h.compositeScore <= 5);
@@ -1423,10 +1468,10 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       const totalCluster = ledger.openPositions.filter(
         (p) => getEffClusterKey(p.symbol, p.direction) === effClusterKey
       ).length;
-      const totalClusterCap = 2;
+      const totalClusterCap = 1;
 
       const lastSymTrade = ledger.closedTrades.find((t) => t.symbol === sym && t.closeTimestamp);
-      const cooldownMs = lastSymTrade && lastSymTrade.realizedPnL_USD < 0 ? 90 * 60000 : 45 * 60000;
+      const cooldownMs = 45 * 60000;
       const recentlyClosed = lastSymTrade?.closeTimestamp ? nowMs - lastSymTrade.closeTimestamp < cooldownMs : false;
 
       if (
@@ -1449,23 +1494,24 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       const tp2 = isLong ? entryPx + tpDist : entryPx - tpDist;
       const tp1 = isLong ? entryPx + tpDist * 0.75 : entryPx - tpDist * 0.75;
 
-      const riskPct = cand.horizonHours === 1 ? 2.2 : 2.5;
+      const riskPct = 3.0;
       const q2u = sym === 'USD/JPY' ? 1 / (entryPx || 155) : 1;
       const freeMargin = Math.max(0, ledger.cashBalanceUSD - ledger.allocatedMarginUSD);
-      const allocUSD = Math.min(curEq * 0.3, freeMargin * 0.9);
+      const allocUSD = Math.min(curEq * 0.32, freeMargin * 0.92);
       const desiredRiskUSD = curEq * (riskPct / 100) * ddScale;
       const unitRiskUSD = slDist * q2u;
       const maxUnitsByMargin = (allocUSD * spec.maxIbkrLeverage) / Math.max(1e-6, entryPx * q2u);
       const units = Math.min(desiredRiskUSD / Math.max(1e-6, unitRiskUSD), maxUnitsByMargin);
       const actualRiskUSD = units * unitRiskUSD;
+      const minRiskFloor = Math.max(6, 10 * ddScale);
 
-      if (allocUSD >= 120 && units > 0 && actualRiskUSD >= 11) {
+      if (allocUSD >= 60 && units > 0 && actualRiskUSD >= minRiskFloor) {
         const notionalUSD = units * entryPx * q2u;
         const entryFee = computeIbkrCommissionUSD(spec, notionalUSD, units);
         const roundTripCostPct =
           (entryFee * 2) / Math.max(1, notionalUSD) + spec.spreadPts / Math.max(1e-6, entryPx);
         const expectedTpPct = tpDist / Math.max(1e-6, entryPx);
-        const passesCostGate = expectedTpPct >= roundTripCostPct * 1.5;
+        const passesCostGate = expectedTpPct >= roundTripCostPct * 2.5;
         if (entryFee * 2 <= actualRiskUSD * 0.28 && passesCostGate) {
           ledger.cashBalanceUSD = +(ledger.cashBalanceUSD - entryFee).toFixed(2);
           const latest12Ts = p12.bars[completed12Idx]?.timestamp || nowMs;
