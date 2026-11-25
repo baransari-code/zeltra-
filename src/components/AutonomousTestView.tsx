@@ -73,6 +73,8 @@ interface MarketRadarItem {
   pUp24h: number;
   status: string;
   reason: string;
+  botScore?: number;
+  botDirection?: string;
 }
 
 interface AutonomousLedger {
@@ -118,6 +120,7 @@ interface AutonomousLedger {
     maxDrawdownPercent: number;
     totalSpreadAndCommissionUSD: number;
     totalFinancingUSD?: number;
+    directionAccuracyPercent?: number;
   };
 }
 
@@ -186,6 +189,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
   const [wfWindow, setWfWindow] = useState<'30d' | '90d' | '1y' | '2y'>('2y');
   const [wfReport, setWfReport] = useState<WalkForwardReport | null>(null);
   const [wfLoading, setWfLoading] = useState<boolean>(false);
+  const [wfError, setWfError] = useState<string | null>(null);
 
   // Alt görünüm sekmesi
   const [deskTab, setDeskTab] = useState<'positions' | 'proof' | 'radar' | 'architecture' | 'logs'>('proof');
@@ -214,6 +218,11 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json: AutonomousLedger = await resp.json();
       setLedger(json);
+      if (action === 'reset') {
+        setClosedPage(1);
+        setRadarPage(1);
+        setLogPage(1);
+      }
       setError(null);
     } catch (e: any) {
       setError(e?.message || 'Otonom fon verisi alınamadı');
@@ -225,13 +234,14 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
 
   const fetchWalkForward = useCallback(async (win: '30d' | '90d' | '1y' | '2y', refresh = false) => {
     setWfLoading(true);
+    setWfError(null);
     try {
       const resp = await fetch(`/api/autonomous-backtest?window=${win}${refresh ? '&refresh=1' : ''}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json: WalkForwardReport = await resp.json();
       setWfReport(json);
-    } catch {
-      // Hata durumunda mevcut raporu koru
+    } catch (e: any) {
+      setWfError(e?.message || 'Walk-Forward raporu hesaplanamadı.');
     } finally {
       setWfLoading(false);
     }
@@ -251,7 +261,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
   const wfSvg = useMemo(() => {
     if (!wfReport || !wfReport.equityCurve || wfReport.equityCurve.length < 2) return null;
     const pts = wfReport.equityCurve;
-    const baseCap = wfReport.initialCapitalUSD || 1_000;
+    const baseCap = wfReport.initialCapitalUSD || 25_000;
     const W = 900;
     const H = 210;
     const PAD = 24;
@@ -269,10 +279,17 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
   if (loading && !ledger) {
     return (
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-10 text-center text-xs font-mono text-zinc-400">
-        ZELTRA v14.0 Kurumsal 3-Pod Otonom Fon Motoru yükleniyor ve 17 küresel enstrüman taranıyor...
+        ZELTRA Cortex v16.0 Kurumsal 3-Pod Otonom Fon Motoru yükleniyor ve 17 küresel enstrüman taranıyor...
       </div>
     );
   }
+
+  const totalClosedPages = Math.max(1, Math.ceil((ledger?.closedTrades.length || 0) / CLOSED_PER_PAGE));
+  const safeClosedPage = Math.min(closedPage, totalClosedPages);
+  const totalRadarPages = Math.max(1, Math.ceil(((ledger?.lastMarketRadar || []).length) / RADAR_PER_PAGE));
+  const safeRadarPage = Math.min(radarPage, totalRadarPages);
+  const totalLogPages = Math.max(1, Math.ceil((ledger?.activityLog.length || 0) / LOGS_PER_PAGE));
+  const safeLogPage = Math.min(logPage, totalLogPages);
 
   return (
     <div className="space-y-4">
@@ -289,9 +306,9 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
             <span className={`w-2 h-2 rounded-full ${ledger?.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
             {ledger?.isRunning ? 'AKTİF' : 'DURAKLATILDI'}
           </span>
-          <span className="text-xs font-bold text-white">3-Pod + Cortex Otonom Fon (USD)</span>
+          <span className="text-xs font-bold text-white">IBKR Pro Reg-T Margin Otonom Hesap ($25,000 USD)</span>
           <span className="text-xs font-mono text-zinc-400">
-            Hesap <strong className="text-emerald-300">USD</strong> • VIX{' '}
+            FINRA PDT <strong className="text-emerald-300">AKTİF ($25K+)</strong> • VIX{' '}
             <strong className="text-zinc-200">{ledger?.vixLevel?.toFixed(1) || '18.0'}</strong> • Hedef:{' '}
             {ledger?.liveReadiness?.targetDateTR || '01.12.2026'}
           </span>
@@ -328,14 +345,14 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
 
           <button
             onClick={() => {
-              if (window.confirm('Test fonu $1,000 USD başlangıç sermayesi ile sıfırlansın mı?')) {
+              if (window.confirm('Gerçek IBKR Pro hesabı $25,000.00 USD başlangıç sermayesi ile sıfırdan başlatılsın mı?')) {
                 fetchLedger('reset');
               }
             }}
             disabled={busyAction !== null}
             className="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1.5"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> $1K Sıfırla
+            <RotateCcw className="w-3.5 h-3.5" /> $25K Sıfırla
           </button>
         </div>
       </div>
@@ -436,9 +453,9 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
             <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
               <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <Cpu className="w-4 h-4 text-cyan-400" />
-                3-Pod Sermaye Mimarisi
+                3-Pod + Cortex +4S/12S IBKR Mimarisi
               </h2>
-              <span className="text-[11px] font-mono text-zinc-500">Maks 8 Slot</span>
+              <span className="text-[11px] font-mono text-zinc-500">Maks 5 Eşzamanlı Slot (Dar FX & +1S Kapalı)</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {(ledger.podStats || []).map((ps) => (
@@ -542,6 +559,18 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
               </div>
             </div>
 
+            {wfError && (
+              <div className="bg-rose-950/40 border border-rose-800 text-rose-300 rounded p-2.5 text-xs flex items-center justify-between">
+                <span>{wfError}</span>
+                <button
+                  onClick={() => fetchWalkForward(wfWindow, true)}
+                  className="px-2 py-0.5 rounded bg-rose-900/50 hover:bg-rose-800 text-rose-100 font-mono"
+                >
+                  Tekrar Hesapla
+                </button>
+              </div>
+            )}
+
             {wfLoading && !wfReport ? (
               <div className="py-12 text-center text-xs font-mono text-zinc-400">
                 17 küresel enstrümanın gerçek 2 yıllık saatlik mum verisi simüle ediliyor...
@@ -631,17 +660,17 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                   <div className="lg:col-span-4 bg-zinc-950 border border-zinc-800 rounded p-3.5 flex flex-col justify-between space-y-3">
                     <div className="space-y-2">
                       <div className="text-xs font-bold text-white border-b border-zinc-800 pb-1.5">
-                        Eski Sistem (v13.2) vs Yeni ZELTRA (v15.2)
+                        Eski Sistem (v13.2) vs Yeni ZELTRA (v16.1 • $25K IBKR)
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                         <div className="bg-rose-950/30 border border-rose-900/50 rounded p-2.5 space-y-1">
                           <div className="text-[10px] text-rose-300 font-bold">ESKİ (v13.2) — 2Y</div>
-                          <div className="text-sm font-black text-rose-400">$97</div>
+                          <div className="text-sm font-black text-rose-400">$2,425</div>
                           <div className="text-[11px] text-rose-300">-90.3% | DD %90.9</div>
                           <div className="text-[10px] text-zinc-400">PF 0.58 • 0/9 Çeyrek</div>
                         </div>
                         <div className="bg-emerald-950/30 border border-emerald-800/50 rounded p-2.5 space-y-1">
-                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v15.5) — {wfWindow.toUpperCase()}</div>
+                          <div className="text-[10px] text-emerald-300 font-bold">YENİ (v16.1) — {wfWindow.toUpperCase()}</div>
                           <div className="text-sm font-black text-emerald-400">{fmtUSD(wfReport.endingEquityUSD)}</div>
                           <div className="text-[11px] text-emerald-300">
                             {wfReport.netProfitPercent >= 0 ? '+' : ''}{wfReport.netProfitPercent}% | DD %{wfReport.maxDrawdownPercent}
@@ -819,21 +848,17 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                 <div className="flex items-center gap-1.5 font-mono text-xs">
                   <button
                     onClick={() => setClosedPage((p) => Math.max(1, p - 1))}
-                    disabled={closedPage <= 1}
+                    disabled={safeClosedPage <= 1}
                     className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
                   >
                     ← Önceki
                   </button>
                   <span className="text-zinc-400">
-                    Sayfa {closedPage} / {Math.ceil(ledger.closedTrades.length / CLOSED_PER_PAGE)}
+                    Sayfa {safeClosedPage} / {totalClosedPages}
                   </span>
                   <button
-                    onClick={() =>
-                      setClosedPage((p) =>
-                        Math.min(Math.ceil(ledger.closedTrades.length / CLOSED_PER_PAGE), p + 1)
-                      )
-                    }
-                    disabled={closedPage >= Math.ceil(ledger.closedTrades.length / CLOSED_PER_PAGE)}
+                    onClick={() => setClosedPage((p) => Math.min(totalClosedPages, p + 1))}
+                    disabled={safeClosedPage >= totalClosedPages}
                     className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
                   >
                     Sonraki →
@@ -859,7 +884,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
                     {ledger.closedTrades
-                      .slice((closedPage - 1) * CLOSED_PER_PAGE, closedPage * CLOSED_PER_PAGE)
+                      .slice((safeClosedPage - 1) * CLOSED_PER_PAGE, safeClosedPage * CLOSED_PER_PAGE)
                       .map((t) => (
                         <tr key={t.id}>
                           <td className="py-2 pr-2">
@@ -903,26 +928,17 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
             <div className="flex items-center gap-1.5 font-mono text-xs">
               <button
                 onClick={() => setRadarPage((p) => Math.max(1, p - 1))}
-                disabled={radarPage <= 1}
+                disabled={safeRadarPage <= 1}
                 className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
               >
                 ← Önceki
               </button>
               <span className="text-zinc-400">
-                Sayfa {radarPage} / {Math.max(1, Math.ceil((ledger.lastMarketRadar || []).length / RADAR_PER_PAGE))}
+                Sayfa {safeRadarPage} / {totalRadarPages}
               </span>
               <button
-                onClick={() =>
-                  setRadarPage((p) =>
-                    Math.min(
-                      Math.max(1, Math.ceil((ledger.lastMarketRadar || []).length / RADAR_PER_PAGE)),
-                      p + 1
-                    )
-                  )
-                }
-                disabled={
-                  radarPage >= Math.max(1, Math.ceil((ledger.lastMarketRadar || []).length / RADAR_PER_PAGE))
-                }
+                onClick={() => setRadarPage((p) => Math.min(totalRadarPages, p + 1))}
+                disabled={safeRadarPage >= totalRadarPages}
                 className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
               >
                 Sonraki →
@@ -935,7 +951,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                 <tr className="border-b border-zinc-800 text-zinc-500 text-[10px] text-left">
                   <th className="py-2 pr-2">Varlık</th>
                   <th className="py-2 px-2 text-right">Fiyat (24S)</th>
-                  <th className="py-2 px-2 text-right">ZAC v14</th>
+                  <th className="py-2 px-2 text-right">ZAC / Cortex</th>
                   <th className="py-2 px-2 text-right">XSMOM</th>
                   <th className="py-2 px-2 text-right">EWMAC</th>
                   <th className="py-2 px-2 text-right">IBS12 / CR2</th>
@@ -946,7 +962,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
                 {(ledger.lastMarketRadar || [])
-                  .slice((radarPage - 1) * RADAR_PER_PAGE, radarPage * RADAR_PER_PAGE)
+                  .slice((safeRadarPage - 1) * RADAR_PER_PAGE, safeRadarPage * RADAR_PER_PAGE)
                   .map((r) => (
                   <tr key={r.symbol} className="hover:bg-zinc-800/40 transition-colors">
                     <td className="py-2.5 pr-2">
@@ -977,6 +993,11 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
                       >
                         {r.zacScore >= 0 ? `+${r.zacScore}` : r.zacScore}
                       </span>
+                      {typeof r.botScore === 'number' && (
+                        <div className="text-[9px] text-cyan-400 mt-0.5">
+                          Cortex {r.botScore >= 0 ? `+${r.botScore}` : r.botScore}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2.5 px-2 text-right text-zinc-300">#{r.xsmomRank || '-'}</td>
                     <td className={`py-2.5 px-2 text-right ${r.ewmac >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -1031,21 +1052,17 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
               <div className="flex items-center gap-1.5 font-mono text-xs">
                 <button
                   onClick={() => setLogPage((p) => Math.max(1, p - 1))}
-                  disabled={logPage <= 1}
+                  disabled={safeLogPage <= 1}
                   className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
                 >
                   ← Önceki
                 </button>
                 <span className="text-zinc-400">
-                  Sayfa {logPage} / {Math.ceil(ledger.activityLog.length / LOGS_PER_PAGE)}
+                  Sayfa {safeLogPage} / {totalLogPages}
                 </span>
                 <button
-                  onClick={() =>
-                    setLogPage((p) =>
-                      Math.min(Math.ceil(ledger.activityLog.length / LOGS_PER_PAGE), p + 1)
-                    )
-                  }
-                  disabled={logPage >= Math.ceil(ledger.activityLog.length / LOGS_PER_PAGE)}
+                  onClick={() => setLogPage((p) => Math.min(totalLogPages, p + 1))}
+                  disabled={safeLogPage >= totalLogPages}
                   className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-zinc-300 disabled:opacity-40"
                 >
                   Sonraki →
@@ -1055,7 +1072,7 @@ export const AutonomousTestView: React.FC<AutonomousTestViewProps> = ({ onInspec
           </div>
           <div className="space-y-1.5 font-mono text-xs">
             {ledger.activityLog
-              .slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE)
+              .slice((safeLogPage - 1) * LOGS_PER_PAGE, safeLogPage * LOGS_PER_PAGE)
               .map((log) => (
               <div
                 key={log.id}

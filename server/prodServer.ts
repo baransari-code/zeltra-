@@ -69,12 +69,17 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// Mobil / Bulut Yük Dengeleyici (Render / Cloudflare) 502 Kopmalarını Önlemek İçin Keep-Alive Zaman Aşımları
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 66_000;
+
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 [ZELTRA ${STRATEGY_VERSION}] Kurumsal Fon & ZAC v14 İndikatör Sunucusu aktif -> http://0.0.0.0:${PORT}`);
+  console.log(`\n🚀 [ZELTRA ${STRATEGY_VERSION}] 7/24 $25,000 IBKR Pro & Cortex v16.1 Sunucusu aktif -> http://0.0.0.0:${PORT}`);
+  // Sıralı Orkestrasyon: Önce /canli mühürlerini sonuçlandır & kilitle, hemen ardından Otonom Fonu taze sinyallerle çalıştır!
   startAutonomousScheduler();
-  setTimeout(() => {
-    runLiveAuditTick(false).catch(() => {});
-  }, 3000);
+  setTimeout(async () => {
+    await runLiveAuditTick(false).catch(() => {});
+  }, 1000);
   setInterval(() => {
     runLiveAuditTick(false).catch(() => {});
   }, 60 * 1000);
@@ -82,11 +87,11 @@ server.listen(PORT, '0.0.0.0', () => {
     executeManualTradingTick(false).catch(() => {});
   }, 45 * 1000);
 
-  // Render harici URL mevcutsa 9 dakikada bir yedek self-heartbeat (GitHub Actions gecikmelerine karşı çift kalkan)
+  // Render harici URL mevcutsa 8 dakikada bir yedek self-heartbeat (GitHub Actions gecikmelerine karşı çift kalkan)
   const externalUrl = process.env.RENDER_EXTERNAL_URL;
   if (externalUrl && externalUrl.startsWith('http')) {
     setInterval(() => {
       fetch(`${externalUrl.replace(/\/+$/, '')}/api/health`).catch(() => {});
-    }, 9 * 60 * 1000);
+    }, 8 * 60 * 1000);
   }
 });

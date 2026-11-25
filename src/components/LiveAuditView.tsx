@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
+  AlertTriangle,
   ArrowUpRight,
   Brain,
   CheckCircle2,
@@ -50,6 +51,7 @@ interface LockedForecast {
   predictedPrice: number;
   predictedMovePct: number;
   expectedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+  confluenceTier?: 'SNIPER' | 'HIGH' | 'STANDARD' | 'CHOP';
   lower90: number;
   upper90: number;
   zacScore: number;
@@ -162,11 +164,11 @@ interface LiveAuditViewProps {
 }
 
 const EXPERT_SHORT_NAMES: Record<string, string> = {
-  E1_MACRO_TREND: 'U1: Makro Trend (EWMAC)',
-  E2_MICRO_DISPLACEMENT: 'U2: Mikro İvme & FVG',
-  E3_MEAN_REV_SPRING: 'U3: Kısa Vade Yay (RSI2/IBS)',
-  E4_CANDLE_VSA_SWEEP: 'U4: Mum, VSA & Likidite Süpürmesi',
-  E5_XSMOM_REGIME: 'U5: Kesitsel Liderlik & Rejim',
+  E1_MACRO_TREND: 'U1: Makro Trend (EWMAC & SMA200)',
+  E2_MICRO_DISPLACEMENT: 'U2: 4S/12S İvme & FVG/OB',
+  E3_MEAN_REV_SPRING: 'U3: Çok-Ölçekli Trend İçi Yay',
+  E4_CANDLE_VSA_SWEEP: 'U4: Kapanmış Mum, VSA & Sweep',
+  E5_XSMOM_REGIME: 'U5: Kesitsel Liderlik & Haber',
 };
 
 const fmtUSD = (n: number, decimals = 2) => {
@@ -199,6 +201,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   const [data, setData] = useState<LiveAuditPayload | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const [activeSection, setActiveSection] = useState<'forecasts' | 'ai' | 'portfolio'>('forecasts');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'SETTLED'>('ALL');
@@ -228,6 +231,9 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json: LiveAuditPayload = await resp.json();
       setData(json);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message || 'Canlı denetim verisi alınamadı.');
     } finally {
       setLoading(false);
       setSyncing(false);
@@ -265,7 +271,11 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
     [filteredForecasts, safeForecastPage]
   );
 
-  const lessons = data?.aiBrain?.recentLessons || [];
+  const allLessons = data?.aiBrain?.recentLessons || [];
+  const lessons = useMemo(() => {
+    const byH = allLessons.filter((l) => l.horizonHours === Number(brainHorizonTab));
+    return byH.length > 0 ? byH : allLessons;
+  }, [allLessons, brainHorizonTab]);
   const totalLessonPages = Math.max(1, Math.ceil(lessons.length / LESSONS_PER_PAGE));
   const safeLessonPage = Math.min(lessonPage, totalLessonPages);
   const pagedLessons = lessons.slice(
@@ -284,7 +294,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   const equitySvg = useMemo(() => {
     const hist = data?.portfolio?.equityHistory || [];
     if (hist.length < 2) return null;
-    const baseCap = data?.portfolio?.initialCapitalUSD || 1_000;
+    const baseCap = data?.portfolio?.initialCapitalUSD || 25_000;
     const W = 860;
     const H = 150;
     const PAD = 18;
@@ -302,7 +312,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
   if (loading && !data) {
     return (
       <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-10 text-center text-xs font-mono text-zinc-400">
-        /canli — ZELTRA Cortex v15.0 Öz-Öğrenen Yapay Zeka ve Canlı Doğrulama Defteri yükleniyor...
+        /canli — ZELTRA Cortex v16.0 Öz-Öğrenen Yapay Zeka ve Canlı Doğrulama Defteri yükleniyor...
       </div>
     );
   }
@@ -322,7 +332,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
             Canlı Takip
           </span>
           <span className="text-xs font-mono text-zinc-400">
-            Cortex v15.2 ({brain?.totalPostMortems || 0} analiz)
+            Cortex v16.1 • $25K IBKR Pro ({brain?.totalPostMortems || 0} analiz)
           </span>
           {p && (
             <span className="text-xs font-mono text-zinc-500 hidden sm:inline">
@@ -342,6 +352,21 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         </button>
       </div>
 
+      {error && (
+        <div className="bg-rose-950/40 border border-rose-800 text-rose-300 rounded p-3 text-xs flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            {error}
+          </span>
+          <button
+            onClick={() => loadAudit(true)}
+            className="px-2.5 py-1 rounded bg-rose-900/50 hover:bg-rose-800 text-rose-100 font-mono"
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      )}
+
       {/* SAYFA SEKMELERİ (TEK ODAKLI GÖRÜNÜM) */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800/80 pb-2 text-xs font-semibold">
         {[
@@ -357,7 +382,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
           },
           {
             id: 'portfolio',
-            label: `Portföy (${p ? fmtUSD(p.totalEquityUSD) : '$1,000.00'})`,
+            label: `IBKR Portföy (${p ? fmtUSD(p.totalEquityUSD) : '$25,000.00'})`,
             sub: p ? `${p.openPositionsCount} Açık` : '',
           },
         ].map((tab) => {
@@ -620,20 +645,23 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
         </div>
       )}
 
-      {/* 2. CORTEX v15.2 MODEL AĞIRLIKLARI & ÖZ-ELEŞTİRİ */}
+      {/* 2. CORTEX v16.0 MODEL AĞIRLIKLARI & ÖZ-ELEŞTİRİ */}
       {activeSection === 'ai' && brain && activeBrainProf && (
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-2.5">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
               <Brain className="w-4 h-4 text-cyan-400" />
-              Cortex v15.2 Model Ağırlıkları
+              Cortex v16.0 Model Ağırlıkları
             </h2>
 
             <div className="flex items-center gap-1 font-mono text-xs">
               {(['1', '4', '24'] as const).map((hk) => (
                 <button
                   key={hk}
-                  onClick={() => setBrainHorizonTab(hk)}
+                  onClick={() => {
+                    setBrainHorizonTab(hk);
+                    setLessonPage(1);
+                  }}
                   className={`px-3 py-1 rounded border transition-colors ${
                     brainHorizonTab === hk
                       ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold'
@@ -783,7 +811,13 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                       <p className="text-[11px] text-cyan-300/90 leading-relaxed font-medium">
                         ↳ {pm.nextTimeActionTR}
                       </p>
-                      <div className="text-[10px] font-mono text-zinc-500 pt-1 border-t border-zinc-800/70 truncate">
+                      <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono text-zinc-400 pt-1 border-t border-zinc-800/70">
+                        <span className="text-emerald-400/90 truncate">✓ {pm.winningExpertLabelTR}</span>
+                        {pm.misleadingExpertLabelTR && (
+                          <span className="text-rose-400/90 truncate">✗ {pm.misleadingExpertLabelTR}</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] font-mono text-zinc-500 truncate">
                         {pm.weightDeltaSummaryTR}
                       </div>
                     </div>
@@ -821,7 +855,11 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
               <div className="text-base font-bold text-emerald-400 mt-0.5">
                 {fs.settledCount > 0 ? `%${fs.directionHitRatePct}` : 'Bekleniyor'}
               </div>
-              <div className="text-[10px] text-zinc-500">Tüm sonuçlananlar</div>
+              <div className="text-[10px] text-zinc-500">
+                {typeof fs.directionalWinRatePct === 'number' && fs.directionalSettledCount
+                  ? `Saf Yönlü: %${fs.directionalWinRatePct} (n=${fs.directionalSettledCount})`
+                  : 'Tüm sonuçlananlar'}
+              </div>
             </div>
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5">
               <div className="text-[10px] text-zinc-500">Yüksek İnanç (|Cortex|≥12)</div>
@@ -923,7 +961,7 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                   <th className="py-2 pr-2">Varlık & Ufuk</th>
                   <th className="py-2 px-2">Kilit → Hedef Zamanı</th>
                   <th className="py-2 px-2 text-right">Kilit Fiyatı (T0)</th>
-                  <th className="py-2 px-2 text-right">Cortex v15 Tahmini</th>
+                  <th className="py-2 px-2 text-right">Cortex v16 Tahmini</th>
                   <th className="py-2 px-2 text-right">Canlı / Gerçekleşen</th>
                   <th className="py-2 pl-2 text-right">Sonuç & AI Teşhisi</th>
                 </tr>
@@ -960,13 +998,23 @@ export const LiveAuditView: React.FC<LiveAuditViewProps> = ({ onInspectSymbol })
                             <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-cyan-300 text-[10px] font-bold">
                               +{f.horizonHours}S
                             </span>
+                            {f.confluenceTier && f.confluenceTier !== 'CHOP' && (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[9px] font-bold">
+                                {f.confluenceTier}
+                              </span>
+                            )}
                           </div>
                           <div className="text-[10px] text-zinc-400">
                             Skor {f.zacScore >= 0 ? `+${f.zacScore}` : f.zacScore} • %{f.pUp} ↑
                           </div>
                           {f.patternLabelAtEntryTR && (
-                            <div className="text-[10px] text-cyan-400/90 font-sans truncate max-w-[200px]">
+                            <div className="text-[10px] text-cyan-400/90 font-sans truncate max-w-[210px]">
                               {f.patternLabelAtEntryTR}
+                            </div>
+                          )}
+                          {f.dominantExpertLabelTR && (
+                            <div className="text-[9px] text-zinc-500 font-sans truncate max-w-[210px]">
+                              {f.dominantExpertLabelTR}
                             </div>
                           )}
                         </td>

@@ -15,10 +15,10 @@ const SYMBOLS = [
 
 export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
   symbol,
-  liveUsdTry: _liveUsdTry,
+  liveUsdTry,
   onSelectSymbol,
 }) => {
-  const [capitalUSD, setCapitalUSD] = useState<number>(1000);
+  const [capitalUSD, setCapitalUSD] = useState<number>(25000);
   const [riskPercent, setRiskPercent] = useState<number>(1.5);
   const [entry, setEntry] = useState<number>(0);
   const [stopLoss, setStopLoss] = useState<number>(0);
@@ -35,11 +35,20 @@ export const RiskCalculator: React.FC<RiskCalculatorProps> = ({
       const json = await res.json();
       const setup = json?.zacSnapshot?.activeSetup;
       if (setup) {
-        setDigits(json.digits ?? 2);
+        const d = json.digits ?? 2;
+        const isShort = setup.direction === 'SAT (SHORT)';
+        const fallbackDist = Math.abs(setup.entryPrice - setup.stopLoss) * 2;
+        const resolvedTp =
+          setup.takeProfit > 0
+            ? setup.takeProfit
+            : +(setup.entryPrice + (isShort ? -fallbackDist : fallbackDist)).toFixed(d);
+        setDigits(d);
         setEntry(setup.entryPrice);
         setStopLoss(setup.stopLoss);
-        setTakeProfit(setup.takeProfit > 0 ? setup.takeProfit : +(setup.entryPrice + Math.abs(setup.entryPrice - setup.stopLoss) * 2).toFixed(json.digits ?? 2));
-        setPodNote(`${setup.podLabelTR} • ZAC Skor: ${json.zacSnapshot.zacScore}`);
+        setTakeProfit(resolvedTp);
+        setPodNote(
+          `${setup.podLabelTR} (${setup.direction}) • ZAC: ${json.zacSnapshot.zacScore} • Kur: ${liveUsdTry.toFixed(2)} ₺`
+        );
       }
     } finally {
       setLoading(false);

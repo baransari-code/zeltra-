@@ -45,8 +45,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="h-7 w-auto object-contain select-none"
             />
             <span>ZELTRA</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hidden sm:inline">
-              v15.2
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-emerald-400 hidden sm:inline">
+              v16.1 • $25K IBKR
             </span>
           </button>
 

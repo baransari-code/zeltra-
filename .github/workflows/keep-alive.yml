@@ -2,7 +2,7 @@ name: ZELTRA 7/24 Render Keep-Alive & Canlı Tarama
 
 on:
   schedule:
-    # Her 5 dakikada bir çalışır (GitHub gecikmesi olsa bile Render'ın 15 dk uyku sınırına takılmaz)
+    # Her 5 dakikada bir çalışır (Render 15 dk uyku sınırını kesin olarak önler ve 7/24 canlı taramayı tetikler)
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
@@ -21,15 +21,16 @@ jobs:
           RESP=$(curl -fsS --max-time 60 --retry 2 --retry-delay 5 "https://zeltra-ru7m.onrender.com/api/health")
           echo "HEALTH: $RESP"
 
-      - name: Sync /api/live-audit (/canli Tahmin Kilit & Sonuçlandırma)
+      - name: Sync /api/live-audit (/canli Tahmin Kilit & $25K IBKR Durumu)
         run: |
           echo "Syncing https://zeltra-ru7m.onrender.com/api/live-audit ..."
-          AUDIT=$(curl -fsS --max-time 45 "https://zeltra-ru7m.onrender.com/api/live-audit")
+          AUDIT=$(curl -fsS --max-time 55 "https://zeltra-ru7m.onrender.com/api/live-audit")
           echo "$AUDIT" | node -e "
             const d = JSON.parse(require('fs').readFileSync(0, 'utf8'));
             console.log('LIVE AUDIT OK:', {
-              equity: d.portfolio?.totalEquityTRY,
-              netTRY: d.portfolio?.netProfitTRY,
+              version: d.strategyVersion,
+              equityUSD: d.portfolio?.totalEquityUSD,
+              netUSD: d.portfolio?.netProfitUSD,
               open: d.portfolio?.openPositionsCount,
               locked: d.forecastSummary?.totalLocked,
               settled: d.forecastSummary?.settledCount,

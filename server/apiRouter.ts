@@ -16,10 +16,24 @@ import {
   fetchRealHourlyHistory,
   type HourlyBar,
 } from './marketService';
-import { computeProChartSeries, computeZacChartOverlay } from './zeltraAlphaIndicator';
+import {
+  build12hIndicatorPack,
+  build4hIndicatorPack,
+  buildDailyIndicatorPack,
+  computeProChartSeries,
+  computeZacChartOverlay,
+  evaluateZacAt,
+  extract4hContextAt,
+  ZAC_CRYPTO_ASSETS,
+  ZAC_MR12_ASSETS,
+} from './zeltraAlphaIndicator';
 import {
   analyzeCandlestickAndMicrostructure,
+  buildExpertVector,
+  computeAdaptiveHorizonForecast,
+  findLastClosedBarIndex,
   loadOrInitAiBrain,
+  scanRecentChartMicrostructure,
 } from './zeltraSelfLearningAi';
 import {
   controlAutonomousBot,
@@ -87,12 +101,14 @@ export async function handleZeltraApiRequest(
     const snap = getAutonomousLedgerSnapshot();
     if (snap.isRunning && nowMs - lastHealthBgKickTs >= 45_000) {
       lastHealthBgKickTs = nowMs;
-      runAutonomousBotTick(false).catch(() => {});
-      runLiveAuditTick(false).catch(() => {});
+      (async () => {
+        await runLiveAuditTick(false).catch(() => {});
+        await runAutonomousBotTick(false).catch(() => {});
+      })();
     }
     sendJson(res, 200, {
       status: 'OK',
-      service: 'ZELTRA-QUANT-V14',
+      service: 'ZELTRA-CORTEX-V16.1-IBKR-25K',
       strategyVersion: STRATEGY_VERSION,
       liveGoTargetIso: LIVE_GO_TARGET_ISO,
       isRunning: snap.isRunning,
@@ -139,13 +155,23 @@ export async function handleZeltraApiRequest(
     return true;
   }
 
-  // 4. FLAGSHIP PRO İNDİKATÖR & TAHMİN TERMİNALİ: ZELTRA ALPHA COMPOSITE (ZAC v14)
-  if (pathname === '/api/pro-chart') {
+  // 4. FLAGSHIP PRO İNDİKATÖR & CORTEX v16.0 SMC TERMİNALİ (/api/pro-chart & /api/zac-overlay)
+  if (pathname === '/api/pro-chart' || pathname === '/api/zac-overlay') {
     try {
       const symbol = urlObj.searchParams.get('symbol') || 'XAU/USD';
       const tfRaw = (urlObj.searchParams.get('tf') || '1h').toLowerCase();
       const tf: '15m' | '1h' | '4h' | '12h' | '1d' =
         tfRaw === '15m' || tfRaw === '4h' || tfRaw === '12h' || tfRaw === '1d' ? tfRaw : '1h';
+      const tfDurationMs =
+        tf === '15m'
+          ? 900_000
+          : tf === '4h'
+            ? 4 * 3600_000
+            : tf === '12h'
+              ? 12 * 3600_000
+              : tf === '1d'
+                ? 86400_000
+                : 3600_000;
 
       const spec = getSpec(symbol);
       const [h1Full, dailyClean, bars15m, newsList, macro, cryptoQuotes] = await Promise.all([
@@ -157,9 +183,8 @@ export async function handleZeltraApiRequest(
         fetchLiveCryptoQuotes().catch(() => ({} as Record<string, { mid: number; bid: number; ask: number }>)),
       ]);
 
-      // 1H boşsa 30g saatlik fallback
       const h1Bars = h1Full.length >= 30 ? h1Full : await fetchRealHourlyHistory(symbol).catch(() => [] as HourlyBar[]);
-      const dailyBars = dailyClean.length >= 30 ? dailyClean : aggregateBarsByHours(h1Bars, 24);
+      const dailyBars = dailyClean.length >= 30 ? dailyClean : aggregateBarsByHours(h1Bars, 24, symbol);
       const newsContext = extractNewsSentimentForAsset(symbol, newsList);
       const vixLevel = macro?.vixPrice && macro.vixPrice > 5 ? macro.vixPrice : 18.0;
 
@@ -177,24 +202,41 @@ export async function handleZeltraApiRequest(
       const change24h = +(livePrice - prev24).toFixed(spec.digits);
       const changePercent24h = prev24 > 0 ? +((change24h / prev24) * 100).toFixed(2) : 0;
 
-      // Seçilen zaman dilimi için mum kaynağı
-      let sourceBars: HourlyBar[];
+      let sourceBarsRaw: HourlyBar[];
       let maxBars = 110;
       if (tf === '15m' && bars15m.length >= 30) {
-        sourceBars = bars15m;
+        sourceBarsRaw = bars15m;
         maxBars = 110;
       } else if (tf === '4h') {
-        sourceBars = aggregateBarsByHours(h1Bars, 4);
+        sourceBarsRaw = aggregateBarsByHours(h1Bars, 4, symbol);
         maxBars = 110;
       } else if (tf === '12h') {
-        sourceBars = aggregateBarsByHours(h1Bars, 12);
+        sourceBarsRaw = aggregateBarsByHours(h1Bars, 12, symbol);
         maxBars = 100;
       } else if (tf === '1d') {
-        sourceBars = dailyBars;
+        sourceBarsRaw = dailyBars;
         maxBars = 130;
       } else {
-        sourceBars = h1Bars.length >= 30 ? h1Bars : dailyBars;
+        sourceBarsRaw = h1Bars.length >= 30 ? h1Bars : dailyBars;
         maxBars = 120;
+      }
+
+      const nowMs = Date.now();
+      // Yalnızca halen açık/oluşmakta olan son mumu anlık canlı fiyatla hizala (kapanmış geçmiş mumu bozma!)
+      const sourceBars = sourceBarsRaw.slice();
+      if (sourceBars.length > 0 && livePrice > 0) {
+        const lastIdx = sourceBars.length - 1;
+        const lb = sourceBars[lastIdx];
+        const lbEnd = lb.endTimestamp || lb.timestamp + tfDurationMs;
+        if (lbEnd > nowMs) {
+          const o = lb.open ?? lb.close;
+          sourceBars[lastIdx] = {
+            ...lb,
+            close: livePrice,
+            high: Math.max(lb.high ?? livePrice, o, livePrice),
+            low: Math.min(lb.low ?? livePrice, o, livePrice),
+          };
+        }
       }
 
       const displaySlice = sourceBars.slice(-maxBars);
@@ -216,7 +258,6 @@ export async function handleZeltraApiRequest(
         CORE_SYMBOLS.length
       );
 
-      // Her mum objesine ZAC v14 serilerini birebir bağla
       const enrichedCandles = baseCandles.map((c, idx) => ({
         ...c,
         fairValue: zacOverlay.fairValueSeries[idx] ?? c.ema50,
@@ -227,12 +268,98 @@ export async function handleZeltraApiRequest(
         regime: zacOverlay.regimeSeries[idx] ?? 'NEUTRAL_CHOP',
       }));
 
-      // +24S ve +72S Konisi için nokta dizisi (grafik sağ uzantısı)
+      // Aktif zaman dilimi (tf) için KAPANMIŞ MUM + Canlı Uzanım Mikroyapısı
+      const microstructure = analyzeCandlestickAndMicrostructure(sourceBarsRaw, spec.digits, undefined, {
+        nowMs,
+        symbol,
+        barDurationMs: tfDurationMs,
+        livePrice,
+      });
+      const smcOverlay = scanRecentChartMicrostructure(displaySlice, spec.digits);
+
+      // Otonom Fon ve /canli ile %100 Birebir Senkron Cortex v16.0 5-Uzman & +1S/+4S/+24S Hesabı!
+      const dPack = buildDailyIndicatorPack(dailyBars);
+      const p12 = build12hIndicatorPack(h1Bars, symbol);
+      const p4 = build4hIndicatorPack(h1Bars, symbol);
+      const completedD = findLastClosedBarIndex(dPack.bars, nowMs, 86400_000, symbol);
+      const completed12 = findLastClosedBarIndex(p12.bars, nowMs, 12 * 3600_000, symbol);
+      const h4Ctx = extract4hContextAt(p4, nowMs);
+      const snap1h = evaluateZacAt(
+        symbol,
+        spec.digits,
+        livePrice,
+        dPack,
+        completedD,
+        p12,
+        completed12,
+        vixLevel,
+        radarRow?.xsmomRank || 0,
+        CORE_SYMBOLS.length
+      );
+      const micro1h =
+        h1Bars.length >= 25
+          ? analyzeCandlestickAndMicrostructure(h1Bars, spec.digits, undefined, {
+              nowMs,
+              symbol,
+              barDurationMs: 3600_000,
+              livePrice,
+            })
+          : microstructure;
+      const experts = buildExpertVector(
+        snap1h.ewmac,
+        snap1h.aboveSma200,
+        snap1h.ibs12h,
+        snap1h.cumRsi2_12h,
+        snap1h.mom12hAtr,
+        snap1h.xsmomRank,
+        CORE_SYMBOLS.length,
+        snap1h.volRatio,
+        micro1h,
+        ZAC_CRYPTO_ASSETS.has(symbol),
+        ZAC_MR12_ASSETS.has(symbol),
+        {
+          ...h4Ctx,
+          newsContext,
+          dxyChg15mPct: macro?.dxyChg15mPct,
+          vixChg5mPct: macro?.vixChg5mPct,
+        }
+      );
+      const hasPod = snap1h.activeSetup.pod !== 'NONE' && snap1h.activeSetup.direction !== 'BEKLE';
+      const cortex1h = computeAdaptiveHorizonForecast(1, livePrice, snap1h.atr12h14, spec.digits, experts, micro1h, hasPod, symbol, newsContext);
+      const cortex4h = computeAdaptiveHorizonForecast(4, livePrice, snap1h.atr12h14, spec.digits, experts, micro1h, hasPod, symbol, newsContext);
+      const cortex24h = computeAdaptiveHorizonForecast(24, livePrice, snap1h.atr12h14, spec.digits, experts, micro1h, hasPod, symbol, newsContext);
+
+      // Eğer klasik 3-Pod BEKLE'deyse fakat radar/Cortex aktif bir sinyal üretiyorsa terminali de botla senkronla!
+      if (
+        zacOverlay.snapshot.activeSetup.pod === 'NONE' &&
+        radarRow &&
+        radarRow.direction !== 'BEKLE' &&
+        radarRow.activePod !== 'NONE'
+      ) {
+        const isL = radarRow.direction === 'AL (LONG)';
+        const atr1hEst = Math.max(livePrice * 0.0015, snap1h.atr12h14 / Math.sqrt(12));
+        const slPx = +(isL ? livePrice - atr1hEst * 1.65 : livePrice + atr1hEst * 1.65).toFixed(spec.digits);
+        const tpPx = +(isL ? livePrice + atr1hEst * 2.45 : livePrice - atr1hEst * 2.45).toFixed(spec.digits);
+        zacOverlay.snapshot.activeSetup = {
+          pod: radarRow.activePod,
+          podLabelTR: `Cortex v16.0 Senkron (${radarRow.status})`,
+          direction: radarRow.direction,
+          entryPrice: +livePrice.toFixed(spec.digits),
+          stopLoss: slPx,
+          takeProfit: tpPx,
+          trailingAtrMult: 1.65,
+          riskReward: 1.48,
+          maxHoldHours: 4,
+          convictionPercent: radarRow.conviction || Math.min(92, 58 + Math.abs(cortex1h.compositeScore)),
+          rationaleTR: radarRow.reason || cortex1h.aiReasoningTR,
+        };
+      }
+
       const h4 = zacOverlay.snapshot.horizons.find((h) => h.horizonHours === 4)!;
       const h12 = zacOverlay.snapshot.horizons.find((h) => h.horizonHours === 12)!;
       const h24 = zacOverlay.snapshot.horizons.find((h) => h.horizonHours === 24)!;
       const h72 = zacOverlay.snapshot.horizons.find((h) => h.horizonHours === 72)!;
-      const microstructure = analyzeCandlestickAndMicrostructure(sourceBars, spec.digits);
+      const aiBrain = loadOrInitAiBrain();
 
       sendJson(res, 200, {
         symbol,
@@ -247,7 +374,17 @@ export async function handleZeltraApiRequest(
         markers: zacOverlay.markers,
         zacSnapshot: zacOverlay.snapshot,
         microstructure,
-        aiBrain: loadOrInitAiBrain(),
+        smcOverlay,
+        cortex: {
+          experts,
+          horizons: {
+            h1: cortex1h,
+            h4: cortex4h,
+            h24: cortex24h,
+          },
+          assetProfile: aiBrain.assetProfiles?.[symbol] || null,
+        },
+        aiBrain,
         oosSelfAudit: zacOverlay.oosSelfAudit,
         forecastCones: [h4, h12, h24, h72],
         newsContext,
@@ -267,7 +404,7 @@ export async function handleZeltraApiRequest(
         generatedAt: new Date().toISOString(),
       });
     } catch (err: any) {
-      sendJson(res, 500, { error: err?.message || 'ZAC v14 grafik verisi üretilemedi' });
+      sendJson(res, 500, { error: err?.message || 'ZAC v16 grafik verisi üretilemedi' });
     }
     return true;
   }

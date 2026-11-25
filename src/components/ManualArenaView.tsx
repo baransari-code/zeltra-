@@ -203,8 +203,8 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   const [actionMessage, setActionMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const [selectedSymbol, setSelectedSymbol] = useState<string>('BTC/USD');
-  const [marginInput, setMarginInput] = useState<string>('100');
-  const [leverageInput, setLeverageInput] = useState<number>(3);
+  const [marginInput, setMarginInput] = useState<string>('1000');
+  const [leverageInput, setLeverageInput] = useState<number>(2);
   const [stopLossInput, setStopLossInput] = useState<string>('');
   const [takeProfitInput, setTakeProfitInput] = useState<string>('');
   const [noteInput, setNoteInput] = useState<string>('');
@@ -368,7 +368,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   };
 
   const handleResetArena = async () => {
-    const ok = await postAction({ action: 'reset' }, 'Manuel Arena hesabın $1,000.00 USD olarak sıfırlandı.');
+    const ok = await postAction({ action: 'reset' }, 'Manuel IBKR Pro hesabın $25,000.00 USD olarak sıfırlandı.');
     if (ok) {
       setConfirmReset(false);
     }
@@ -384,7 +384,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
     const maxTs = Math.max(...allPts.map((p) => p.timestamp));
     const spanTs = Math.max(1, maxTs - minTs);
 
-    const baseCap = userLedger?.initialCapitalUSD ?? 1000;
+    const baseCap = userLedger?.initialCapitalUSD ?? 25000;
     const equities = [baseCap, ...allPts.map((p) => p.equityUSD)];
     const minEq = Math.min(...equities);
     const maxEq = Math.max(...equities);
@@ -401,8 +401,9 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
     const toPath = (pts: { timestamp: number; equityUSD: number }[]) => {
       if (pts.length === 0) return '';
       if (pts.length === 1) {
+        const x = mapX(pts[0].timestamp);
         const y = mapY(pts[0].equityUSD);
-        return `M 48 ${y.toFixed(1)} L ${(W - 20).toFixed(1)} ${y.toFixed(1)}`;
+        return `M ${Math.max(48, x - 6).toFixed(1)} ${y.toFixed(1)} L ${Math.min(W - 20, x + 6).toFixed(1)} ${y.toFixed(1)}`;
       }
       return pts
         .map((p, i) => `${i === 0 ? 'M' : 'L'} ${mapX(p.timestamp).toFixed(1)} ${mapY(p.equityUSD).toFixed(1)}`)
@@ -483,8 +484,8 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
   }
 
   const availCash = userLedger?.availableCashUSD ?? 0;
-  const userEquity = arena?.userEquityUSD ?? 1000;
-  const botEquity = arena?.botEquityUSD ?? 1000;
+  const userEquity = arena?.userEquityUSD ?? 25000;
+  const botEquity = arena?.botEquityUSD ?? 25000;
   const leadUSD = arena?.leadUSD ?? 0;
   const totalGrossOpenUSD =
     userLedger?.openPositions.reduce((s, p) => s + (p.grossUnrealizedPnL_USD ?? 0), 0) ?? 0;
@@ -509,10 +510,10 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-bold text-white mt-2">
-              Sen vs Otonom Sistem — $1,000 USD Gerçek Piyasa Düellosu
+              Sen vs Otonom Sistem — $25,000 USD Gerçek IBKR Pro Piyasa Düellosu
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Burada kendi $1,000 kasanla canlı piyasa spread, kayma, IBKR komisyonu ve %85 marjin likidasyon kurallarıyla işlem açıp otonom botla birebir yarışabilirsin.
+              Burada kendi $25,000 IBKR Pro Reg-T Margin kasanla canlı piyasa Bid/Ask spread, kayma, SEC/FINRA TAF harçları ve %85 marjin likidasyon kurallarıyla işlem açıp otonom botla birebir yarışabilirsin.
             </p>
           </div>
 
@@ -540,7 +541,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-red-950/60 text-zinc-300 hover:text-red-300 border border-zinc-700 hover:border-red-800/60 transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Kasamı Sıfırla ($1K)
+                Kasamı Sıfırla ($25K)
               </button>
             ) : (
               <div className="inline-flex items-center gap-1.5 bg-red-950/60 border border-red-700/70 rounded-lg px-2.5 py-1">
@@ -741,7 +742,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
           </div>
 
           <div>
-            <label className="block text-[11px] text-zinc-400 mb-1">Varlık Seçimi (16 IBKR / Kraken Enstrümanı)</label>
+            <label className="block text-[11px] text-zinc-400 mb-1">Varlık Seçimi (17 IBKR / Kraken Enstrümanı)</label>
             <select
               value={selectedAsset?.symbol ?? 'BTC/USD'}
               onChange={(e) => {
@@ -835,7 +836,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
               className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-500"
             />
             <div className="grid grid-cols-5 gap-1.5 mt-1.5">
-              {[50, 100, 250, 500].map((amt) => (
+              {[500, 1000, 2500, 5000].map((amt) => (
                 <button
                   key={amt}
                   type="button"
@@ -947,7 +948,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
-              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 25 || availCash < parsedMargin}
+              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 10 || availCash < parsedMargin}
               onClick={() => handleOpenOrder('AL (LONG)')}
               className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition-colors"
             >
@@ -956,7 +957,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             </button>
             <button
               type="button"
-              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 25 || availCash < parsedMargin}
+              disabled={submitting || !selectedAsset?.isOpen || parsedMargin < 10 || availCash < parsedMargin}
               onClick={() => handleOpenOrder('SAT (SHORT)')}
               className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition-colors"
             >
@@ -1071,7 +1072,7 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-sky-400" />
-                7/24 Açık Kripto Piyasası — Senin Seçimin İçin Hızlı Tıkla
+                Şu An Açık Piyasalar — Hızlı Enstrüman Seçimi
               </span>
               <span className="text-[10px] text-zinc-500">Seçtiğin varlık soldaki terminale yüklenir</span>
             </div>
@@ -1099,7 +1100,8 @@ export const ManualArenaView: React.FC<ManualArenaViewProps> = ({ onGoToBotTest 
                         </span>
                       </div>
                       <div className="text-xs font-mono text-zinc-300 mt-0.5">
-                        ${formatPrice(item.price, item.digits)}
+                        {item.cluster === 'USD_MAJORS' ? '' : '$'}
+                        {formatPrice(item.price, item.digits)}
                       </div>
                       <div className="text-[10px] text-zinc-500 mt-0.5 truncate">
                         Bot: {item.botStatus || 'BEKLEMEDE'} ({item.botScore ?? 50})

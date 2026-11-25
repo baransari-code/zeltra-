@@ -57,12 +57,187 @@ const ohlcCache = new Map<string, { timestamp: number; data: any }>();
 const inFlightOhlc = new Map<string, Promise<any>>();
 export interface HourlyBar {
   timestamp: number;
+  endTimestamp?: number;
   open?: number;
   high?: number;
   low?: number;
   close: number;
   volume?: number;
   vwap?: number;
+}
+
+const US_EQUITY_SYMBOLS_SET = new Set([
+  'NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'AMD', 'TSLA',
+]);
+
+export type SessionMode = 'CRYPTO_UTC' | 'NY_CLOSE_17ET' | 'US_EQUITY_RTH';
+
+const nyPartsFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+export function getNyUtcOffsetHours(tsMs: number): number {
+  try {
+    const parts = Object.fromEntries(nyPartsFormatter.formatToParts(tsMs).map((p) => [p.type, p.value]));
+    const hr = Number(parts.hour) === 24 ? 0 : Number(parts.hour);
+    const asUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), hr, Number(parts.minute));
+    const diffHrs = Math.round((asUtc - Math.floor(tsMs / 60000) * 60000) / 3600000);
+    return diffHrs >= -6 && diffHrs <= -3 ? diffHrs : -5;
+  } catch {
+    return -5;
+  }
+}
+
+export function getNyLocalTimeInfo(tsMs: number): {
+  year: number;
+  month: number;
+  day: number;
+  dayOfWeek: number;
+  hour: number;
+  minute: number;
+  minutesOfDay: number;
+  offsetHours: number;
+} {
+  const parts = Object.fromEntries(nyPartsFormatter.formatToParts(tsMs).map((p) => [p.type, p.value]));
+  const year = Number(parts.year);
+  const month = Number(parts.month);
+  const day = Number(parts.day);
+  const dayOfWeek = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const hour = Number(parts.hour) === 24 ? 0 : Number(parts.hour);
+  const minute = Number(parts.minute);
+  const asUtc = Date.UTC(year, month - 1, day, hour, minute);
+  const rawOff = Math.round((asUtc - Math.floor(tsMs / 60000) * 60000) / 3600000);
+  const offsetHours = rawOff >= -6 && rawOff <= -3 ? rawOff : -5;
+  return { year, month, day, dayOfWeek, hour, minute, minutesOfDay: hour * 60 + minute, offsetHours };
+}
+
+export function getSessionMode(symbol: string): SessionMode {
+  if (KRAKEN_PAIR_MAP[symbol]) return 'CRYPTO_UTC';
+  if (US_EQUITY_SYMBOLS_SET.has(symbol)) return 'US_EQUITY_RTH';
+  return 'NY_CLOSE_17ET';
+}
+
+function getPrecisionForSymbol(symbol: string): number {
+  if (symbol === 'DOGE/USD') return 6;
+  if (symbol.includes('JPY')) return 3;
+  if (
+    symbol.includes('/') &&
+    !symbol.startsWith('XAU') &&
+    !symbol.startsWith('XAG') &&
+    !KRAKEN_PAIR_MAP[symbol]
+  ) {
+    return 5;
+  }
+  if (symbol === 'COPPER' || symbol === 'XRP/USD' || symbol === 'ADA/USD') return 4;
+  if (symbol === 'XAG/USD' || symbol === 'AVAX/USD' || symbol === 'LINK/USD') return 3;
+  return 4;
+}
+
+// Kurumsal OHLCV Temizleyici:
+// 1) JS 0 ?? c / NaN ?? c hatalarını engeller, high >= max(o,c) ve low <= min(o,c) zorlar.
+// 2) Yahoo'nun saat ortasında eklediği hizasız sahte "canlı fiyat" barlarını (tsSec % 900 !== 0) eler.
+// 3) Seans dışı ölü düz barları (O=H=L=C == prevClose, V=0) ve 0-hacimli sahte rollover iğnelerini temizler.
+// 4) Tek barda >%22 bozuk veri sıçramalarını (örn. bozuk pre-sync kotasyon artefaktı) engeller.
+export function sanitizeAndDedupeBars(
+  rawRows: { tsSec: number; open: any; high: any; low: any; close: any; volume?: any; vwap?: any }[],
+  intervalSec: number,
+  symbol = ''
+): HourlyBar[] {
+  const byTs = new Map<number, HourlyBar>();
+  const isCrypto = Boolean(KRAKEN_PAIR_MAP[symbol]);
+  const maxSingleBarJump = isCrypto ? 0.32 : intervalSec >= 86400 ? 0.35 : 0.22;
+  let prevValidClose = 0;
+
+  for (const r of rawRows) {
+    const tsSec = Number(r.tsSec);
+    const c = Number(r.close);
+    if (!Number.isFinite(tsSec) || tsSec <= 0 || !Number.isFinite(c) || c <= 0) continue;
+
+    // 15m veya 1h serisinde Yahoo'nun saniye bazlı eklediği hizasız son tick pseudo-barını atla
+    // Not: NYSE 09:30 ET barları tsSec % 1800 === 0 olduğundan % 900 === 0 kontrolünden güvenle geçer!
+    if (intervalSec >= 900 && intervalSec < 86400 && tsSec % 900 !== 0) {
+      continue;
+    }
+
+    // Bozuk veri sağlayıcı sıçraması (tek saatlik barda >%22 kopukluk) kontrolü
+    if (
+      prevValidClose > 0 &&
+      intervalSec <= 3600 &&
+      Math.abs(c - prevValidClose) / prevValidClose > maxSingleBarJump
+    ) {
+      continue;
+    }
+
+    const rawO = Number(r.open);
+    const o = Number.isFinite(rawO) && rawO > 0 ? rawO : c;
+    const rawH = Number(r.high);
+    const rawL = Number(r.low);
+    let h = Number.isFinite(rawH) && rawH > 0 ? Math.max(rawH, o, c) : Math.max(o, c);
+    let l = Number.isFinite(rawL) && rawL > 0 ? Math.min(rawL, o, c) : Math.min(o, c);
+    const rawV = Number(r.volume);
+    const v = Number.isFinite(rawV) && rawV >= 0 ? rawV : 0;
+
+    // Tamamen ölü bakım/kapalı seans barlarını atla (ATR ve RSI2 seyrelmesini sıfırlar)
+    if (
+      intervalSec < 86400 &&
+      h - l < 1e-12 &&
+      v === 0 &&
+      prevValidClose > 0 &&
+      Math.abs(c - prevValidClose) < 1e-12
+    ) {
+      continue;
+    }
+
+    // Sıfır hacimli sahte rollover iğnesi (bad-tick spike) kırpıcısı
+    const body = Math.abs(c - o);
+    const refPx = Math.max(o, c, 1e-9);
+    if (v === 0 && body / refPx < 0.0015) {
+      if ((h - Math.max(o, c)) / refPx > 0.025) {
+        h = Math.max(o, c) + Math.max(body * 2.5, refPx * 0.002);
+      }
+      if ((Math.min(o, c) - l) / refPx > 0.025) {
+        l = Math.min(o, c) - Math.max(body * 2.5, refPx * 0.002);
+      }
+    }
+
+    const tsMs = tsSec * 1000;
+    let durMs = intervalSec * 1000;
+    if (intervalSec < 86400 && US_EQUITY_SYMBOLS_SET.has(symbol)) {
+      const ny = getNyLocalTimeInfo(tsMs);
+      const nyMinOfDay = ny.hour * 60 + ny.minute;
+      // ABD Hisselerinde RTH seansı [09:30, 16:00) aralığında başlar; 16:00 kapanış müzayede hayalet barını atla!
+      if (ny.dayOfWeek === 0 || ny.dayOfWeek === 6 || nyMinOfDay < 570 || nyMinOfDay >= 960) {
+        continue;
+      }
+      if (intervalSec === 3600 && ny.hour === 15 && ny.minute === 30) {
+        durMs = 1800 * 1000;
+      }
+    }
+
+    const cleanBar: HourlyBar = {
+      timestamp: tsMs,
+      endTimestamp: tsMs + durMs,
+      open: o,
+      high: h,
+      low: l,
+      close: c,
+      volume: v,
+    };
+    if (Number.isFinite(Number(r.vwap)) && Number(r.vwap) > 0) {
+      cleanBar.vwap = Number(r.vwap);
+    }
+
+    byTs.set(tsMs, cleanBar);
+    prevValidClose = c;
+  }
+
+  return Array.from(byTs.values()).sort((a, b) => a.timestamp - b.timestamp);
 }
 
 const hourlyCache = new Map<string, { timestamp: number; data: HourlyBar[] }>();
@@ -213,47 +388,39 @@ export async function fetchReal1YearData(symbol: string) {
         throw new Error('Geçersiz veri yapısı');
       }
 
-      const timestamps = result.timestamp;
+      const timestamps: number[] = result.timestamp;
       const quote = result.indicators.quote[0];
       const meta = result.meta;
+      const dec = getPrecisionForSymbol(symbol);
 
-      const candles: {
-        timestamp: number;
-        dateStr: string;
-        open: number;
-        high: number;
-        low: number;
-        close: number;
-        volume: number;
-      }[] = [];
+      const sanitizedDaily = sanitizeAndDedupeBars(
+        timestamps.map((t, i) => ({
+          tsSec: t,
+          open: quote.open?.[i],
+          high: quote.high?.[i],
+          low: quote.low?.[i],
+          close: quote.close?.[i],
+          volume: quote.volume?.[i],
+        })),
+        86400,
+        symbol
+      );
 
-      for (let i = 0; i < timestamps.length; i++) {
-        const close = quote.close[i];
-        if (close === null || close === undefined || isNaN(close)) continue;
-
-        const open = quote.open[i] ?? close;
-        const high = quote.high[i] ?? Math.max(open, close);
-        const low = quote.low[i] ?? Math.min(open, close);
-        const volume = quote.volume[i] ?? 0;
-        const ts = timestamps[i] * 1000;
-        const dateStr = new Date(ts).toISOString().split('T')[0];
-
-        candles.push({
-          timestamp: ts,
-          dateStr,
-          open: +open.toFixed(4),
-          high: +high.toFixed(4),
-          low: +low.toFixed(4),
-          close: +close.toFixed(4),
-          volume,
-        });
-      }
+      const candles = sanitizedDaily.map((b) => ({
+        timestamp: b.timestamp,
+        dateStr: new Date(b.timestamp).toISOString().split('T')[0],
+        open: +(b.open ?? b.close).toFixed(dec),
+        high: +(b.high ?? b.close).toFixed(dec),
+        low: +(b.low ?? b.close).toFixed(dec),
+        close: +b.close.toFixed(dec),
+        volume: b.volume ?? 0,
+      }));
 
       const lastCandleClose = candles.length > 0 ? candles[candles.length - 1].close : 0;
       const rawRegular = Number(meta.regularMarketPrice);
-      // Eğer meta.regularMarketPrice son mumdan aşırı kopuksa (>%15 veri sağlayıcı artefaktı) son mumu esas al
+      // Eğer meta.regularMarketPrice son mumdan aşırı kopuksa (>%12 veri sağlayıcı artefaktı) son mumu esas al
       let currentPrice =
-        Number.isFinite(rawRegular) && rawRegular > 0 && (lastCandleClose === 0 || Math.abs(rawRegular - lastCandleClose) / lastCandleClose < 0.15)
+        Number.isFinite(rawRegular) && rawRegular > 0 && (lastCandleClose === 0 || Math.abs(rawRegular - lastCandleClose) / lastCandleClose < 0.12)
           ? rawRegular
           : lastCandleClose;
 
@@ -271,9 +438,9 @@ export async function fetchReal1YearData(symbol: string) {
 
       if (candles.length > 0 && currentPrice > 0) {
         const lastIdx = candles.length - 1;
-        candles[lastIdx].close = +currentPrice.toFixed(4);
-        candles[lastIdx].high = +Math.max(candles[lastIdx].high, currentPrice).toFixed(4);
-        candles[lastIdx].low = +Math.min(candles[lastIdx].low, currentPrice).toFixed(4);
+        candles[lastIdx].close = +currentPrice.toFixed(dec);
+        candles[lastIdx].high = +Math.max(candles[lastIdx].high, candles[lastIdx].open, currentPrice).toFixed(dec);
+        candles[lastIdx].low = +Math.min(candles[lastIdx].low, candles[lastIdx].open, currentPrice).toFixed(dec);
       }
 
       // Gerçek 24 Saatlik Değişim: 1 yıllık grafikte chartPreviousClose 1 yıl önceki fiyattır; bir önceki günlük mum kapanışını kullan!
@@ -284,7 +451,7 @@ export async function fetchReal1YearData(symbol: string) {
           ? Number(meta.previousClose)
           : currentPrice;
 
-      const change24h = +(currentPrice - prevDayClose).toFixed(4);
+      const change24h = +(currentPrice - prevDayClose).toFixed(dec);
       const changePercent24h = prevDayClose > 0 ? +((change24h / prevDayClose) * 100).toFixed(2) : 0;
 
       const payload = {
@@ -360,15 +527,19 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<HourlyBar[
             const kJson: any = await kResp.json();
             const resKey = Object.keys(kJson?.result || {}).find((k) => k !== 'last');
             const rows: any[] = resKey ? kJson.result[resKey] || [] : [];
-            list = rows.map((r) => ({
-              timestamp: Number(r[0]) * 1000,
-              open: Number(r[1]),
-              high: Number(r[2]),
-              low: Number(r[3]),
-              close: Number(r[4]),
-              vwap: Number(r[5]) || Number(r[4]),
-              volume: Number(r[6]) || 0,
-            }));
+            list = sanitizeAndDedupeBars(
+              rows.map((r) => ({
+                tsSec: Number(r[0]),
+                open: r[1],
+                high: r[2],
+                low: r[3],
+                close: r[4],
+                vwap: r[5],
+                volume: r[6],
+              })),
+              3600,
+              symbol
+            );
           }
         } catch {
           // fallback below
@@ -391,24 +562,20 @@ export async function fetchRealHourlyHistory(symbol: string): Promise<HourlyBar[
         const result = data?.chart?.result?.[0];
         if (!result || !result.timestamp || !result.indicators?.quote?.[0]) return cached?.data || [];
 
-        const timestamps = result.timestamp;
+        const timestamps: number[] = result.timestamp;
         const quote = result.indicators.quote[0];
-        for (let i = 0; i < timestamps.length; i++) {
-          const c = quote.close[i];
-          if (c !== null && c !== undefined && !isNaN(c)) {
-            const o = quote.open?.[i] ?? c;
-            const h = quote.high?.[i] ?? Math.max(o, c);
-            const l = quote.low?.[i] ?? Math.min(o, c);
-            list.push({
-              timestamp: timestamps[i] * 1000,
-              open: +o,
-              high: +h,
-              low: +l,
-              close: +c,
-              volume: Number(quote.volume?.[i]) || 0,
-            });
-          }
-        }
+        list = sanitizeAndDedupeBars(
+          timestamps.map((t, i) => ({
+            tsSec: t,
+            open: quote.open?.[i],
+            high: quote.high?.[i],
+            low: quote.low?.[i],
+            close: quote.close?.[i],
+            volume: quote.volume?.[i],
+          })),
+          3600,
+          symbol
+        );
       }
 
       if (list.length > 0 && KRAKEN_PAIR_MAP[symbol]) {
@@ -456,23 +623,70 @@ const FX_SYMBOLS_SET = new Set([
   'EUR/GBP', 'EUR/JPY', 'GBP/JPY', 'USD/TRY', 'EUR/TRY', 'GBP/TRY',
 ]);
 
-export function aggregateBarsByHours(bars1h: HourlyBar[], bucketHours: number): HourlyBar[] {
+// Kurumsal Seans-Duyarlı Çoklu-Zaman Dilimi Agregasyonu (DST-Aware NY 17:00 ET & US Equity RTH Split):
+// 1) Kripto: Standart UTC blokları (00:00 / 12:00 UTC).
+// 2) FX, Değerli Metaller, Enerji, Endeks Vadeli: 17:00 America/New_York seans kapanışı (Pazar 22:00 UTC sahte günlük mumları sıfırlar!).
+// 3) ABD Hisseleri (NVDA, AAPL, MSFT): 12H istendiğinde NYSE seansını Sabah [09:30–12:30 ET] ve Öğleden Sonra [12:30–16:00 ET]
+//    olarak iki gerçek yarı-seans barına böler (12H serisinin 1G serisine çökmesini engeller!).
+export function aggregateBarsByHours(bars1h: HourlyBar[], bucketHours: number, symbol = ''): HourlyBar[] {
   const map = new Map<number, HourlyBar>();
+  const mode = symbol ? getSessionMode(symbol) : 'CRYPTO_UTC';
   const ms = bucketHours * 3600 * 1000;
+
   for (const b of bars1h) {
     if (!b || !(b.close > 0)) continue;
-    const k = Math.floor(b.timestamp / ms) * ms;
-    const prev = map.get(k);
+    let bucketStart = Math.floor(b.timestamp / ms) * ms;
+    let bucketEnd = bucketStart + ms;
+
+    if (mode === 'US_EQUITY_RTH' && bucketHours === 12) {
+      const ny = getNyLocalTimeInfo(b.timestamp);
+      const dayMidnightUtc = Date.UTC(ny.year, ny.month - 1, ny.day, 0, 0, 0) - ny.offsetHours * 3600 * 1000;
+      if (ny.minutesOfDay < 12 * 60 + 30) {
+        bucketStart = dayMidnightUtc + (9 * 60 + 30) * 60 * 1000;
+        bucketEnd = dayMidnightUtc + (12 * 60 + 30) * 60 * 1000;
+      } else {
+        bucketStart = dayMidnightUtc + (12 * 60 + 30) * 60 * 1000;
+        bucketEnd = dayMidnightUtc + 16 * 60 * 1000;
+      }
+    } else if (mode === 'NY_CLOSE_17ET' && (bucketHours === 24 || bucketHours === 12)) {
+      const nyOff = getNyUtcOffsetHours(b.timestamp);
+      const shiftMs = (7 + nyOff) * 3600 * 1000; // +2h EST, +3h EDT -> 17:00 ET maps to 00:00 shifted!
+      let shiftedTs = b.timestamp + shiftMs;
+      const shiftedDay = new Date(shiftedTs).getUTCDay();
+      if (shiftedDay === 0) {
+        // Pazar 17:00 ET öncesi sığ açılış ticklerini Pazartesi seansına birleştir
+        const nextMon = (Math.floor(shiftedTs / 86400000) + 1) * 86400000;
+        shiftedTs = nextMon;
+      } else if (shiftedDay === 6) {
+        // Cumartesi artığı varsa Cuma son seansına sabitle
+        const friEnd = Math.floor(shiftedTs / 86400000) * 86400000 - 1000;
+        shiftedTs = friEnd;
+      }
+      const kShifted = Math.floor(shiftedTs / ms) * ms;
+      bucketStart = kShifted - shiftMs;
+      bucketEnd = bucketStart + ms;
+    }
+
+    const prev = map.get(bucketStart);
     const o = b.open ?? b.close;
-    const h = b.high ?? Math.max(o, b.close);
-    const l = b.low ?? Math.min(o, b.close);
+    const h = Math.max(b.high ?? b.close, o, b.close);
+    const l = Math.min(b.low ?? b.close, o, b.close);
     if (!prev) {
-      map.set(k, { timestamp: k, open: o, high: h, low: l, close: b.close, volume: b.volume ?? 0 });
+      map.set(bucketStart, {
+        timestamp: bucketStart,
+        endTimestamp: bucketEnd,
+        open: o,
+        high: h,
+        low: l,
+        close: b.close,
+        volume: b.volume ?? 0,
+      });
     } else {
       prev.high = Math.max(prev.high ?? prev.close, h);
       prev.low = Math.min(prev.low ?? prev.close, l);
       prev.close = b.close;
       prev.volume = (prev.volume ?? 0) + (b.volume ?? 0);
+      if (bucketEnd > (prev.endTimestamp ?? 0)) prev.endTimestamp = bucketEnd;
     }
   }
   return Array.from(map.values()).sort((a, b) => a.timestamp - b.timestamp);
@@ -483,6 +697,7 @@ async function fetchYahooChartBars(symbol: string, range: string, interval: stri
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const intervalSec = interval === '1d' ? 86400 : interval === '15m' ? 900 : 3600;
   try {
     const resp = await fetch(url, {
       signal: controller.signal,
@@ -497,24 +712,18 @@ async function fetchYahooChartBars(symbol: string, range: string, interval: stri
     if (!result?.timestamp || !result?.indicators?.quote?.[0]) return [];
     const ts: number[] = result.timestamp;
     const q = result.indicators.quote[0];
-    const out: HourlyBar[] = [];
-    for (let i = 0; i < ts.length; i++) {
-      const c = q.close?.[i];
-      if (c !== null && c !== undefined && Number.isFinite(c) && c > 0) {
-        const o = Number.isFinite(q.open?.[i]) && q.open[i] > 0 ? +q.open[i] : +c;
-        const h = Number.isFinite(q.high?.[i]) && q.high[i] > 0 ? Math.max(+q.high[i], o, +c) : Math.max(o, +c);
-        const l = Number.isFinite(q.low?.[i]) && q.low[i] > 0 ? Math.min(+q.low[i], o, +c) : Math.min(o, +c);
-        out.push({
-          timestamp: ts[i] * 1000,
-          open: o,
-          high: h,
-          low: l,
-          close: +c,
-          volume: Number(q.volume?.[i]) || 0,
-        });
-      }
-    }
-    return out;
+    return sanitizeAndDedupeBars(
+      ts.map((t, i) => ({
+        tsSec: t,
+        open: q.open?.[i],
+        high: q.high?.[i],
+        low: q.low?.[i],
+        close: q.close?.[i],
+        volume: q.volume?.[i],
+      })),
+      intervalSec,
+      symbol
+    );
   } catch {
     return [];
   } finally {
@@ -574,25 +783,51 @@ export async function fetchCleanDailyHistory(symbol: string): Promise<HourlyBar[
   const now = Date.now();
   const cached = cleanDailyCache.get(symbol);
   if (cached && now - cached.timestamp < EXTENDED_CACHE_TTL && cached.data.length > 0) {
+    if (KRAKEN_PAIR_MAP[symbol]) {
+      const liveQ = await fetchLiveCryptoQuotes();
+      const q = liveQ[symbol];
+      if (q && q.mid > 0) {
+        const copy = cached.data.slice();
+        const last = copy[copy.length - 1];
+        copy[copy.length - 1] = {
+          ...last,
+          close: q.mid,
+          high: Math.max(last.high ?? q.mid, last.open ?? q.mid, q.mid),
+          low: Math.min(last.low ?? q.mid, last.open ?? q.mid, q.mid),
+        };
+        return copy;
+      }
+    }
     return cached.data;
   }
   if (inFlightCleanDaily.has(symbol)) return inFlightCleanDaily.get(symbol)!;
 
   const p = (async () => {
     const [h2y, d5y] = await Promise.all([
-      fetchExtendedHourlyHistory(symbol, '730d'),
+      FX_SYMBOLS_SET.has(symbol) || KRAKEN_PAIR_MAP[symbol]
+        ? fetchExtendedHourlyHistory(symbol, '730d')
+        : US_EQUITY_SYMBOLS_SET.has(symbol)
+          ? Promise.resolve([] as HourlyBar[])
+          : fetchExtendedHourlyHistory(symbol, '730d'),
       FX_SYMBOLS_SET.has(symbol) ? Promise.resolve([] as HourlyBar[]) : fetchYahooChartBars(symbol, '5y', '1d', 12000),
     ]);
-    const clean2y = aggregateBarsByHours(h2y, 24);
+
+    // ABD hisselerinde resmi NYSE açılış/kapanış müzayedesini içeren günlük barları doğrudan koru!
     let out: HourlyBar[];
-    if (FX_SYMBOLS_SET.has(symbol)) {
-      out = clean2y.length >= 220 ? clean2y : await fetchYahooChartBars(symbol, '2y', '1d', 10000);
-    } else if (d5y.length > 0 && clean2y.length > 0) {
-      const firstClean = clean2y[0].timestamp;
-      out = [...d5y.filter((b) => b.timestamp < firstClean - 12 * 3600 * 1000), ...clean2y];
+    if (US_EQUITY_SYMBOLS_SET.has(symbol) && d5y.length >= 200) {
+      out = d5y;
     } else {
-      out = clean2y.length > 0 ? clean2y : d5y;
+      const clean2y = aggregateBarsByHours(h2y, 24, symbol);
+      if (FX_SYMBOLS_SET.has(symbol)) {
+        out = clean2y.length >= 200 ? clean2y : await fetchYahooChartBars(symbol, '2y', '1d', 10000);
+      } else if (d5y.length > 0 && clean2y.length > 0) {
+        const firstClean = clean2y[0].timestamp;
+        out = [...d5y.filter((b) => b.timestamp < firstClean - 14 * 3600 * 1000), ...clean2y];
+      } else {
+        out = clean2y.length > 0 ? clean2y : d5y;
+      }
     }
+
     if (out.length > 0) {
       cleanDailyCache.set(symbol, { timestamp: Date.now(), data: out });
       return out;
@@ -622,8 +857,8 @@ export async function fetchReal15mHistory(symbol: string): Promise<HourlyBar[]> 
         copy[copy.length - 1] = {
           ...last,
           close: q.mid,
-          high: Math.max(last.high ?? q.mid, q.mid),
-          low: Math.min(last.low ?? q.mid, q.mid),
+          high: Math.max(last.high ?? q.mid, last.open ?? q.mid, q.mid),
+          low: Math.min(last.low ?? q.mid, last.open ?? q.mid, q.mid),
         };
         return copy;
       }
@@ -647,15 +882,19 @@ export async function fetchReal15mHistory(symbol: string): Promise<HourlyBar[]> 
           const kJson: any = await kResp.json();
           const resKey = Object.keys(kJson?.result || {}).find((k) => k !== 'last');
           const rows: any[] = resKey ? kJson.result[resKey] || [] : [];
-          list = rows.map((r) => ({
-            timestamp: Number(r[0]) * 1000,
-            open: Number(r[1]),
-            high: Number(r[2]),
-            low: Number(r[3]),
-            close: Number(r[4]),
-            vwap: Number(r[5]) || Number(r[4]),
-            volume: Number(r[6]) || 0,
-          }));
+          list = sanitizeAndDedupeBars(
+            rows.map((r) => ({
+              tsSec: Number(r[0]),
+              open: r[1],
+              high: r[2],
+              low: r[3],
+              close: r[4],
+              vwap: r[5],
+              volume: r[6],
+            })),
+            900,
+            symbol
+          );
         }
       } else {
         const yahooTicker = SYMBOL_MAP[symbol] || symbol.replace('/', '');
@@ -666,22 +905,20 @@ export async function fetchReal15mHistory(symbol: string): Promise<HourlyBar[]> 
         if (resp.ok) {
           const data: any = await resp.json();
           const result = data?.chart?.result?.[0];
-          const ts = result?.timestamp || [];
+          const ts: number[] = result?.timestamp || [];
           const q = result?.indicators?.quote?.[0] || {};
-          for (let i = 0; i < ts.length; i++) {
-            const c = q.close?.[i];
-            if (c !== null && c !== undefined && !isNaN(c)) {
-              const o = q.open?.[i] ?? c;
-              list.push({
-                timestamp: ts[i] * 1000,
-                open: +o,
-                high: +(q.high?.[i] ?? Math.max(o, c)),
-                low: +(q.low?.[i] ?? Math.min(o, c)),
-                close: +c,
-                volume: Number(q.volume?.[i]) || 0,
-              });
-            }
-          }
+          list = sanitizeAndDedupeBars(
+            ts.map((t, i) => ({
+              tsSec: t,
+              open: q.open?.[i],
+              high: q.high?.[i],
+              low: q.low?.[i],
+              close: q.close?.[i],
+              volume: q.volume?.[i],
+            })),
+            900,
+            symbol
+          );
         }
       }
 

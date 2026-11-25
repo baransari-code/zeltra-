@@ -26,8 +26,10 @@ export default defineConfig({
           }
           next();
         });
-        startAutonomousScheduler();
-        setTimeout(() => runLiveAuditTick(false).catch(() => {}), 3000);
+        setTimeout(async () => {
+          await runLiveAuditTick(false).catch(() => {});
+          startAutonomousScheduler();
+        }, 1200);
         setInterval(() => runLiveAuditTick(false).catch(() => {}), 60 * 1000);
       },
     },

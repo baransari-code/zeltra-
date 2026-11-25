@@ -1,4 +1,4 @@
-// server/manualTrader.ts — ZELTRA /test2 Gerçek Piyasa Manuel İşlem Arenası (Sen vs Otonom Bot $1,000 USD Yarışması)
+// server/manualTrader.ts — ZELTRA /test2 Gerçek Piyasa Manuel İşlem Arenası (Sen vs Otonom Bot $25,000 USD IBKR Pro Yarışması)
 import fs from 'fs';
 import path from 'path';
 import type http from 'http';
@@ -82,7 +82,7 @@ function createCleanManualLedger(initialCapitalUSD = INITIAL_CAPITAL_USD, usdTry
   return {
     botId: 'ZELTRA-USER-ARENA-USD',
     currency: 'USD',
-    strategyVersion: 'manual-ibkr-v3-1k-usd',
+    strategyVersion: 'manual-ibkr-v4-25k-usd',
     isRunning: true,
     startedAt: nowIso,
     lastTickAt: nowIso,
@@ -143,7 +143,7 @@ function createCleanManualLedger(initialCapitalUSD = INITIAL_CAPITAL_USD, usdTry
         timestamp: nowIso,
         type: 'SYSTEM',
         symbol: 'ARENA',
-        message: '$1,000.00 USD Manuel IBKR Arena hesabı başlatıldı. Gerçek piyasa fiyatları, spread ve IBKR komisyonlarıyla özgürce işlem açabilirsiniz.',
+        message: '$25,000.00 USD Manuel IBKR Pro Reg-T Margin Arena hesabı sıfırdan başlatıldı. Gerçek borsa Bid/Ask spread, kayma, SEC/FINRA TAF harçları ve IBKR komisyonlarıyla özgürce işlem açabilirsiniz.',
       },
     ],
   };
@@ -174,8 +174,8 @@ async function loadOrInitManualLedger(): Promise<AutonomousLedgerState> {
       if (
         parsed &&
         parsed.currency === 'USD' &&
-        parsed.strategyVersion === 'manual-ibkr-v3-1k-usd' &&
-        typeof parsed.initialCapitalUSD === 'number'
+        parsed.strategyVersion === 'manual-ibkr-v4-25k-usd' &&
+        Math.abs(Number(parsed.initialCapitalUSD || 0) - INITIAL_CAPITAL_USD) < 100
       ) {
         recalculateLedgerMetrics(parsed);
         return parsed as AutonomousLedgerState;
@@ -241,7 +241,7 @@ function applyOpenPositionsValuation(
       const curNotional = swapUnits * livePrice * quoteToUsdSwap;
       const borrowed = Math.max(0, curNotional - pos.allocatedCapitalUSD * remWeight);
       if (borrowed > 0) {
-        const swapFee = +(borrowed * (0.068 / 365)).toFixed(2);
+        const swapFee = +(borrowed * (0.0633 / 365)).toFixed(2);
         pos.financingCostUSD = +((pos.financingCostUSD || 0) + swapFee).toFixed(2);
         pos.executionCostUSD = +((pos.entryCommissionUSD || 0) + (pos.exitCommissionUSD || 0) + pos.financingCostUSD).toFixed(2);
         pos.realizedPnL_USD = +(pos.realizedPnL_USD - swapFee).toFixed(2);
@@ -257,7 +257,7 @@ function applyOpenPositionsValuation(
 
     const grossUSD = remUnits * priceDiff * quoteToUsd;
     const closeNotional = remUnits * livePrice * quoteToUsd;
-    const estExitFeeUSD = computeIbkrCommissionUSD(spec, closeNotional, remUnits);
+    const estExitFeeUSD = computeIbkrCommissionUSD(spec, closeNotional, remUnits, isLong);
     const netFloatingUSD = +(grossUSD - estExitFeeUSD).toFixed(2);
     const totalNetUSD = +(pos.realizedPnL_USD + netFloatingUSD).toFixed(2);
     const rMult = +(priceDiff / slDist).toFixed(2);
@@ -278,8 +278,13 @@ function applyOpenPositionsValuation(
     const hitTp = session.isOpen && hasActiveTp && (isLong ? livePrice >= pos.takeProfit2 : livePrice <= pos.takeProfit2);
 
     if (isLiquidated || hitSl || hitTp) {
-      const actualExitFee = estExitFeeUSD;
-      const netDelta = +(grossUSD - actualExitFee).toFixed(2);
+      const execClosePx = hitTp
+        ? livePrice
+        : +(isLong ? livePrice - spec.slippagePts : livePrice + spec.slippagePts).toFixed(spec.digits);
+      const execDiff = isLong ? execClosePx - pos.entryPrice : pos.entryPrice - execClosePx;
+      const execGrossUSD = remUnits * execDiff * quoteToUsd;
+      const actualExitFee = computeIbkrCommissionUSD(spec, remUnits * execClosePx * quoteToUsd, remUnits, isLong);
+      const netDelta = +(execGrossUSD - actualExitFee).toFixed(2);
       pos.exitCommissionUSD = +((pos.exitCommissionUSD || 0) + actualExitFee).toFixed(2);
       pos.executionCostUSD = +((pos.entryCommissionUSD || 0) + pos.exitCommissionUSD + (pos.financingCostUSD || 0)).toFixed(2);
       pos.realizedPnL_USD = +(pos.realizedPnL_USD + netDelta).toFixed(2);
@@ -287,7 +292,7 @@ function applyOpenPositionsValuation(
       pos.unrealizedPnL_USD = 0;
       pos.totalPnL_USD = pos.realizedPnL_USD;
       pos.totalPnL_Percent = +((pos.totalPnL_USD / state.initialCapitalUSD) * 100).toFixed(2);
-      pos.closePrice = livePrice;
+      pos.closePrice = execClosePx;
       pos.closeTime = nowIso;
       pos.closeTimestamp = now;
 
@@ -350,11 +355,21 @@ function buildArenaResponse(
   nowDate: Date
 ): ManualArenaResponse {
   const scannerMap = new Map((botState.marketScanner || []).map((s) => [s.symbol, s]));
+  const radarMap = new Map((botState.lastMarketRadar || []).map((r) => [r.symbol, r]));
   const universe: ArenaUniverseItem[] = CORE_UNIVERSE.map((spec) => {
     const market = marketMap.get(spec.symbol);
     const { mid, bid, ask } = getLiveBidAsk(market, spec);
     const session = isMarketOpenForAsset(spec.symbol, nowDate);
     const scan = scannerMap.get(spec.symbol);
+    const rad = radarMap.get(spec.symbol);
+    const resolvedScore =
+      typeof rad?.botScore === 'number'
+        ? rad.botScore
+        : typeof scan?.score === 'number'
+          ? scan.score
+          : typeof scan?.confluenceScore === 'number'
+            ? scan.confluenceScore
+            : 50;
     return {
       symbol: spec.symbol,
       name: spec.name,
@@ -368,16 +383,16 @@ function buildArenaResponse(
       ibkrMaxFeePct: spec.ibkrMaxFeePct,
       spreadPts: spec.spreadPts,
       slippagePts: spec.slippagePts,
-      price: mid || scan?.price || 0,
-      bid: bid || scan?.price || 0,
-      ask: ask || scan?.price || 0,
-      change24hPercent: +(market?.changePercent24h || 0).toFixed(2),
+      price: mid || rad?.price || scan?.price || 0,
+      bid: bid || rad?.bid || scan?.price || 0,
+      ask: ask || rad?.ask || scan?.price || 0,
+      change24hPercent: +(market?.changePercent24h ?? rad?.change24hPercent ?? 0).toFixed(2),
       isOpen: session.isOpen,
       closedReason: session.reason,
-      botStatus: scan?.status,
-      botDirection: scan?.candidateDirection,
-      botScore: scan?.confluenceScore,
-      botReason: scan?.decisionReason,
+      botStatus: rad?.status || scan?.status || 'BEKLEMEDE',
+      botDirection: rad?.direction || scan?.direction || scan?.candidateDirection || 'BEKLE',
+      botScore: Math.min(100, Math.max(0, Math.round(resolvedScore))),
+      botReason: rad?.reason || scan?.reason || scan?.decisionReason || '',
     };
   });
 
@@ -566,13 +581,13 @@ export async function openManualPosition(params: ManualOpenOrderParams): Promise
     const riskUSD = +(units * slDist * quoteToUsd).toFixed(2);
 
     // IBKR Giriş Komisyonunu Peşin Kes
-    const entryCommissionUSD = +computeIbkrCommissionUSD(spec, actualNotionalUSD, units).toFixed(2);
+    const entryCommissionUSD = +computeIbkrCommissionUSD(spec, actualNotionalUSD, units, !isLong).toFixed(2);
     state.cashBalanceUSD = +(state.cashBalanceUSD - entryCommissionUSD).toFixed(2);
 
     const initLiqPrice = isLong ? liveBid : liveAsk;
     const initDiff = isLong ? initLiqPrice - entryPrice : entryPrice - initLiqPrice;
     const initCloseNotional = units * initLiqPrice * quoteToUsd;
-    const estExitFeeUSD = computeIbkrCommissionUSD(spec, initCloseNotional, units);
+    const estExitFeeUSD = computeIbkrCommissionUSD(spec, initCloseNotional, units, isLong);
     const initGrossUSD = +(units * initDiff * quoteToUsd).toFixed(2);
     const initUnrealizedUSD = +(initGrossUSD - estExitFeeUSD).toFixed(2);
     const initRealizedUSD = +(-entryCommissionUSD).toFixed(2);
@@ -692,7 +707,8 @@ export async function closeManualPosition(tradeId: string, fraction = 1): Promis
 
     const isLong = pos.direction === 'AL (LONG)';
     const { bid: liveBid, ask: liveAsk } = getLiveBidAsk(market, spec);
-    const closePrice = isLong ? liveBid : liveAsk;
+    const rawClosePrice = isLong ? liveBid : liveAsk;
+    const closePrice = +(isLong ? rawClosePrice - spec.slippagePts : rawClosePrice + spec.slippagePts).toFixed(spec.digits);
     const remUnitsBefore = pos.tp1Hit ? +(pos.positionSizeUnits * 0.5).toFixed(6) : pos.positionSizeUnits;
 
     const isPartial = fraction < 0.99 && !pos.tp1Hit;
@@ -700,7 +716,7 @@ export async function closeManualPosition(tradeId: string, fraction = 1): Promis
     const quoteToUsd = pos.symbol === 'USD/JPY' ? 1 / (closePrice || 155) : 1;
     const priceDiff = isLong ? closePrice - pos.entryPrice : pos.entryPrice - closePrice;
     const closeNotional = closeUnits * closePrice * quoteToUsd;
-    const exitFee = +computeIbkrCommissionUSD(spec, closeNotional, closeUnits).toFixed(2);
+    const exitFee = +computeIbkrCommissionUSD(spec, closeNotional, closeUnits, isLong).toFixed(2);
     const grossDelta = closeUnits * priceDiff * quoteToUsd;
     const netDelta = +(grossDelta - exitFee).toFixed(2);
 

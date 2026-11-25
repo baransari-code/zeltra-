@@ -251,19 +251,7 @@ export function analyzeArticleWithAI(params: {
         reason: imp.reasonTR,
       }));
 
-      // Eğer haberin etkilediği birincil varlık listede yoksa onu da ekle
-      if (!relevantImpacts.some((i) => i.symbol === primaryAsset)) {
-        const dir: 'AL (LONG)' | 'SAT (SHORT)' = params.sentimentScore >= 0 ? 'AL (LONG)' : 'SAT (SHORT)';
-        relevantImpacts.unshift({
-          symbol: primaryAsset,
-          direction: dir,
-          conviction: Math.min(92, Math.max(60, Math.round(Math.abs(params.sentimentScore) * 95))),
-          reason: dir === 'AL (LONG)'
-            ? `${primaryAsset} için pozitif haber akışı alım yönlü fırsat oluşturuyor.`
-            : `${primaryAsset} üzerinde satış baskısı oluşturan haber akışı.`,
-        });
-      }
-
+      // Eğer haberin etkilediği birincil varlık kural listesinde yoksa USD ters-korelasyon kontrolüyle ekle
       const mainImpact = relevantImpacts.find((i) => i.symbol === primaryAsset) || relevantImpacts[0];
       const verdict: ArticleAiAnalysis['opportunityVerdict'] =
         mainImpact.conviction >= 68
@@ -294,12 +282,26 @@ export function analyzeArticleWithAI(params: {
   if (score >= 0.22) direction = 'AL (LONG)';
   else if (score <= -0.22) direction = 'SAT (SHORT)';
 
-  // Ters korelasyonlu parite düzeltmesi: ABD doları pozitif haberi EUR/USD için SAT, USD/JPY için AL demektir
+  // Ters korelasyonlu parite düzeltmesi: ABD doları/tahvil faizi şoku USD/JPY ve USD/TRY için YUKARI, EUR/USD ve XAU/USD için AŞAĞI yönlüdür!
+  const lowerCombined = combinedText.toLowerCase();
+  const isStrongDollarShock =
+    /\b(strong dollar|dollar surges|dollar rallies|dxy rises|yields surge|yields jump|rates surge|hawkish fed|rate hike)\b/i.test(lowerCombined);
+  const isWeakDollarShock =
+    /\b(weak dollar|dollar falls|dollar drops|dxy falls|yields fall|yields drop|dovish fed|rate cut)\b/i.test(lowerCombined);
+
   const assetImpacts: AssetDirectionalImpact[] = params.affectedAssets.map((sym) => {
     let symDir = direction;
+    if (isStrongDollarShock) {
+      if (sym === 'USD/JPY' || sym === 'USD/TRY' || sym === 'USD/CHF' || sym === 'USD/CAD') symDir = 'AL (LONG)';
+      else if (sym === 'EUR/USD' || sym === 'GBP/USD' || sym === 'XAU/USD' || sym === 'XAG/USD') symDir = 'SAT (SHORT)';
+    } else if (isWeakDollarShock) {
+      if (sym === 'USD/JPY' || sym === 'USD/TRY' || sym === 'USD/CHF' || sym === 'USD/CAD') symDir = 'SAT (SHORT)';
+      else if (sym === 'EUR/USD' || sym === 'GBP/USD' || sym === 'XAU/USD' || sym === 'XAG/USD') symDir = 'AL (LONG)';
+    }
+
     let reason = '';
     if (symDir === 'AL (LONG)') {
-      reason = `${sym} için kurumsal alım iştahını destekleyen olumlu gelişme.`;
+      reason = `${sym} için kurumsal alım iştahını ve parite yönünü destekleyen gelişme.`;
     } else if (symDir === 'SAT (SHORT)') {
       reason = `${sym} üzerinde kısa vadeli satış baskısı yaratan gelişme.`;
     } else {

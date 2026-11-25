@@ -35,11 +35,12 @@ function pathForTab(tab: AppTab): string {
 }
 
 export const App: React.FC = () => {
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('MSFT');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('XAU/USD');
   const [activeTab, setActiveTabState] = useState<AppTab>(() =>
     typeof window !== 'undefined' ? resolveTabFromPath(window.location.pathname) : 'fund'
   );
   const [notifications, setNotifications] = useState<NewsNotification[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const [liveUsdTry, setLiveUsdTry] = useState<number>(42.5);
 
   const setActiveTab = useCallback((tab: AppTab) => {
@@ -75,12 +76,19 @@ export const App: React.FC = () => {
       const res = await fetch('/api/real-news');
       if (res.ok) {
         const list = await res.json();
-        if (Array.isArray(list)) setNotifications(list);
+        if (Array.isArray(list)) {
+          setNotifications(
+            list.map((item: NewsNotification) => ({
+              ...item,
+              read: Boolean(item.read || readIds.has(item.id)),
+            }))
+          );
+        }
       }
     } catch {
       // keep previous list
     }
-  }, []);
+  }, [readIds]);
 
   useEffect(() => {
     loadLiveFxRate();
@@ -107,7 +115,14 @@ export const App: React.FC = () => {
   );
 
   const handleMarkAllAsRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) => {
+      setReadIds((old) => {
+        const next = new Set(old);
+        prev.forEach((n) => next.add(n.id));
+        return next;
+      });
+      return prev.map((n) => ({ ...n, read: true }));
+    });
   }, []);
 
   return (
@@ -136,7 +151,9 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'arena' && <ManualArenaView />}
+        {activeTab === 'arena' && (
+          <ManualArenaView onGoToBotTest={() => setActiveTab('fund')} />
+        )}
 
         {activeTab === 'news' && (
           <InstitutionTracker
@@ -155,7 +172,7 @@ export const App: React.FC = () => {
       </main>
 
       <footer className="border-t border-zinc-900/80 py-3 px-4 text-center text-[11px] font-mono text-zinc-600">
-        ZELTRA Cortex v15.2 • Canlı Geçiş: 01.12.2026
+        ZELTRA Cortex v16.0 • Kurumsal Kapanmış-Mum SMC & 5-Uzmanlı Yapay Zeka • Canlı Geçiş: 01.12.2026
       </footer>
     </div>
   );

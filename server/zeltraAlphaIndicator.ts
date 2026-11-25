@@ -68,12 +68,14 @@ export function calcRsiSeries(closes: number[], period: number): number[] {
   }
   avgGain /= period;
   avgLoss /= period;
-  out[period] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+  const initDenom = avgGain + avgLoss;
+  out[period] = initDenom < 1e-12 ? 50 : (100 * avgGain) / initDenom;
   for (let i = period + 1; i < n; i++) {
     const d = closes[i] - closes[i - 1];
     avgGain = (avgGain * (period - 1) + (d > 0 ? d : 0)) / period;
     avgLoss = (avgLoss * (period - 1) + (d < 0 ? -d : 0)) / period;
-    out[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+    const denom = avgGain + avgLoss;
+    out[i] = denom < 1e-12 ? 50 : (100 * avgGain) / denom;
   }
   return out;
 }
@@ -113,10 +115,82 @@ export function calcEfficiencyRatio(closes: number[], idx: number, lookback = 20
 }
 
 export function calcIbs(bar: HourlyBar): number {
-  const hi = bar.high ?? bar.close;
-  const lo = bar.low ?? bar.close;
+  const o = bar.open ?? bar.close;
+  const hi = Math.max(bar.high ?? bar.close, o, bar.close);
+  const lo = Math.min(bar.low ?? bar.close, o, bar.close);
   const rng = hi - lo;
-  return rng > 1e-12 ? (bar.close - lo) / rng : 0.5;
+  return rng > 1e-12 ? Math.max(0, Math.min(1, (bar.close - lo) / rng)) : 0.5;
+}
+
+// Gerçek Wilder ADX(14), +DI(14), -DI(14) Hesaplayıcısı (Sabit 20 stub'ını ortadan kaldırır!)
+export function calcAdxSeries(
+  bars: HourlyBar[],
+  period = 14
+): { adx: number[]; pdi: number[]; ndi: number[] } {
+  const n = bars.length;
+  const adx = new Array<number>(n).fill(20);
+  const pdi = new Array<number>(n).fill(20);
+  const ndi = new Array<number>(n).fill(20);
+  if (n <= period + 1) return { adx, pdi, ndi };
+
+  const tr = new Array<number>(n).fill(0);
+  const plusDm = new Array<number>(n).fill(0);
+  const minusDm = new Array<number>(n).fill(0);
+
+  for (let i = 1; i < n; i++) {
+    const curH = Math.max(bars[i].high ?? bars[i].close, bars[i].close);
+    const curL = Math.min(bars[i].low ?? bars[i].close, bars[i].close);
+    const prevH = Math.max(bars[i - 1].high ?? bars[i - 1].close, bars[i - 1].close);
+    const prevL = Math.min(bars[i - 1].low ?? bars[i - 1].close, bars[i - 1].close);
+    const prevC = bars[i - 1].close;
+
+    tr[i] = Math.max(curH - curL, Math.abs(curH - prevC), Math.abs(curL - prevC));
+    const upMove = curH - prevH;
+    const downMove = prevL - curL;
+    plusDm[i] = upMove > downMove && upMove > 0 ? upMove : 0;
+    minusDm[i] = downMove > upMove && downMove > 0 ? downMove : 0;
+  }
+
+  let smTr = 0;
+  let smPlus = 0;
+  let smMinus = 0;
+  for (let i = 1; i <= period; i++) {
+    smTr += tr[i];
+    smPlus += plusDm[i];
+    smMinus += minusDm[i];
+  }
+
+  const dxArr = new Array<number>(n).fill(20);
+  for (let i = period; i < n; i++) {
+    if (i > period) {
+      smTr = smTr - smTr / period + tr[i];
+      smPlus = smPlus - smPlus / period + plusDm[i];
+      smMinus = smMinus - smMinus / period + minusDm[i];
+    }
+    const p = smTr > 1e-12 ? (100 * smPlus) / smTr : 0;
+    const m = smTr > 1e-12 ? (100 * smMinus) / smTr : 0;
+    pdi[i] = p;
+    ndi[i] = m;
+    const diSum = p + m;
+    dxArr[i] = diSum > 1e-12 ? (100 * Math.abs(p - m)) / diSum : 0;
+  }
+
+  let adxVal = 0;
+  const startAdx = Math.min(n - 1, period * 2 - 1);
+  let cnt = 0;
+  for (let i = period; i <= startAdx; i++) {
+    adxVal += dxArr[i];
+    cnt++;
+  }
+  adxVal = cnt > 0 ? adxVal / cnt : 20;
+  adx[startAdx] = adxVal;
+  for (let i = 0; i < startAdx; i++) adx[i] = dxArr[i] || 20;
+  for (let i = startAdx + 1; i < n; i++) {
+    adxVal = (adxVal * (period - 1) + dxArr[i]) / period;
+    adx[i] = adxVal;
+  }
+
+  return { adx, pdi, ndi };
 }
 
 // Robert Carver Multi-Speed EWMAC (8/32 + 16/64 + 32/128), -20..+20 arası volatilite normalize
@@ -177,8 +251,18 @@ export function buildDailyIndicatorPack(dailyBars: HourlyBar[]): DailyIndicatorP
   };
 }
 
-export function build12hIndicatorPack(h1Bars: HourlyBar[]): TwelveHourIndicatorPack {
-  const bars = aggregateBarsByHours(h1Bars, 12);
+export interface FourHourIndicatorPack {
+  bars: HourlyBar[];
+  closes: number[];
+  e8: number[];
+  e21: number[];
+  e50: number[];
+  rsi2: number[];
+  atr14: number[];
+}
+
+export function build12hIndicatorPack(h1Bars: HourlyBar[], symbol = ''): TwelveHourIndicatorPack {
+  const bars = aggregateBarsByHours(h1Bars, 12, symbol);
   const closes = bars.map((b) => b.close);
   return {
     bars,
@@ -189,6 +273,49 @@ export function build12hIndicatorPack(h1Bars: HourlyBar[]): TwelveHourIndicatorP
     atr14: calcAtrSeries(bars, 14),
     atr50: calcAtrSeries(bars, 50),
   };
+}
+
+export function build4hIndicatorPack(h1Bars: HourlyBar[], symbol = ''): FourHourIndicatorPack {
+  const bars = aggregateBarsByHours(h1Bars, 4, symbol);
+  const closes = bars.map((b) => b.close);
+  return {
+    bars,
+    closes,
+    e8: calcEmaSeries(closes, 8),
+    e21: calcEmaSeries(closes, 21),
+    e50: calcEmaSeries(closes, 50),
+    rsi2: calcRsiSeries(closes, 2),
+    atr14: calcAtrSeries(bars, 14),
+  };
+}
+
+export function extract4hContextAt(
+  p4: FourHourIndicatorPack,
+  nowMs = Date.now()
+): {
+  idx: number;
+  ibs4h: number;
+  cumRsi2_4h: number;
+  trend4hScore: number;
+  er4h: number;
+  zScoreEma20_4h: number;
+} {
+  if (!p4 || p4.bars.length < 5) {
+    return { idx: 0, ibs4h: 0.5, cumRsi2_4h: 50, trend4hScore: 0, er4h: 0.25, zScoreEma20_4h: 0 };
+  }
+  let idx = p4.bars.length - 1;
+  while (idx > 0 && (p4.bars[idx].endTimestamp ?? p4.bars[idx].timestamp + 4 * 3600000) > nowMs) {
+    idx--;
+  }
+  const b = p4.bars[idx];
+  const atr = Math.max(1e-9, p4.atr14[idx] || b.close * 0.008);
+  const ibs4h = +calcIbs(b).toFixed(3);
+  const cumRsi2_4h = idx >= 1 ? +((p4.rsi2[idx] + p4.rsi2[idx - 1]) / 2).toFixed(1) : +p4.rsi2[idx].toFixed(1);
+  const slope = ((p4.e8[idx] - p4.e21[idx]) / atr) * 24 + (b.close > p4.e50[idx] ? 16 : -16);
+  const trend4hScore = Math.round(Math.max(-100, Math.min(100, slope)));
+  const er4h = +calcEfficiencyRatio(p4.closes, idx, 10).toFixed(2);
+  const zScoreEma20_4h = +((b.close - p4.e21[idx]) / atr).toFixed(2);
+  return { idx, ibs4h, cumRsi2_4h, trend4hScore, er4h, zScoreEma20_4h };
 }
 
 // =========================================================================
@@ -692,8 +819,10 @@ export function computeZacChartOverlay(
   xsmomRank = 0,
   xsmomTotal = 17
 ): ZacChartOverlayResult {
-  const dPack = buildDailyIndicatorPack(dailyBars.length >= 30 ? dailyBars : aggregateBarsByHours(h1FullBars, 24));
-  const p12 = build12hIndicatorPack(h1FullBars.length >= 24 ? h1FullBars : displayBars);
+  const dPack = buildDailyIndicatorPack(
+    dailyBars.length >= 30 ? dailyBars : aggregateBarsByHours(h1FullBars, 24, symbol)
+  );
+  const p12 = build12hIndicatorPack(h1FullBars.length >= 24 ? h1FullBars : displayBars, symbol);
 
   const dispCloses = displayBars.map((b) => b.close);
   const dispAtr = calcAtrSeries(displayBars, 14);
@@ -717,9 +846,19 @@ export function computeZacChartOverlay(
 
   for (let i = 0; i < displayBars.length; i++) {
     const b = displayBars[i];
-    // Kesin nedensel işaretçiler (sadece tamamlanmış geçmiş barlar!)
-    while (dp + 1 < dPack.bars.length && dPack.bars[dp + 1].timestamp + 86400000 <= b.timestamp) dp++;
-    while (i12 + 1 < p12.bars.length && p12.bars[i12 + 1].timestamp + 12 * 3600000 <= b.timestamp) i12++;
+    // Kesin nedensel işaretçiler (sadece endTimestamp itibarıyla kapanmış geçmiş barlar!)
+    while (
+      dp + 1 < dPack.bars.length &&
+      (dPack.bars[dp + 1].endTimestamp ?? dPack.bars[dp + 1].timestamp + 86400000) <= b.timestamp
+    ) {
+      dp++;
+    }
+    while (
+      i12 + 1 < p12.bars.length &&
+      (p12.bars[i12 + 1].endTimestamp ?? p12.bars[i12 + 1].timestamp + 12 * 3600000) <= b.timestamp
+    ) {
+      i12++;
+    }
 
     const fv = dispEma50[i] || b.close;
     const atr = dispAtr[i] || b.close * 0.01;
@@ -753,7 +892,6 @@ export function computeZacChartOverlay(
     zacSeries.push(zac);
     regimeSeries.push(regime);
 
-    // Tarihsel gerçek Pod tetik işaretçileri (grafik üzerinde net görünmesi için min 8 bar aralıklı)
     if (i - lastMarkerIdx >= 8 && dp >= 120) {
       if (isMr && above200 && ewmac > 0 && vr <= 1.40 && ibs12 < 0.22 && cr2 < 18) {
         markers.push({ index: i, timestamp: b.timestamp, price: roundTo(b.low ?? b.close, digits), pod: 'MR_SPRING_12H', direction: 'LONG', label: 'MR12 AL' });
@@ -771,14 +909,16 @@ export function computeZacChartOverlay(
     }
   }
 
-  // Son tamamlanmış günlük & 12H mum üzerinden canlı fiyatla ZAC v14 fotoğrafı (sıfır yarım-mum repainting)
+  // Son tamamlanmış günlük & 12H mum üzerinden canlı fiyatla ZAC v14 fotoğrafı
   const nowMs = Date.now();
+  const lastD = dPack.bars[dPack.bars.length - 1];
   const completedDailyIdx =
-    dPack.bars.length >= 2 && dPack.bars[dPack.bars.length - 1].timestamp + 24 * 3600000 > nowMs
+    dPack.bars.length >= 2 && (lastD.endTimestamp ?? lastD.timestamp + 24 * 3600000) > nowMs
       ? dPack.bars.length - 2
       : Math.max(0, dPack.bars.length - 1);
+  const last12 = p12.bars[p12.bars.length - 1];
   const completed12Idx =
-    p12.bars.length >= 2 && p12.bars[p12.bars.length - 1].timestamp + 12 * 3600000 > nowMs
+    p12.bars.length >= 2 && (last12.endTimestamp ?? last12.timestamp + 12 * 3600000) > nowMs
       ? p12.bars.length - 2
       : Math.max(0, p12.bars.length - 1);
   const latestSnapshot = evaluateZacAt(
@@ -794,7 +934,7 @@ export function computeZacChartOverlay(
     xsmomTotal
   );
 
-  // Dürüst +24H OOS Kendi-Kendini Denetim (12H serisi üzerinde sıfır look-ahead)
+  // Dürüst +24H OOS Kendi-Kendini Denetim (sıfır look-ahead, sıfır düz-fiyat yanlılığı)
   let allN = 0;
   let allHit = 0;
   let hcN = 0;
@@ -803,13 +943,20 @@ export function computeZacChartOverlay(
   let dpEval = 0;
   for (let j = Math.max(40, p12.bars.length - 260); j < p12.bars.length - 2; j++) {
     const bj = p12.bars[j];
-    while (dpEval + 1 < dPack.bars.length && dPack.bars[dpEval + 1].timestamp + 86400000 <= bj.timestamp) dpEval++;
+    const bjEnd = bj.endTimestamp ?? bj.timestamp + 12 * 3600000;
+    while (
+      dpEval + 1 < dPack.bars.length &&
+      (dPack.bars[dpEval + 1].endTimestamp ?? dPack.bars[dpEval + 1].timestamp + 86400000) <= bjEnd
+    ) {
+      dpEval++;
+    }
     if (dpEval < 60) continue;
     const snapJ = evaluateZacAt(symbol, digits, bj.close, dPack, dpEval, p12, j, vixLevel, 0, xsmomTotal);
     const h24 = snapJ.horizons.find((h) => h.horizonHours === 24)!;
     const actualPx = p12.bars[j + 2].close;
-    const actualUp = actualPx >= bj.close;
-    const predUp = h24.expectedPrice >= bj.close;
+    if (Math.abs(actualPx - bj.close) < 1e-9) continue;
+    const actualUp = actualPx > bj.close;
+    const predUp = h24.expectedPrice > bj.close;
     allN++;
     if (actualUp === predUp) allHit++;
     if (Math.abs(snapJ.zacScore) >= 35 || snapJ.activeSetup.pod !== 'NONE') {
@@ -882,6 +1029,7 @@ export function computeProChartSeries(
   const macdLineArr = closes.map((_, i) => (ema12Arr[i] || 0) - (ema26Arr[i] || 0));
   const macdSigArr = calcEmaSeries(macdLineArr, 9);
   const rsiArr = calcRsiSeries(closes, 14);
+  const adxPack = calcAdxSeries(bars, 14);
 
   const startIdx = Math.max(0, bars.length - maxBars);
   const out: ProChartCandle[] = [];
@@ -915,13 +1063,18 @@ export function computeProChartSeries(
     const ml = macdLineArr[i] ?? 0;
     const ms = macdSigArr[i] ?? 0;
 
+    const rOpen = +(b.open ?? b.close).toFixed(digits);
+    const rClose = +b.close.toFixed(digits);
+    const rHigh = +Math.max(b.high ?? b.close, rOpen, rClose).toFixed(digits);
+    const rLow = +Math.min(b.low ?? b.close, rOpen, rClose).toFixed(digits);
+
     out.push({
       timestamp: b.timestamp,
       timeStr,
-      open: +(b.open ?? b.close).toFixed(digits),
-      high: +(b.high ?? b.close).toFixed(digits),
-      low: +(b.low ?? b.close).toFixed(digits),
-      close: +b.close.toFixed(digits),
+      open: rOpen,
+      high: rHigh,
+      low: rLow,
+      close: rClose,
       volume: Math.round(vol),
       rvol: rv,
       ema8: +(ema8Arr[i] ?? b.close).toFixed(digits),
@@ -935,9 +1088,9 @@ export function computeProChartSeries(
       macdHist: +(ml - ms).toFixed(digits + 2),
       macdLine: +ml.toFixed(digits + 2),
       macdSignal: +ms.toFixed(digits + 2),
-      adx14: 20,
-      pdi14: 20,
-      ndi14: 20,
+      adx14: +(adxPack.adx[i] ?? 20).toFixed(1),
+      pdi14: +(adxPack.pdi[i] ?? 20).toFixed(1),
+      ndi14: +(adxPack.ndi[i] ?? 20).toFixed(1),
     });
   }
   return out;

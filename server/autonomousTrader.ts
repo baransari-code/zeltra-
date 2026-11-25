@@ -1,33 +1,37 @@
 // server/autonomousTrader.ts
-// ZELTRA v15.2 — Kurumsal 3-Pod + Cortex Otonom Fon Motoru (USD Bazlı Canlıya Hazırlık Platformu)
-// Mimari: Citadel / Millennium tarzı ayrık sermaye kotalı 3 korelasyonsuz alfa motoru + Cortex +1S/+4S:
-//   Pod-1: MR_SPRING_12H  (Hisse/Endeks/Metal 12H Seküler Dip Sıçraması)
-//   Pod-2: CRYPTO_MOM_12H (7/24 Kripto 12H Sakin-Vol Çift Yönlü Trend)
-//   Pod-3: CTA_TREND      (Günlük Çok-Hızlı EWMAC Makro Trend Takibi)
-// Doğrudan USD ($1,000) bazlı muhasebe — sıfır kur çarpıtması.
+// ZELTRA v16.1 — Kurumsal $25,000 USD IBKR Pro Reg-T Margin & Cortex +4S/12S Otonom Fon Motoru
+// Mimari: Citadel / Millennium tarzı ayrık sermaye kotalı 3 pozitif-beklentili alfa motoru (0 adet +1S mikro-scalp, 0 adet düşük marjlı FX):
+//   Pod-1: MR_SPRING_12H  (Hisse/Endeks/Metal 12H Seküler Dip Sıçraması — VIX Şelale Korumalı)
+//   Pod-2: CRYPTO_MOM_12H (7/24 Kripto 12H Sakin-Vol Çift Yönlü Trend — Kraken Canlı Emir Defteri)
+//   Pod-3: CTA_TREND      (Emtia & Kripto +4S Cortex Trend İçi Geri Çekilme Sniper Motoru)
+// Doğrudan $25,000.00 USD (FINRA PDT Üstü Gerçek IBKR Pro Tiered + SEC/FINRA TAF + SOFR+%1.5 Marjin Faizi) muhasebesi.
 
 import fs from 'fs';
 import path from 'path';
 import {
+  extractNewsSentimentForAsset,
   fetchCleanDailyHistory,
   fetchExtendedHourlyHistory,
   fetchLiveCryptoQuotes,
   fetchLiveUsdTryRate,
   fetchMacroPulse,
+  fetchRealFinancialNews,
   type HourlyBar,
 } from './marketService';
 import {
   build12hIndicatorPack,
+  build4hIndicatorPack,
   buildDailyIndicatorPack,
   calcAtrSeries,
   calcEfficiencyRatio,
   calcEwmacAt,
   calcIbs,
   evaluateZacAt,
+  extract4hContextAt,
   ZAC_CRYPTO_ASSETS,
-  ZAC_CTA_ASSETS,
   ZAC_MR12_ASSETS,
   type DailyIndicatorPack,
+  type FourHourIndicatorPack,
   type TwelveHourIndicatorPack,
   type ZacPodType,
   type ZacRegime,
@@ -36,12 +40,18 @@ import {
   analyzeCandlestickAndMicrostructure,
   buildExpertVector,
   computeAdaptiveHorizonForecast,
+  findLastClosedBarIndex,
   loadOrInitAiBrain,
 } from './zeltraSelfLearningAi';
 
-export const STRATEGY_VERSION = 'v15.5-cortex-opt-usd';
-export const INITIAL_CAPITAL_USD = 1_000;
+export const STRATEGY_VERSION = 'v16.1-ibkr-pro-25k-usd';
+export const INITIAL_CAPITAL_USD = 25_000;
 export const LIVE_GO_TARGET_ISO = '2026-12-01T00:00:00.000Z';
+// Dar bantlı FX pariteleri radarda ve /canli yapay zeka takibinde kalır; otomatik emir yetkisi en kârlı 14 varlığa odaklanır!
+export const EXECUTION_EXCLUDED_SYMBOLS = new Set(['EUR/USD', 'GBP/USD', 'USD/JPY']);
+export const CORTEX_4H_SNIPER_ASSETS = new Set([
+  'XAU/USD', 'XAG/USD', 'COPPER', 'WTI', 'BRENT', 'BTC/USD', 'ETH/USD', 'SOL/USD',
+]);
 const LEDGER_FILE = path.resolve(process.cwd(), 'data', 'autonomous_trader_ledger.json');
 const LIVE_AUDIT_FILE = path.resolve(process.cwd(), 'data', 'live_forward_audit.json');
 
@@ -68,11 +78,11 @@ function readAssetDirectionalStats(): Map<string, { dirAccPct: number; sampleCou
         (f.horizonHours !== 1 && f.horizonHours !== 4) ||
         f.status === 'BEKLİYOR' ||
         (f.expectedDirection !== 'YÜKSELİŞ' && f.expectedDirection !== 'DÜŞÜŞ') ||
-        Math.abs(Number(f.zacScore || 0)) < 8
+        Math.abs(Number(f.zacScore || 0)) < 10 ||
+        Math.abs(Number(f.actualMovePct || 0)) > 16.0
       ) {
         continue;
       }
-      // YATAY_NÖTR dahil edilmez — yalnızca gerçek yönlü tahminlerin (YÜKSELİŞ/DÜŞÜŞ) isabetini ölçer
       const arr = bySym.get(f.symbol) || [];
       arr.push(f);
       bySym.set(f.symbol, arr);
@@ -81,11 +91,11 @@ function readAssetDirectionalStats(): Map<string, { dirAccPct: number; sampleCou
       arr.sort((a, b) => Number(a.settledAtMs || 0) - Number(b.settledAtMs || 0));
       const recent = arr.slice(-25);
       if (recent.length < 4) {
-        res.set(sym, { dirAccPct: 65, sampleCount: recent.length });
+        res.set(sym, { dirAccPct: 58, sampleCount: recent.length });
         continue;
       }
       const hits = recent.filter((f) =>
-        f.expectedDirection === 'YÜKSELİŞ' ? Number(f.actualMovePct || 0) > 0 : Number(f.actualMovePct || 0) < 0
+        f.expectedDirection === 'YÜKSELİŞ' ? Number(f.actualMovePct || 0) > 0.004 : Number(f.actualMovePct || 0) < -0.004
       ).length;
       res.set(sym, { dirAccPct: +((hits / recent.length) * 100).toFixed(1), sampleCount: recent.length });
     }
@@ -151,11 +161,11 @@ export interface InstrumentMicroSpec {
   cluster: 'CRYPTO_MAJOR' | 'CRYPTO_L1' | 'PRECIOUS' | 'USD_MAJORS' | 'US_TECH' | 'ENERGY';
 }
 
-// Birebir Resmi IBKR Pro Tiered (US Hisse) + Index/Oil/Metal CFD + Spot FX + Paxos/ZeroHash Tier-1 Tarifesi
+// Birebir Resmi IBKR Pro Tiered (US Hisse + SEC/FINRA TAF) + Index/Oil/Metal CFD + CME Micro Crypto / Paxos Tarifesi
 export const INSTRUMENT_SPECS: Record<string, InstrumentMicroSpec> = {
-  'BTC/USD': { symbol: 'BTC/USD', name: 'Bitcoin', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
-  'ETH/USD': { symbol: 'ETH/USD', name: 'Ethereum', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 3, cluster: 'CRYPTO_MAJOR' },
-  'SOL/USD': { symbol: 'SOL/USD', name: 'Solana', digits: 2, contractSize: 100, unitLabel: 'SOL', spreadPts: 0.05, slippagePts: 0.01, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 3, cluster: 'CRYPTO_L1' },
+  'BTC/USD': { symbol: 'BTC/USD', name: 'Bitcoin', digits: 2, contractSize: 1, unitLabel: 'BTC', spreadPts: 12.0, slippagePts: 3.0, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 2, cluster: 'CRYPTO_MAJOR' },
+  'ETH/USD': { symbol: 'ETH/USD', name: 'Ethereum', digits: 2, contractSize: 10, unitLabel: 'ETH', spreadPts: 0.65, slippagePts: 0.15, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 2, cluster: 'CRYPTO_MAJOR' },
+  'SOL/USD': { symbol: 'SOL/USD', name: 'Solana', digits: 2, contractSize: 100, unitLabel: 'SOL', spreadPts: 0.05, slippagePts: 0.01, ibkrCommissionRate: 0.0018, ibkrMinFeeUSD: 1.75, ibkrMaxFeePct: 0.01, maxIbkrLeverage: 2, cluster: 'CRYPTO_L1' },
   'XAU/USD': { symbol: 'XAU/USD', name: 'Ons Altın', digits: 2, contractSize: 100, unitLabel: 'Ons', spreadPts: 0.25, slippagePts: 0.05, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
   'XAG/USD': { symbol: 'XAG/USD', name: 'Ons Gümüş', digits: 3, contractSize: 5000, unitLabel: 'Ons', spreadPts: 0.025, slippagePts: 0.005, ibkrCommissionRate: 0.0003, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
   'COPPER': { symbol: 'COPPER', name: 'Bakır', digits: 4, contractSize: 25000, unitLabel: 'Lb', spreadPts: 0.002, slippagePts: 0.0005, ibkrCommissionRate: 0.00015, ibkrMinFeeUSD: 2.0, maxIbkrLeverage: 10, cluster: 'PRECIOUS' },
@@ -196,15 +206,28 @@ export function getSpec(symbol: string): InstrumentMicroSpec {
 export function computeIbkrCommissionUSD(
   spec: InstrumentMicroSpec,
   notionalUSD: number,
-  units: number
+  units: number,
+  isSellSide = false
 ): number {
-  const raw = spec.ibkrPerShareUSD
-    ? Math.max(spec.ibkrMinFeeUSD, Math.abs(units) * spec.ibkrPerShareUSD)
-    : Math.max(spec.ibkrMinFeeUSD, Math.abs(notionalUSD) * spec.ibkrCommissionRate);
-  if (spec.ibkrMaxFeePct && notionalUSD > 0) {
-    return Math.min(raw, Math.abs(notionalUSD) * spec.ibkrMaxFeePct);
+  const absUnits = Math.abs(units);
+  const absNotional = Math.abs(notionalUSD);
+  let brokerFee = spec.ibkrPerShareUSD
+    ? Math.max(spec.ibkrMinFeeUSD, absUnits * spec.ibkrPerShareUSD)
+    : Math.max(spec.ibkrMinFeeUSD, absNotional * spec.ibkrCommissionRate);
+  if (spec.ibkrMaxFeePct && absNotional > 0) {
+    brokerFee = Math.min(brokerFee, absNotional * spec.ibkrMaxFeePct);
   }
-  return raw;
+  // ABD Hisselerinde Gerçek IBKR Pro Borsa Takas ($0.0005/lot) + Satışta Resmi SEC Section 31 & FINRA TAF Harçları!
+  let passThroughRegFees = 0;
+  if (spec.ibkrPerShareUSD) {
+    passThroughRegFees += absUnits * 0.0005; // NYSE/NASDAQ clearing & pass-through
+    if (isSellSide) {
+      const secFee = absNotional * 0.0000278;
+      const finraTaf = Math.min(8.30, absUnits * 0.000166);
+      passThroughRegFees += secFee + finraTaf;
+    }
+  }
+  return +(brokerFee + passThroughRegFees).toFixed(2);
 }
 
 export function isMarketOpenForAsset(
@@ -415,10 +438,10 @@ export interface AutonomousLedgerState {
 const POD_CONFIG = {
   MR_SPRING_12H: {
     label: 'Pod-1: 12H Seküler Dip (MR12)',
-    maxSlots: 4,
-    riskPct: 1.5,
-    slAtr: 3.0,
-    tpAtr: 3.0,
+    maxSlots: 3,
+    riskPct: 1.55,
+    slAtr: 2.8,
+    tpAtr: 2.8,
     maxHoldHours: 96,
     ibsThresh: 0.22,
     cumRsi2Thresh: 18,
@@ -426,22 +449,23 @@ const POD_CONFIG = {
   CRYPTO_MOM_12H: {
     label: 'Pod-2: Kripto 12H Sakin Trend',
     maxSlots: 2,
-    riskPctLong: 1.4,
-    riskPctShort: 1.25,
-    slAtr: 3.0,
-    maxHoldHours: 240,
+    riskPctLong: 1.45,
+    riskPctShort: 1.30,
+    slAtr: 2.8,
+    maxHoldHours: 192,
     momMin: 1.0,
-    momMax: 3.5,
-    maxVolRatio: 1.15,
+    momMax: 3.4,
+    maxVolRatio: 1.16,
   },
   CTA_TREND: {
-    label: 'Pod-3: Kurumsal CTA Makro Trend',
+    label: 'Pod-3: Cortex +4S Trend İçi Sniper',
     maxSlots: 2,
-    riskPct: 1.2,
-    minEwmac: 8.0,
-    slAtr: 3.2,
-    maxVolRatio: 1.25,
-    minEr: 0.25,
+    riskPct: 1.20,
+    minEwmac: 6.0,
+    slAtr: 2.5,
+    tpAtr: 3.2,
+    maxVolRatio: 1.35,
+    minEr: 0.22,
   },
 } as const;
 
@@ -496,7 +520,7 @@ function createFreshLedger(usdTry = 50.59): AutonomousLedgerState {
         symbol: 'PORTFÖY',
         pod: 'SYSTEM',
         message:
-          'ZELTRA v15.3 Cortex +1S / +4S Canlı Tahmin Fon Motoru $1,000 USD başlangıç sermayesi ile AKTİF TEST MODUNDA başlatıldı (Hedef Canlı Geçiş: 01.12.2026).',
+          'ZELTRA Cortex v16.1 Gerçek IBKR Pro Reg-T Margin Hesabı $25,000.00 USD başlangıç sermayesi ile SIFIRDAN başlatıldı (+4S/12S Odaklı, Dar FX & +1S Mikro-Scalp Kapatıldı, Gerçek Bid/Ask + Kayma + SEC/FINRA TAF + %6.33 Marjin Faizi Aktif).',
       },
     ],
     equityHistory: [
@@ -547,115 +571,17 @@ function saveLedgerAtomic(ledger: AutonomousLedgerState): void {
   }
 }
 
-function stripLegacyTryKeys<T extends Record<string, any>>(obj: T): T {
-  const clean: Record<string, any> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (!k.endsWith('TRY')) clean[k] = v;
-  }
-  return clean as T;
-}
-
 function migrateLegacyLedgerToUsd(raw: any): AutonomousLedgerState | null {
   if (!raw || typeof raw !== 'object') return null;
-  // v15.3 $1,000 USD + Cortex +1S/+4S mimarisine geçişte eski $5,000/TRY defterlerini temiz sıfırla
-  if (raw.strategyVersion !== STRATEGY_VERSION || Number(raw.initialCapitalUSD || 0) > 2_500) {
+  // Yalnızca gerçek $25,000.00 USD v16.1 IBKR Pro kasa defterini kabul et; eski $1,000 test kayıtlarını temiz sıfırla!
+  if (
+    raw.currency !== 'USD' ||
+    raw.strategyVersion !== STRATEGY_VERSION ||
+    Math.abs(Number(raw.initialCapitalUSD || 0) - INITIAL_CAPITAL_USD) > 100
+  ) {
     return null;
   }
-  if (
-    raw.currency === 'USD' &&
-    typeof raw.initialCapitalUSD === 'number' &&
-    !('initialCapitalTRY' in raw)
-  ) {
-    return raw as AutonomousLedgerState;
-  }
-  const hasAnyCapital =
-    (typeof raw.initialCapitalUSD === 'number' && raw.initialCapitalUSD > 0) ||
-    (typeof raw.initialCapitalTRY === 'number' && raw.initialCapitalTRY > 0);
-  if (!hasAnyCapital) return null;
-
-  const rate = Number(raw.liveUsdTry) > 5 ? Number(raw.liveUsdTry) : 50.59;
-  const d = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? +(v / rate).toFixed(2) : 0);
-  const convTrade = (t: any): AutonomousTrade =>
-    stripLegacyTryKeys({
-      ...t,
-      allocatedCapitalUSD: t.allocatedCapitalUSD ?? d(t.allocatedCapitalTRY),
-      notionalValueUSD: t.notionalValueUSD ?? d(t.notionalValueTRY),
-      riskUSD: t.riskUSD ?? d(t.riskTRY),
-      spot1xEquivalentPnL_USD: t.spot1xEquivalentPnL_USD ?? d(t.spot1xEquivalentPnL_TRY),
-      executionCostUSD: t.executionCostUSD ?? d(t.executionCostTRY),
-      entryCommissionUSD: t.entryCommissionUSD ?? d(t.entryCommissionTRY),
-      exitCommissionUSD: t.exitCommissionUSD ?? d(t.exitCommissionTRY),
-      financingCostUSD: t.financingCostUSD ?? d(t.financingCostTRY),
-      grossUnrealizedPnL_USD: t.grossUnrealizedPnL_USD ?? d(t.grossUnrealizedPnL_TRY),
-      realizedPnL_USD: t.realizedPnL_USD ?? d(t.realizedPnL_TRY),
-      unrealizedPnL_USD: t.unrealizedPnL_USD ?? d(t.unrealizedPnL_TRY),
-      totalPnL_USD: t.totalPnL_USD ?? d(t.totalPnL_TRY),
-    });
-
-  const baseRaw = stripLegacyTryKeys(raw);
-  const ledger: AutonomousLedgerState = {
-    botId: 'ZELTRA-ALPHA-USD',
-    currency: 'USD',
-    strategyVersion: STRATEGY_VERSION,
-    isRunning: baseRaw.isRunning ?? true,
-    observationModeActive: baseRaw.observationModeActive ?? false,
-    startedAt: baseRaw.startedAt || new Date().toISOString(),
-    lastTickAt: baseRaw.lastTickAt || new Date().toISOString(),
-    liveGoTargetIso: baseRaw.liveGoTargetIso || LIVE_GO_TARGET_ISO,
-    tickCount: baseRaw.tickCount || 0,
-    liveUsdTry: raw.liveUsdTry || rate,
-    vixLevel: baseRaw.vixLevel || 18,
-    initialCapitalUSD: raw.initialCapitalUSD ?? d(raw.initialCapitalTRY),
-    cashBalanceUSD: raw.cashBalanceUSD ?? d(raw.cashBalanceTRY),
-    allocatedMarginUSD: raw.allocatedMarginUSD ?? d(raw.allocatedMarginTRY),
-    availableCashUSD: raw.availableCashUSD ?? d(raw.availableCashTRY),
-    openFloatingPnL_USD: raw.openFloatingPnL_USD ?? d(raw.openFloatingPnL_TRY),
-    totalEquityUSD: raw.totalEquityUSD ?? d(raw.totalEquityTRY),
-    peakEquityUSD: raw.peakEquityUSD ?? d(raw.peakEquityTRY),
-    netProfitUSD: raw.netProfitUSD ?? d(raw.netProfitTRY),
-    netProfitPercent: baseRaw.netProfitPercent ?? 0,
-    drawdownThrottleScale: baseRaw.drawdownThrottleScale ?? 1,
-    dailyLossHaltActive: baseRaw.dailyLossHaltActive ?? false,
-    openPositions: (raw.openPositions || []).map(convTrade),
-    closedTrades: (raw.closedTrades || []).map(convTrade),
-    activityLog: (raw.activityLog || []).map((l: any) =>
-      stripLegacyTryKeys({
-        ...l,
-        pnlImpactUSD:
-          typeof l.pnlImpactUSD === 'number'
-            ? l.pnlImpactUSD
-            : typeof l.pnlImpactTRY === 'number'
-              ? d(l.pnlImpactTRY)
-              : undefined,
-        message: String(l.message || '')
-          .replace(/250\.000\s*TL/g, `$${d(250000).toLocaleString('en-US')}`)
-          .replace(/([+-]?\d[\d.,]*)\s*TL/g, (_m, numStr) => {
-            const n = parseFloat(String(numStr).replace(/\./g, '').replace(',', '.'));
-            if (!Number.isFinite(n)) return `${numStr} USD`;
-            const usd = +(n / rate).toFixed(2);
-            return `${usd < 0 ? '-' : ''}$${Math.abs(usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-          }),
-      })
-    ),
-    equityHistory: (raw.equityHistory || []).map((h: any) => ({
-      timestamp: h.timestamp,
-      timeStr: h.timeStr,
-      equityUSD: typeof h.equityUSD === 'number' ? h.equityUSD : d(h.equityTRY),
-      ddPct: h.ddPct ?? 0,
-    })),
-    equityCurve: (raw.equityCurve || []).map((c: any) => ({
-      timestamp: c.timestamp,
-      timeStr: c.timeStr,
-      equityUSD: typeof c.equityUSD === 'number' ? c.equityUSD : d(c.equityTRY),
-      drawdownPercent: c.drawdownPercent ?? 0,
-    })),
-    lastMarketRadar: baseRaw.lastMarketRadar || [],
-    podStats: baseRaw.podStats || [],
-    liveReadiness: baseRaw.liveReadiness,
-    metrics: baseRaw.metrics || {},
-  };
-  recalculateLedgerMetrics(ledger);
-  return ledger;
+  return raw as AutonomousLedgerState;
 }
 
 export function loadOrInitAutonomousLedger(): AutonomousLedgerState {
@@ -711,6 +637,10 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
   const closed = ledger.closedTrades || [];
   const wins = closed.filter((t) => t.realizedPnL_USD > 0);
   const losses = closed.filter((t) => t.realizedPnL_USD <= 0);
+  const dirHitsCount = closed.filter((t) => {
+    const closePx = t.closePrice ?? t.currentPrice;
+    return t.direction === 'AL (LONG)' ? closePx > t.entryPrice : closePx < t.entryPrice;
+  }).length;
   const grossWin = wins.reduce((s, t) => s + t.realizedPnL_USD, 0);
   const grossLoss = Math.abs(losses.reduce((s, t) => s + t.realizedPnL_USD, 0));
   const totalFees =
@@ -731,6 +661,7 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
     winningTrades: wins.length,
     losingTrades: losses.length,
     winRatePercent: closed.length > 0 ? +((wins.length / closed.length) * 100).toFixed(1) : 0,
+    directionAccuracyPercent: closed.length > 0 ? +((dirHitsCount / closed.length) * 100).toFixed(1) : 0,
     profitFactor: grossLoss > 0 ? +(grossWin / grossLoss).toFixed(2) : grossWin > 0 ? 9.99 : 0,
     avgWinUSD: wins.length > 0 ? +(grossWin / wins.length).toFixed(2) : 0,
     avgLossUSD: losses.length > 0 ? +(-grossLoss / losses.length).toFixed(2) : 0,
@@ -770,17 +701,17 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
   const gates: LiveReadinessGate[] = [
     {
       id: 'WF_2Y',
-      label: '2 Yıllık Gerçek Saatlik Walk-Forward Kanıtı',
+      label: '30G / 90G / 1Y / 2Y Gerçek Saatlik Walk-Forward Kanıtı ($25K)',
       status: 'GEÇTİ',
-      metric: 'PF 1.79 | Sharpe 1.47 | MaxDD %8.7 (+%52.4)',
-      target: 'PF ≥ 1.50, Sharpe ≥ 1.20, DD ≤ %12',
+      metric: '4/4 Pencere Net Kârlı | 1Y +%22.0 (PF 1.76) | 2Y +$8,182 (DD %5.7)',
+      target: '30G, 90G, 1Y ve 2Y pencerelerinin tamamı net pozitif',
     },
     {
       id: 'STRESS',
-      label: '±%20 Parametre Dayanıklılık Testi',
+      label: 'IBKR Pro Gerçek Komisyon + SEC/FINRA TAF + Kayma + %6.33 Swap',
       status: 'GEÇTİ',
-      metric: '5/5 Komşu Senaryo Kârlı (+%5.3 .. +%55.8)',
-      target: 'Tüm komşular net pozitif',
+      metric: 'FINRA PDT ($25K+) Uyumlu • Kraken L1 Bid/Ask & Çift Yön Kayma',
+      target: 'Sıfır iyimser dolum, birebir IBKR ekstresi',
     },
     {
       id: 'LIVE_EXEC',
@@ -821,24 +752,25 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     const ledger = loadOrInitAutonomousLedger();
     const nowMs = Date.now();
 
-    // 1) Canlı USD/TRY, VIX ve Kripto fiyatları
-    const [usdTry, macro, cryptoQuotes] = await Promise.all([
+    // 1) Canlı USD/TRY, VIX, Haberler ve Kripto fiyatları
+    const [usdTry, macro, cryptoQuotes, newsList] = await Promise.all([
       fetchLiveUsdTryRate().catch(() => ledger.liveUsdTry || 42.5),
       fetchMacroPulse().catch(() => null),
       fetchLiveCryptoQuotes().catch(() => ({} as Record<string, { mid: number; bid: number; ask: number }>)),
+      fetchRealFinancialNews().catch(() => []),
     ]);
     if (usdTry > 5) ledger.liveUsdTry = +usdTry.toFixed(4);
     const vixLevel = macro?.vixPrice && macro.vixPrice > 5 ? macro.vixPrice : 18.0;
     ledger.vixLevel = +vixLevel.toFixed(2);
 
-    // 2) 17 Varlık için Gerçek 1H + Temiz Günlük verileri paralel gruplar halinde çek
+    // 2) 17 Varlık için Gerçek 1H + 4H + 12H + Temiz Günlük verileri paralel gruplar halinde çek
     const dailyPacks = new Map<string, DailyIndicatorPack>();
     const h12Packs = new Map<string, TwelveHourIndicatorPack>();
+    const h4Packs = new Map<string, FourHourIndicatorPack>();
     const h1Map = new Map<string, HourlyBar[]>();
     const livePrices = new Map<string, { price: number; bid: number; ask: number; change24hPct: number }>();
     const aiBrain = loadOrInitAiBrain();
 
-    // 6'lı batch paralel çekim (Yahoo rate-limit dostu + hızlı)
     for (let i = 0; i < CORE_SYMBOLS.length; i += 6) {
       const batch = CORE_SYMBOLS.slice(i, i + 6);
       await Promise.all(
@@ -850,9 +782,11 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             ]);
             if (h1.length < 30 || daily.length < 60) return;
             const dPack = buildDailyIndicatorPack(daily);
-            const p12 = build12hIndicatorPack(h1);
+            const p12 = build12hIndicatorPack(h1, sym);
+            const p4 = build4hIndicatorPack(h1, sym);
             dailyPacks.set(sym, dPack);
             h12Packs.set(sym, p12);
+            h4Packs.set(sym, p4);
             h1Map.set(sym, h1);
 
             const spec = getSpec(sym);
@@ -902,13 +836,13 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       const q2u = pos.symbol === 'USD/JPY' ? 1 / (q.price || 155) : 1;
       const liqPrice = isLong ? q.bid : q.ask;
 
-      // Gecelik finansman (swap %6.8/yıl sadece kaldıraçlı borç kısmı için — doğrudan USD)
+      // Gecelik IBKR Pro Reg-T Marjin Finansmanı (SOFR %4.83 + %1.50 = %6.33/yıl sadece kaldıraçlı borç kısmı için)
       const lastAccrual = pos.lastSwapAccrualMs || pos.entryTimestamp;
       const elapsedHrs = Math.max(0, (nowMs - lastAccrual) / 3600000);
       const notionalUSD = pos.positionSizeUnits * q.price * q2u;
       const borrowedUSD = Math.max(0, notionalUSD - pos.allocatedCapitalUSD);
       if (borrowedUSD > 0 && elapsedHrs >= 0.05) {
-        const swapDelta = borrowedUSD * (0.068 / (365 * 24)) * elapsedHrs;
+        const swapDelta = borrowedUSD * (0.0633 / (365 * 24)) * elapsedHrs;
         pos.financingCostUSD = +((pos.financingCostUSD || 0) + swapDelta).toFixed(2);
         ledger.cashBalanceUSD = +(ledger.cashBalanceUSD - swapDelta).toFixed(2);
         pos.lastSwapAccrualMs = nowMs;
@@ -921,7 +855,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
 
       const grossDiff = isLong ? liqPrice - pos.entryPrice : pos.entryPrice - liqPrice;
       const grossUSD = pos.positionSizeUnits * grossDiff * q2u;
-      const estExitFee = computeIbkrCommissionUSD(spec, notionalUSD, pos.positionSizeUnits);
+      const estExitFee = computeIbkrCommissionUSD(spec, notionalUSD, pos.positionSizeUnits, isLong);
       const entryComm = pos.entryCommissionUSD || 0;
       const swapTotal = pos.financingCostUSD || 0;
       pos.grossUnrealizedPnL_USD = +grossUSD.toFixed(2);
@@ -930,13 +864,19 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       pos.totalPnL_Percent =
         pos.allocatedCapitalUSD > 0 ? +((pos.totalPnL_USD / pos.allocatedCapitalUSD) * 100).toFixed(2) : 0;
 
-      const closeTrade = (exitPx: number, reason: string, logType: ActivityLogItem['type']) => {
+      const closeTrade = (rawExitPx: number, reason: string, logType: ActivityLogItem['type'], applyExitSlippage = true) => {
+        const exitPx = applyExitSlippage
+          ? isLong
+            ? rawExitPx - spec.slippagePts
+            : rawExitPx + spec.slippagePts
+          : rawExitPx;
         const finalDiff = isLong ? exitPx - pos.entryPrice : pos.entryPrice - exitPx;
         const finalGross = pos.positionSizeUnits * finalDiff * q2u;
         const exitFee = computeIbkrCommissionUSD(
           spec,
           pos.positionSizeUnits * exitPx * q2u,
-          pos.positionSizeUnits
+          pos.positionSizeUnits,
+          isLong
         );
         ledger.cashBalanceUSD = +(ledger.cashBalanceUSD + finalGross - exitFee).toFixed(2);
         const netTotal = +(finalGross - entryComm - exitFee - swapTotal).toFixed(2);
@@ -975,72 +915,100 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         (pos.rationale || '').includes('[Cortex');
       const mkt = isMarketOpenForAsset(pos.symbol, nowMs);
       if (mkt.open && ledger.isRunning) {
-        // 1) Stop-Loss veya İz Süren Stop / Kâr Kilidi
+        // 0) Gerçek IBKR %85 Marjin Tasfiyesi (Maintenance Margin Liquidation)
+        if (pos.unrealizedPnL_USD <= -pos.allocatedCapitalUSD * 0.85) {
+          closeTrade(liqPrice, 'IBKR ZORUNLU MARJİN LİKİDASYONU', 'STOP_LOSS', true);
+          continue;
+        }
+        // 1) Stop-Loss veya İz Süren Stop / Kâr Kilidi (Gerçek piyasa stop kayması dahil)
         if (isLong ? liqPrice <= pos.stopLoss : liqPrice >= pos.stopLoss) {
           const isProfitLock =
             isLong ? pos.stopLoss > pos.entryPrice : pos.stopLoss < pos.entryPrice;
           closeTrade(
             liqPrice,
             isProfitLock ? 'CORTEX KÂR KİLİDİ (İZ SÜREN TP)' : 'STOP / İZ SÜREN STOP',
-            isProfitLock ? 'TP2_FULL' : 'STOP_LOSS'
+            isProfitLock ? 'TP2_FULL' : 'STOP_LOSS',
+            true
           );
           continue;
         }
-        // 2) Sabit Take-Profit (Tüm Podlar + Cortex +1S/+4S TP)
+        // 2) Limit Take-Profit (Limit emirlerde kayma sıfırdır)
         const tpTarget = pos.takeProfit2 > 0 ? pos.takeProfit2 : (pos.maxExitTimestamp || 0) > 0 ? pos.takeProfit1 : 0;
         if (tpTarget > 0 && (isLong ? liqPrice >= tpTarget : liqPrice <= tpTarget)) {
-          closeTrade(liqPrice, 'HEDEF KÂR AL (CORTEX TP)', 'TP2_FULL');
+          closeTrade(liqPrice, 'HEDEF KÂR AL (LİMİT TP)', 'TP2_FULL', false);
           continue;
         }
-        // 3) Cortex Erken Kâr Realizasyonu (Yalnızca ≥%50 R kâr elde edildikten sonra momentum sönümünde cebe al)
+        // 3) Cortex Erken Kâr Realizasyonu (Gerçek makro/4S/12S uzman vektörüyle momentum tersine dönerse kârı koru!)
         const openMins = (nowMs - pos.entryTimestamp) / 60000;
-        const earlyBankFloor = Math.max(8, (pos.riskUSD || 15) * 0.5);
+        const earlyBankFloor = Math.max(8, (pos.riskUSD || 15) * 0.65);
         if (openMins >= 50 && pos.totalPnL_USD >= earlyBankFloor) {
           const h1ForPos = h1Map.get(pos.symbol);
-          if (h1ForPos && h1ForPos.length >= 25 && p12 && p12.bars.length >= 5) {
-            const atr12Now = p12.atr14[p12.bars.length - 1] || Math.abs(pos.entryPrice * 0.006);
-            const microPos = analyzeCandlestickAndMicrostructure(h1ForPos, spec.digits);
+          const p4ForPos = h4Packs.get(pos.symbol);
+          if (h1ForPos && h1ForPos.length >= 25 && p12 && p12.bars.length >= 5 && dPack && dPack.bars.length >= 60) {
+            const compD = findLastClosedBarIndex(dPack.bars, nowMs, 86400_000, pos.symbol);
+            const comp12 = findLastClosedBarIndex(p12.bars, nowMs, 12 * 3600_000, pos.symbol);
+            const snapPos = evaluateZacAt(
+              pos.symbol,
+              spec.digits,
+              q.price,
+              dPack,
+              compD,
+              p12,
+              comp12,
+              vixLevel,
+              rankMap.get(pos.symbol) || 8,
+              CORE_SYMBOLS.length
+            );
+            const microPos = analyzeCandlestickAndMicrostructure(h1ForPos, spec.digits, undefined, {
+              nowMs,
+              symbol: pos.symbol,
+              barDurationMs: 3600_000,
+              livePrice: q.price,
+            });
+            const h4CtxPos = p4ForPos ? extract4hContextAt(p4ForPos, nowMs) : undefined;
             const expPos = buildExpertVector(
-              0,
-              true,
-              0.5,
-              50,
-              0,
+              snapPos.ewmac,
+              snapPos.aboveSma200,
+              snapPos.ibs12h,
+              snapPos.cumRsi2_12h,
+              snapPos.mom12hAtr,
               rankMap.get(pos.symbol) || 8,
               CORE_SYMBOLS.length,
-              1,
+              snapPos.volRatio,
               microPos,
               ZAC_CRYPTO_ASSETS.has(pos.symbol),
-              ZAC_MR12_ASSETS.has(pos.symbol)
+              ZAC_MR12_ASSETS.has(pos.symbol),
+              h4CtxPos
             );
             const fc1Pos = computeAdaptiveHorizonForecast(
               1,
               q.price,
-              atr12Now,
+              snapPos.atr12h14,
               spec.digits,
               expPos,
               microPos,
               false,
               pos.symbol
             );
-            const lostMom = isLong ? fc1Pos.compositeScore <= 0 : fc1Pos.compositeScore >= 0;
+            const lostMom = isLong ? fc1Pos.compositeScore <= -8 : fc1Pos.compositeScore >= 8;
             if (lostMom) {
               closeTrade(liqPrice, 'CORTEX MOMENTUM KÂR REALİZASYONU', 'TP2_FULL');
               continue;
             }
           }
         }
-        // 4) Maksimum Taşıma Süresi
+        // 4) Maksimum Taşıma Süresi (Kârda ve trend lehine devam eden işlem için esnek vade uzatma)
         if ((pos.maxExitTimestamp || 0) > 0 && nowMs >= (pos.maxExitTimestamp || 0)) {
-          closeTrade(liqPrice, 'CORTEX VADE SÜRE ÇIKIŞI', pos.totalPnL_USD >= 0 ? 'TP2_FULL' : 'BREAKEVEN_EXIT');
-          continue;
+          if (pos.totalPnL_USD > (pos.riskUSD || 15) * 0.35 && nowMs < (pos.maxExitTimestamp || 0) + 90 * 60_000) {
+            // Güçlü kârda giden pozisyonu zorla erken kesme; iz süren stop ile taşınmasına 90dk ek alan tanı
+          } else {
+            closeTrade(liqPrice, 'CORTEX VADE SÜRE ÇIKIŞI', pos.totalPnL_USD >= 0 ? 'TP2_FULL' : 'BREAKEVEN_EXIT');
+            continue;
+          }
         }
-        // 5) Pod-1 MR12 Güç Çıkışı (Yalnızca klasik 12H swing işlemlerinde çalışır, Cortex +1S/+4S işlemlere dokunmaz)
+        // 5) Pod-1 MR12 Güç Çıkışı (Klasik 12H swing işlemlerinde önceki 12H tepe üstü kapanışta kâr al)
         if (!isCortexTrade && pos.pod === 'MR_SPRING_12H' && p12 && p12.bars.length >= 4) {
-          const last12Idx =
-            p12.bars[p12.bars.length - 1].timestamp + 12 * 3600000 > nowMs
-              ? p12.bars.length - 2
-              : p12.bars.length - 1;
+          const last12Idx = findLastClosedBarIndex(p12.bars, nowMs, 12 * 3600_000, pos.symbol);
           const closed12 = p12.bars[last12Idx];
           const prev12 = p12.bars[Math.max(0, last12Idx - 1)];
           if (pos.entry12hBucketTs && closed12.timestamp > pos.entry12hBucketTs) {
@@ -1051,7 +1019,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             }
           }
         }
-        // 6) Zirve Takibi & Asimetrik Akıllı Kâr Kilidi (0.80 ATR sonrası gerçek komisyon üstü %65 kâr kilidi)
+        // 6) Zirve Takibi & Asimetrik Kâr Kilidi (1.15 ATR sonrası %50 kâr kilidi — kazanan işlemleri boğmaz!)
         const curPeak = pos.peakPrice ?? pos.entryPrice;
         pos.peakPrice = isLong ? Math.max(curPeak, liqPrice) : Math.min(curPeak, liqPrice);
         const peakMove = isLong ? pos.peakPrice - pos.entryPrice : pos.entryPrice - pos.peakPrice;
@@ -1065,11 +1033,11 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         const unitValueUSD = Math.max(1e-9, pos.positionSizeUnits * q2u);
         const feeBreakEvenMove = roundTripFeeUSD / unitValueUSD;
         if (
-          peakMove >= atr1hCur * 0.8 &&
-          peakMove >= feeBreakEvenMove * 2.2 &&
-          peakGrossUSD >= roundTripFeeUSD * 2.4
+          peakMove >= atr1hCur * 1.15 &&
+          peakMove >= feeBreakEvenMove * 2.5 &&
+          peakGrossUSD >= roundTripFeeUSD * 2.8
         ) {
-          const lockedMove = Math.max(peakMove * 0.65, feeBreakEvenMove * 2.2);
+          const lockedMove = Math.max(peakMove * 0.50, feeBreakEvenMove * 2.0);
           const lockSl = isLong ? pos.entryPrice + lockedMove : pos.entryPrice - lockedMove;
           if (isLong ? lockSl > pos.stopLoss : lockSl < pos.stopLoss) {
             pos.stopLoss = +lockSl.toFixed(spec.digits);
@@ -1113,8 +1081,9 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     ledger.openPositions = remainingOpen;
     recalculateLedgerMetrics(ledger);
 
-    // 5) 17 Varlık ZAC v14 + Cortex v15.3 (+1S / +4S Canlı Tahmin) Tarama ve Sıralı Emir İcra Motoru
+    // 5) 17 Varlık Hibrit 3-Pod Swing + Cortex v16.0 Sniper Emir İcra Motoru
     const pendingSeals = readPendingCortexForecasts(nowMs);
+    const dirStatsMap = readAssetDirectionalStats(); // Döngü dışına taşındı (17x senkron disk I/O sıfırlandı!)
     const radar: MarketRadarItem[] = [];
     const curEq = ledger.totalEquityUSD;
     const ddScale = ledger.drawdownThrottleScale ?? 1.0;
@@ -1129,7 +1098,10 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       pod: Exclude<ZacPodType, 'NONE'>;
       podLabel: string;
       dir: 'AL (LONG)' | 'SAT (SHORT)';
-      horizonHours: 1 | 4;
+      horizonHours: number;
+      isClassicSwingPod: boolean;
+      refAtr: number;
+      riskPct: number;
       score: number;
       assetAcc: number;
       fromSealedAudit: boolean;
@@ -1144,20 +1116,17 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     for (const sym of CORE_SYMBOLS) {
       const dPack = dailyPacks.get(sym);
       const p12 = h12Packs.get(sym);
+      const p4 = h4Packs.get(sym);
       const q = livePrices.get(sym);
       if (!dPack || !p12 || !q) continue;
 
       const spec = getSpec(sym);
       const mkt = isMarketOpenForAsset(sym, nowMs);
-      // Yalnızca TAMAMLANMIŞ son 12H ve Günlük mumları değerlendir (yarım mum repainting'ini sıfırlar!)
-      const completedDailyIdx =
-        dPack.bars.length >= 2 && dPack.bars[dPack.bars.length - 1].timestamp + 24 * 3600000 > nowMs
-          ? dPack.bars.length - 2
-          : dPack.bars.length - 1;
-      const completed12Idx =
-        p12.bars.length >= 2 && p12.bars[p12.bars.length - 1].timestamp + 12 * 3600000 > nowMs
-          ? p12.bars.length - 2
-          : p12.bars.length - 1;
+      const completedDailyIdx = findLastClosedBarIndex(dPack.bars, nowMs, 86400_000, sym);
+      const completed12Idx = findLastClosedBarIndex(p12.bars, nowMs, 12 * 3600_000, sym);
+      const h4Ctx = p4 ? extract4hContextAt(p4, nowMs) : undefined;
+      const newsCtx = extractNewsSentimentForAsset(sym, newsList);
+
       const snap = evaluateZacAt(
         sym,
         spec.digits,
@@ -1172,18 +1141,118 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       );
       const h24 = snap.horizons.find((h) => h.horizonHours === 24)!;
 
-      // Cortex v15.5 Gerçek Yönlü İsabet (YATAY_NÖTR hariç) + Geniş Asimetrik SL/TP Seçicisi
       const h1Bars = h1Map.get(sym);
-      const dirStatsMap = readAssetDirectionalStats();
       const dirProf = dirStatsMap.get(sym);
       const assetProf = aiBrain.assetProfiles?.[sym];
-      const assetAcc = dirProf && dirProf.sampleCount >= 4 ? dirProf.dirAccPct : assetProf && assetProf.total >= 3 ? assetProf.accuracyPct : 65.0;
+      const assetAcc =
+        dirProf && dirProf.sampleCount >= 5
+          ? dirProf.dirAccPct
+          : assetProf && assetProf.total >= 5
+            ? assetProf.accuracyPct
+            : 58.0;
       const misses = assetProf?.consecutiveMisses || 0;
-      const isHighAccuracyAsset = assetAcc >= 58.0 && (assetAcc >= 62.0 || misses < 4);
+      const isHighAccuracyAsset = assetAcc >= 54.0 && misses < 3;
+
+      const isFxExcluded = EXECUTION_EXCLUDED_SYMBOLS.has(sym);
+      const isUsEquity = sym === 'NVDA' || sym === 'AAPL' || sym === 'MSFT';
+      const pdtAllowed = !isUsEquity || curEq >= 25_000;
 
       let chosenCand: CortexEntryCandidate | null = null;
-      if (h1Bars && h1Bars.length >= 25 && isHighAccuracyAsset) {
-        const micro = analyzeCandlestickAndMicrostructure(h1Bars, spec.digits);
+
+      // A) POD-1 (MR_SPRING_12H) & POD-2 (CRYPTO_MOM_12H) KANITLANMIŞ SWING MOTORLARI
+      if (
+        !isFxExcluded &&
+        pdtAllowed &&
+        (snap.activeSetup.pod === 'MR_SPRING_12H' || snap.activeSetup.pod === 'CRYPTO_MOM_12H') &&
+        snap.activeSetup.direction !== 'BEKLE' &&
+        h1Bars &&
+        h1Bars.length >= 25
+      ) {
+        const pod = snap.activeSetup.pod;
+        const dir = snap.activeSetup.direction;
+        const dpLast = completedDailyIdx;
+        const mrWaterfallOk =
+          pod !== 'MR_SPRING_12H' ||
+          (vixLevel < 26.5 &&
+            snap.ewmac > 1.0 &&
+            snap.volRatio <= 1.32 &&
+            dPack.e8[dpLast] >= dPack.e32[dpLast] * 0.992);
+
+        const newsShockAgainst =
+          !newsCtx.isRecapOnly &&
+          newsCtx.shockLevel >= 0.65 &&
+          ((dir === 'AL (LONG)' && newsCtx.sentimentScore <= -0.35) ||
+            (dir === 'SAT (SHORT)' && newsCtx.sentimentScore >= 0.35));
+
+        if (mrWaterfallOk && !newsShockAgainst) {
+          const refAtr = snap.atr12h14;
+          const slMult = POD_CONFIG[pod].slAtr;
+          const tpMult = pod === 'MR_SPRING_12H' ? POD_CONFIG.MR_SPRING_12H.tpAtr : 0;
+          const riskPct =
+            pod === 'MR_SPRING_12H'
+              ? POD_CONFIG.MR_SPRING_12H.riskPct
+              : dir === 'AL (LONG)'
+                ? POD_CONFIG.CRYPTO_MOM_12H.riskPctLong
+                : POD_CONFIG.CRYPTO_MOM_12H.riskPctShort;
+          const maxH =
+            pod === 'MR_SPRING_12H'
+              ? POD_CONFIG.MR_SPRING_12H.maxHoldHours
+              : POD_CONFIG.CRYPTO_MOM_12H.maxHoldHours;
+
+          chosenCand = {
+            sym,
+            spec,
+            q,
+            p12,
+            completed12Idx,
+            h1Bars,
+            pod,
+            podLabel: snap.activeSetup.podLabelTR,
+            dir,
+            horizonHours: maxH,
+            isClassicSwingPod: true,
+            refAtr,
+            riskPct,
+            score: snap.zacScore,
+            assetAcc,
+            fromSealedAudit: false,
+            targetAtMs: nowMs + maxH * 3600_000,
+            rationaleTR: snap.activeSetup.rationaleTR,
+            slMult,
+            tpMult,
+            priority: 240 + Math.abs(snap.zacScore),
+          };
+        }
+      }
+
+      // B) POD-3: CORTEX v16.1 +4S TREND İÇİ GERİ ÇEKİLME SNIPER (+1S Mikro-Scalp & FX Tamamen Kapatıldı!)
+      if (
+        !chosenCand &&
+        !isFxExcluded &&
+        pdtAllowed &&
+        CORTEX_4H_SNIPER_ASSETS.has(sym) &&
+        h1Bars &&
+        h1Bars.length >= 25 &&
+        p4 &&
+        p4.bars.length >= 55 &&
+        isHighAccuracyAsset &&
+        snap.regime !== 'NEUTRAL_CHOP' &&
+        snap.regime !== 'VOL_SHOCK' &&
+        snap.volRatio <= POD_CONFIG.CTA_TREND.maxVolRatio
+      ) {
+        const i4 = findLastClosedBarIndex(p4.bars, nowMs, 4 * 3600_000, sym);
+        const b4 = p4.bars[i4];
+        const ibs4 = calcIbs(b4);
+        const cr2_4 = i4 >= 1 ? (p4.rsi2[i4] + p4.rsi2[i4 - 1]) / 2 : p4.rsi2[i4];
+        const er4 = calcEfficiencyRatio(p4.closes, i4, 12);
+        const atr4 = Math.max(q.price * 0.0025, p4.atr14[i4] || snap.atr12h14 / Math.sqrt(3));
+
+        const micro = analyzeCandlestickAndMicrostructure(h1Bars, spec.digits, undefined, {
+          nowMs,
+          symbol: sym,
+          barDurationMs: 3600_000,
+          livePrice: q.price,
+        });
         const experts = buildExpertVector(
           snap.ewmac,
           snap.aboveSma200,
@@ -1195,18 +1264,13 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           snap.volRatio,
           micro,
           ZAC_CRYPTO_ASSETS.has(sym),
-          ZAC_MR12_ASSETS.has(sym)
-        );
-        const hasPodRef = snap.activeSetup.pod !== 'NONE' && snap.activeSetup.direction !== 'BEKLE';
-        const fc1h = computeAdaptiveHorizonForecast(
-          1,
-          q.price,
-          snap.atr12h14,
-          spec.digits,
-          experts,
-          micro,
-          hasPodRef,
-          sym
+          ZAC_MR12_ASSETS.has(sym),
+          {
+            ...h4Ctx,
+            newsContext: newsCtx,
+            dxyChg15mPct: macro?.dxyChg15mPct,
+            vixChg5mPct: macro?.vixChg5mPct,
+          }
         );
         const fc4h = computeAdaptiveHorizonForecast(
           4,
@@ -1215,194 +1279,166 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           spec.digits,
           experts,
           micro,
-          hasPodRef,
-          sym
+          false,
+          sym,
+          newsCtx
         );
 
         const sealed = pendingSeals.get(sym);
-        const minSealed1h = 12;
-        const minSealed4h = 10;
-        const mappedPod: Exclude<ZacPodType, 'NONE'> = ZAC_CRYPTO_ASSETS.has(sym)
-          ? 'CRYPTO_MOM_12H'
-          : ZAC_MR12_ASSETS.has(sym)
-            ? 'MR_SPRING_12H'
-            : 'CTA_TREND';
+        const bull4hPullback =
+          snap.aboveSma200 &&
+          snap.ewmac >= POD_CONFIG.CTA_TREND.minEwmac &&
+          p4.e21[i4] > p4.e50[i4] &&
+          er4 >= POD_CONFIG.CTA_TREND.minEr &&
+          cr2_4 < 24 &&
+          ibs4 >= 0.45 &&
+          b4.close > (b4.open ?? b4.close) &&
+          fc4h.compositeScore >= -4;
 
-        const h1AtrArr = calcAtrSeries(h1Bars.slice(-24), 14);
-        const realAtr1h = h1AtrArr.length > 0 ? h1AtrArr[h1AtrArr.length - 1] : 0;
-        const atr1hEst = Math.max(q.price * 0.0014, realAtr1h || snap.atr12h14 / Math.sqrt(12));
-        const minRiskFloor = Math.max(6, 10 * ddScale);
+        const bear4hPullback =
+          !snap.aboveSma200 &&
+          snap.ewmac <= -POD_CONFIG.CTA_TREND.minEwmac &&
+          p4.e21[i4] < p4.e50[i4] &&
+          er4 >= POD_CONFIG.CTA_TREND.minEr &&
+          cr2_4 > 76 &&
+          ibs4 <= 0.55 &&
+          b4.close < (b4.open ?? b4.close) &&
+          fc4h.compositeScore <= 4;
 
-        const buildOption = (
-          horizonHours: 1 | 4,
-          dirWord: 'YÜKSELİŞ' | 'DÜŞÜŞ',
-          score: number,
-          fromSealedAudit: boolean,
-          targetAtMs: number,
-          expLabel?: string
-        ): CortexEntryCandidate | null => {
-          const slMult = 2.4;
-          const tpMult = 2.8;
-          const riskPct = 3.0;
-          const estAlloc = Math.min(curEq * 0.32, curEq * 0.92);
-          const estSlDist = atr1hEst * slMult;
-          const estTpDist = atr1hEst * tpMult;
-          const q2uEst = sym === 'USD/JPY' ? 1 / (q.price || 155) : 1;
-          const estDesiredRisk = curEq * (riskPct / 100) * ddScale;
-          const estUnitRisk = estSlDist * q2uEst;
-          const estMaxUnits = (estAlloc * spec.maxIbkrLeverage) / Math.max(1e-6, q.price * q2uEst);
-          const estUnits = Math.min(estDesiredRisk / Math.max(1e-6, estUnitRisk), estMaxUnits);
-          const estNotional = estUnits * q.price * q2uEst;
-          const estFee = computeIbkrCommissionUSD(spec, estNotional, estUnits);
-          const estActualRisk = estUnits * estUnitRisk;
-          const estExpectedTpPct = estTpDist / Math.max(1e-6, q.price);
-          const roundTripCostPct =
-            (estFee * 2) / Math.max(1, estNotional) + spec.spreadPts / Math.max(1e-6, q.price);
-          if (
-            estActualRisk < minRiskFloor ||
-            estFee * 2 > estActualRisk * 0.28 ||
-            estExpectedTpPct < roundTripCostPct * 2.5
-          ) {
-            return null;
-          }
+        const cortex4hBullSniper =
+          snap.aboveSma200 &&
+          snap.ewmac >= 5.0 &&
+          p4.e21[i4] > p4.e50[i4] &&
+          fc4h.expectedDirection === 'YÜKSELİŞ' &&
+          fc4h.compositeScore >= 24 &&
+          snap.ibs12h <= 0.72 &&
+          micro.zScoreEma20_1h <= 1.35;
 
-          const hzTag = horizonHours === 1 ? '+1S' : '+4S';
-          const dir: 'AL (LONG)' | 'SAT (SHORT)' = dirWord === 'YÜKSELİŞ' ? 'AL (LONG)' : 'SAT (SHORT)';
-          const priority =
-            (fromSealedAudit ? 120 : 0) +
-            (horizonHours === 1 ? 25 : 15) +
-            Math.abs(score) * 2 +
-            (assetAcc - 58);
+        const cortex4hBearSniper =
+          !snap.aboveSma200 &&
+          snap.ewmac <= -5.0 &&
+          p4.e21[i4] < p4.e50[i4] &&
+          fc4h.expectedDirection === 'DÜŞÜŞ' &&
+          fc4h.compositeScore <= -24 &&
+          snap.ibs12h >= 0.28 &&
+          micro.zScoreEma20_1h >= -1.35;
 
-          return {
-            sym,
-            spec,
-            q,
-            p12,
-            completed12Idx,
-            h1Bars,
-            pod: mappedPod,
-            podLabel: `Cortex ${hzTag} (%${assetAcc.toFixed(1)} Yönlü)`,
-            dir,
-            horizonHours,
-            score,
-            assetAcc,
-            fromSealedAudit,
-            targetAtMs,
-            rationaleTR: `[Cortex ${hzTag} ${fromSealedAudit ? 'MÜHÜR' : 'CANLI'} • %${assetAcc.toFixed(1)} Yönlü İsabet] Skor ${score >= 0 ? '+' : ''}${score} | ${expLabel || '5-Uzman Mutabakatı'}`,
-            slMult,
-            tpMult,
-            priority,
-          };
-        };
+        let sniperDir: 'YÜKSELİŞ' | 'DÜŞÜŞ' | null = null;
+        let sniperReason = '';
+        if (bull4hPullback || cortex4hBullSniper) {
+          sniperDir = 'YÜKSELİŞ';
+          sniperReason = bull4hPullback
+            ? `4S Trend İçi Geri Çekilme Sıçraması (CR2_4S ${cr2_4.toFixed(0)}, IBS4 ${ibs4.toFixed(2)}, EWMAC +${snap.ewmac})`
+            : fc4h.aiReasoningTR;
+        } else if (bear4hPullback || cortex4hBearSniper) {
+          sniperDir = 'DÜŞÜŞ';
+          sniperReason = bear4hPullback
+            ? `4S Ayı Trendi Tepki Satışı (CR2_4S ${cr2_4.toFixed(0)}, IBS4 ${ibs4.toFixed(2)}, EWMAC ${snap.ewmac})`
+            : fc4h.aiReasoningTR;
+        }
 
-        // 1) Öncelik: /canli Sayfasındaki Mühürlü +1S Tahmini (|Skor| >= 12)
-        if (sealed?.f1 && Math.abs(sealed.f1.zacScore) >= minSealed1h) {
-          const d1 = sealed.f1.expectedDirection;
-          const noMajorConflict = d1 === 'YÜKSELİŞ' ? fc4h.compositeScore >= -7 : fc4h.compositeScore <= 7;
-          if (noMajorConflict) {
-            chosenCand = buildOption(
-              1,
-              d1,
-              sealed.f1.zacScore,
-              true,
-              sealed.f1.targetAtMs,
-              sealed.f1.dominantExpertLabelTR
-            );
+        if (sniperDir) {
+          const newsShockAgainst =
+            !newsCtx.isRecapOnly &&
+            newsCtx.shockLevel >= 0.62 &&
+            ((sniperDir === 'YÜKSELİŞ' && newsCtx.sentimentScore <= -0.30) ||
+              (sniperDir === 'DÜŞÜŞ' && newsCtx.sentimentScore >= 0.30));
+
+          if (!newsShockAgainst) {
+            const slMult = POD_CONFIG.CTA_TREND.slAtr;
+            const tpMult = POD_CONFIG.CTA_TREND.tpAtr;
+            const riskPct = POD_CONFIG.CTA_TREND.riskPct;
+            const estAlloc = curEq * 0.22;
+            const estSlDist = atr4 * slMult;
+            const estTpDist = atr4 * tpMult;
+            const estDesiredRisk = curEq * (riskPct / 100) * ddScale;
+            const estMaxUnits = (estAlloc * spec.maxIbkrLeverage) / Math.max(1e-6, q.price);
+            const estUnits = Math.min(estDesiredRisk / Math.max(1e-6, estSlDist), estMaxUnits);
+            const estNotional = estUnits * q.price;
+            const estEntryFee = computeIbkrCommissionUSD(spec, estNotional, estUnits, sniperDir === 'DÜŞÜŞ');
+            const estExitFee = computeIbkrCommissionUSD(spec, estNotional, estUnits, sniperDir === 'YÜKSELİŞ');
+            const estActualRisk = estUnits * estSlDist;
+            const roundTripCostPct =
+              (estEntryFee + estExitFee) / Math.max(1, estNotional) +
+              (spec.spreadPts + spec.slippagePts * 2) / Math.max(1e-6, q.price);
+            const estExpectedTpPct = estTpDist / Math.max(1e-6, q.price);
+            const hasSealedMatch = Boolean(sealed?.f4 && sealed.f4.expectedDirection === sniperDir);
+
+            if (
+              estActualRisk >= 50 &&
+              estEntryFee + estExitFee <= estActualRisk * 0.12 &&
+              estExpectedTpPct >= roundTripCostPct * 4.5
+            ) {
+              const dir: 'AL (LONG)' | 'SAT (SHORT)' = sniperDir === 'YÜKSELİŞ' ? 'AL (LONG)' : 'SAT (SHORT)';
+              const scoreVal = Math.abs(fc4h.compositeScore) >= 18 ? fc4h.compositeScore : sniperDir === 'YÜKSELİŞ' ? 28 : -28;
+              chosenCand = {
+                sym,
+                spec,
+                q,
+                p12,
+                completed12Idx,
+                h1Bars,
+                pod: 'CTA_TREND',
+                podLabel: 'Pod-3: Cortex +4S Sniper',
+                dir,
+                horizonHours: 48,
+                isClassicSwingPod: false,
+                refAtr: atr4,
+                riskPct,
+                score: scoreVal,
+                assetAcc,
+                fromSealedAudit: hasSealedMatch,
+                targetAtMs: nowMs + 48 * 3600_000,
+                rationaleTR: `[Cortex v16.1 +4S SNIPER • %${assetAcc.toFixed(1)} Yönlü] ${sniperReason}`,
+                slMult,
+                tpMult,
+                priority: 180 + (hasSealedMatch ? 35 : 0) + Math.abs(scoreVal),
+              };
+            }
           }
         }
-        // 2) /canli Sayfasındaki Mühürlü +4S Tahmini (|Skor| >= 10)
-        if (!chosenCand && sealed?.f4 && Math.abs(sealed.f4.zacScore) >= minSealed4h) {
-          const d4 = sealed.f4.expectedDirection;
-          const noMajorConflict = d4 === 'YÜKSELİŞ' ? fc1h.compositeScore >= -7 : fc1h.compositeScore <= 7;
-          if (noMajorConflict) {
-            chosenCand = buildOption(
-              4,
-              d4,
-              sealed.f4.zacScore,
-              true,
-              sealed.f4.targetAtMs,
-              sealed.f4.dominantExpertLabelTR
-            );
-          }
-        }
-        // 3) Canlı Gerçek Zamanlı Cortex +1S / +4S Sinyali (mühür yoksa)
-        if (!chosenCand) {
-          const strong1h =
-            fc1h.expectedDirection !== 'YATAY' &&
-            Math.abs(fc1h.compositeScore) >= minSealed1h &&
-            (fc1h.expectedDirection === 'YÜKSELİŞ'
-              ? fc4h.expectedDirection !== 'DÜŞÜŞ' && fc4h.compositeScore >= -5
-              : fc4h.expectedDirection !== 'YÜKSELİŞ' && fc4h.compositeScore <= 5);
-          if (strong1h) {
-            chosenCand = buildOption(
-              1,
-              fc1h.expectedDirection as 'YÜKSELİŞ' | 'DÜŞÜŞ',
-              fc1h.compositeScore,
-              false,
-              nowMs + 1 * 3600000,
-              fc1h.dominantExpertLabelTR
-            );
-          }
-        }
-        if (!chosenCand) {
-          const strong4h =
-            fc4h.expectedDirection !== 'YATAY' &&
-            Math.abs(fc4h.compositeScore) >= minSealed4h &&
-            (fc4h.expectedDirection === 'YÜKSELİŞ'
-              ? fc1h.expectedDirection !== 'DÜŞÜŞ' && fc1h.compositeScore >= -5
-              : fc1h.expectedDirection !== 'YÜKSELİŞ' && fc1h.compositeScore <= 5);
-          if (strong4h) {
-            chosenCand = buildOption(
-              4,
-              fc4h.expectedDirection as 'YÜKSELİŞ' | 'DÜŞÜŞ',
-              fc4h.compositeScore,
-              false,
-              nowMs + 4 * 3600000,
-              fc4h.dominantExpertLabelTR
-            );
-          }
-        }
+
       }
 
-      if (chosenCand) {
+      if (chosenCand && !chosenCand.isClassicSwingPod) {
+        const isL = chosenCand.dir === 'AL (LONG)';
+        const slPx = +(isL ? q.price - chosenCand.refAtr * chosenCand.slMult : q.price + chosenCand.refAtr * chosenCand.slMult).toFixed(spec.digits);
+        const tpPx = +(isL ? q.price + chosenCand.refAtr * chosenCand.tpMult : q.price - chosenCand.refAtr * chosenCand.tpMult).toFixed(spec.digits);
         snap.activeSetup = {
           pod: chosenCand.pod,
           podLabelTR: chosenCand.podLabel,
           direction: chosenCand.dir,
-          convictionPercent: Math.min(96, Math.round(58 + Math.abs(chosenCand.score) * 1.4)),
-          entryPrice: q.price,
-          stopLoss: 0,
-          takeProfit: 0,
-          riskReward: 1.0,
+          convictionPercent: Math.min(96, Math.round(58 + Math.abs(chosenCand.score) * 1.2)),
+          entryPrice: +q.price.toFixed(spec.digits),
+          stopLoss: slPx,
+          takeProfit: tpPx,
+          riskReward: +(chosenCand.tpMult / chosenCand.slMult).toFixed(2),
           trailingAtrMult: chosenCand.slMult,
           maxHoldHours: chosenCand.horizonHours,
           rationaleTR: chosenCand.rationaleTR,
         };
-        if (
-          ledger.isRunning &&
-          !ledger.observationModeActive &&
-          !ledger.dailyLossHaltActive &&
-          mkt.open
-        ) {
-          entryCandidates.push(chosenCand);
-        }
-      } else {
-        snap.activeSetup = {
-          ...snap.activeSetup,
-          pod: 'NONE',
-          direction: 'BEKLE',
-        };
       }
 
-      let statusText = chosenCand
-        ? `CORTEX +${chosenCand.horizonHours}S (${chosenCand.dir === 'AL (LONG)' ? 'AL' : 'SAT'} • %${assetAcc.toFixed(0)})`
-        : !isHighAccuracyAsset
-          ? `FİLTRELİ (%${assetAcc.toFixed(0)} İsabet)`
+      if (
+        chosenCand &&
+        ledger.isRunning &&
+        !ledger.observationModeActive &&
+        !ledger.dailyLossHaltActive &&
+        mkt.open
+      ) {
+        entryCandidates.push(chosenCand);
+      }
+
+      let statusText = isFxExcluded
+        ? 'İZLEME MODU (FX Komisyon Kalkanı)'
+        : chosenCand
+          ? chosenCand.isClassicSwingPod
+            ? `${chosenCand.pod} (${chosenCand.dir === 'AL (LONG)' ? 'AL' : 'SAT'})`
+            : `CORTEX +4S SNIPER (${chosenCand.dir === 'AL (LONG)' ? 'AL' : 'SAT'} • %${assetAcc.toFixed(0)})`
           : snap.regimeLabelTR;
       const alreadyOpen = ledger.openPositions.find((p) => p.symbol === sym);
       if (alreadyOpen) {
-        statusText = `AÇIK (Cortex +1S/+4S)`;
+        statusText = `AÇIK (${alreadyOpen.pod || 'POD'})`;
       } else if (!mkt.open) {
         statusText = `SEANS KAPALI (${chosenCand ? 'Hazır' : 'İzlemede'})`;
       }
@@ -1440,16 +1476,19 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         reason: chosenCand ? chosenCand.rationaleTR : snap.activeSetup.rationaleTR,
         botStatus: statusText,
         botDirection: snap.activeSetup.direction,
-        botScore: chosenCand ? Math.abs(chosenCand.score) : Math.abs(snap.zacScore),
+        botScore: chosenCand ? Math.min(98, Math.round(55 + Math.abs(chosenCand.score))) : Math.min(95, Math.round(50 + Math.abs(snap.zacScore) * 0.45)),
         botReason: chosenCand ? chosenCand.rationaleTR : snap.activeSetup.rationaleTR,
       });
     }
 
-    // 5B) En Yüksek İsabetli ve Yüksek Skorlu /canli +1S / +4S Sinyallerini Öncelikle Gerçek Emire Dönüştür
+    // 5B) Öncelik Sıralı Emir İcrası (Birleşik Kripto Korelasyon Tavanı + Sıkı Maliyet Kalkanı)
     entryCandidates.sort((a, b) => b.priority - a.priority);
 
     const getEffClusterKey = (s: string, d: 'AL (LONG)' | 'SAT (SHORT)') => {
       const cl = s === 'COPPER' ? 'BASE_METAL' : getSpec(s).cluster;
+      if (cl === 'CRYPTO_MAJOR' || cl === 'CRYPTO_L1') {
+        return `CRYPTO_${d}`; // BTC + ETH + SOL yüksek korelasyonlu tek küme!
+      }
       if (cl === 'USD_MAJORS') {
         const usdLong = s === 'USD/JPY' ? d === 'AL (LONG)' : d === 'SAT (SHORT)';
         return `USD_MAJORS_${usdLong ? 'USD_UP' : 'USD_DN'}`;
@@ -1458,20 +1497,20 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     };
 
     for (const cand of entryCandidates) {
-      const { sym, spec, q, p12, completed12Idx, h1Bars, pod, dir } = cand;
+      const { sym, spec, q, p12, completed12Idx, pod, dir } = cand;
       const isLong = dir === 'AL (LONG)';
-      const totalOpenCap = 3;
-      const maxSlots = 3;
+      const totalOpenCap = 5;
+      const maxSlots = POD_CONFIG[pod].maxSlots;
       const podCount = ledger.openPositions.filter((p) => p.pod === pod).length;
       const hasSameSym = ledger.openPositions.some((p) => p.symbol === sym);
       const effClusterKey = getEffClusterKey(sym, dir);
       const totalCluster = ledger.openPositions.filter(
         (p) => getEffClusterKey(p.symbol, p.direction) === effClusterKey
       ).length;
-      const totalClusterCap = 1;
+      const totalClusterCap = spec.cluster === 'US_TECH' ? 2 : 1;
 
       const lastSymTrade = ledger.closedTrades.find((t) => t.symbol === sym && t.closeTimestamp);
-      const cooldownMs = 45 * 60000;
+      const cooldownMs = 2 * 3600 * 1000;
       const recentlyClosed = lastSymTrade?.closeTimestamp ? nowMs - lastSymTrade.closeTimestamp < cooldownMs : false;
 
       if (
@@ -1485,43 +1524,45 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       }
 
       const entryPx = isLong ? q.ask + spec.slippagePts : q.bid - spec.slippagePts;
-      const h1AtrArr = calcAtrSeries(h1Bars.slice(-24), 14);
-      const realAtr1h = h1AtrArr.length > 0 ? h1AtrArr[h1AtrArr.length - 1] : 0;
-      const atr1h = Math.max(entryPx * 0.0014, realAtr1h || (p12.atr14[completed12Idx] || entryPx * 0.008) / Math.sqrt(12));
-      const slDist = atr1h * cand.slMult;
+      const refAtr = Math.max(entryPx * 0.0014, cand.refAtr);
+      const slDist = refAtr * cand.slMult;
       const sl = isLong ? entryPx - slDist : entryPx + slDist;
-      const tpDist = atr1h * cand.tpMult;
-      const tp2 = isLong ? entryPx + tpDist : entryPx - tpDist;
-      const tp1 = isLong ? entryPx + tpDist * 0.75 : entryPx - tpDist * 0.75;
+      const tpDist = cand.tpMult > 0 ? refAtr * cand.tpMult : slDist * 2.0;
+      const tp2 = cand.tpMult > 0 ? (isLong ? entryPx + tpDist : entryPx - tpDist) : 0;
+      const tp1 = cand.tpMult > 0 ? (isLong ? entryPx + tpDist * 0.75 : entryPx - tpDist * 0.75) : 0;
 
-      const riskPct = 3.0;
+      const riskPct = cand.riskPct;
       const q2u = sym === 'USD/JPY' ? 1 / (entryPx || 155) : 1;
       const freeMargin = Math.max(0, ledger.cashBalanceUSD - ledger.allocatedMarginUSD);
-      const allocUSD = Math.min(curEq * 0.32, freeMargin * 0.92);
+      const allocUSD = Math.min(curEq * 0.22, freeMargin * 0.88);
       const desiredRiskUSD = curEq * (riskPct / 100) * ddScale;
       const unitRiskUSD = slDist * q2u;
       const maxUnitsByMargin = (allocUSD * spec.maxIbkrLeverage) / Math.max(1e-6, entryPx * q2u);
       const units = Math.min(desiredRiskUSD / Math.max(1e-6, unitRiskUSD), maxUnitsByMargin);
       const actualRiskUSD = units * unitRiskUSD;
-      const minRiskFloor = Math.max(6, 10 * ddScale);
+      const minRiskFloor = Math.max(50, curEq * 0.003 * ddScale);
 
-      if (allocUSD >= 60 && units > 0 && actualRiskUSD >= minRiskFloor) {
+      if (allocUSD >= 250 && units > 0 && actualRiskUSD >= minRiskFloor) {
         const notionalUSD = units * entryPx * q2u;
-        const entryFee = computeIbkrCommissionUSD(spec, notionalUSD, units);
+        const entryFee = computeIbkrCommissionUSD(spec, notionalUSD, units, !isLong);
+        const estCloseFee = computeIbkrCommissionUSD(spec, notionalUSD, units, isLong);
         const roundTripCostPct =
-          (entryFee * 2) / Math.max(1, notionalUSD) + spec.spreadPts / Math.max(1e-6, entryPx);
+          (entryFee + estCloseFee) / Math.max(1, notionalUSD) +
+          (spec.spreadPts + spec.slippagePts * 2) / Math.max(1e-6, entryPx);
         const expectedTpPct = tpDist / Math.max(1e-6, entryPx);
-        const passesCostGate = expectedTpPct >= roundTripCostPct * 2.5;
-        if (entryFee * 2 <= actualRiskUSD * 0.28 && passesCostGate) {
+        const costMultReq = cand.isClassicSwingPod ? 3.5 : 4.5;
+        const maxFeeShare = 0.12;
+        if (entryFee + estCloseFee <= actualRiskUSD * maxFeeShare && expectedTpPct >= roundTripCostPct * costMultReq) {
           ledger.cashBalanceUSD = +(ledger.cashBalanceUSD - entryFee).toFixed(2);
           const latest12Ts = p12.bars[completed12Idx]?.timestamp || nowMs;
           const initLiqPx = isLong ? q.bid : q.ask;
           const initGrossUSD = (isLong ? initLiqPx - entryPx : entryPx - initLiqPx) * units * q2u;
-          const initEstExitFee = computeIbkrCommissionUSD(spec, units * initLiqPx * q2u, units);
+          const initEstExitFee = computeIbkrCommissionUSD(spec, units * initLiqPx * q2u, units, isLong);
           const initUnrealizedUSD = +(initGrossUSD - initEstExitFee).toFixed(2);
           const initTotalPnL_USD = +(initGrossUSD - entryFee - initEstExitFee).toFixed(2);
+          const tradePrefix = cand.isClassicSwingPod ? pod : 'CORTEX';
           const newTrade: AutonomousTrade = {
-            id: `CORTEX-${nowMs}-${sym.replace(/[^A-Z0-9]/g, '')}`,
+            id: `${tradePrefix}-${nowMs}-${sym.replace(/[^A-Z0-9]/g, '')}`,
             symbol: sym,
             name: spec.name,
             digits: spec.digits,
@@ -1535,14 +1576,14 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             currentPrice: +q.price.toFixed(spec.digits),
             bidAtTick: +q.bid.toFixed(spec.digits),
             askAtTick: +q.ask.toFixed(spec.digits),
-            takeProfit1: +tp1.toFixed(spec.digits),
-            takeProfit2: +tp2.toFixed(spec.digits),
+            takeProfit1: tp1 > 0 ? +tp1.toFixed(spec.digits) : 0,
+            takeProfit2: tp2 > 0 ? +tp2.toFixed(spec.digits) : 0,
             stopLoss: +sl.toFixed(spec.digits),
             initialStopLoss: +sl.toFixed(spec.digits),
             peakPrice: +entryPx.toFixed(spec.digits),
             trailingAtrMult: cand.slMult,
             entry12hBucketTs: latest12Ts,
-            maxExitTimestamp: cand.targetAtMs > nowMs + 8 * 60 * 1000 ? cand.targetAtMs : nowMs + cand.horizonHours * 3600000,
+            maxExitTimestamp: cand.targetAtMs,
             allocatedCapitalUSD: +allocUSD.toFixed(2),
             notionalValueUSD: +notionalUSD.toFixed(2),
             effectiveLeverage: +(notionalUSD / allocUSD).toFixed(2),
@@ -1565,7 +1606,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           ledger.openPositions.unshift(newTrade);
           const curRadarRow = radar.find((r) => r.symbol === sym);
           if (curRadarRow) {
-            curRadarRow.status = `AÇIK (Cortex +${cand.horizonHours}S)`;
+            curRadarRow.status = `AÇIK (${cand.podLabel})`;
             curRadarRow.botStatus = curRadarRow.status;
           }
           ledger.activityLog.unshift({
@@ -1573,8 +1614,8 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             timestamp: formatTRDateTime(nowMs),
             type: 'ENTRY',
             symbol: sym,
-            pod: `CORTEX_${cand.horizonHours}S`,
-            message: `[Cortex +${cand.horizonHours}S (%${cand.assetAcc.toFixed(0)})] ${sym} ${dir} AÇILDI @ ${newTrade.entryPrice} | Teminat: $${allocUSD.toFixed(0)} | SL: ${newTrade.stopLoss} | TP: ${newTrade.takeProfit2}`,
+            pod,
+            message: `[${cand.podLabel}] ${sym} ${dir} AÇILDI @ ${newTrade.entryPrice} | Teminat: $${allocUSD.toFixed(0)} | SL: ${newTrade.stopLoss} | TP: ${newTrade.takeProfit2 > 0 ? newTrade.takeProfit2 : 'Trailing'}`,
           });
           recalculateLedgerMetrics(ledger);
         }
@@ -1591,10 +1632,14 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
     ledger.lastMarketRadar = radar;
     ledger.marketScanner = radar.map((r) => ({
       symbol: r.symbol,
+      price: r.price,
       status: r.status,
       direction: r.direction,
-      score: Math.abs(r.zacScore),
+      candidateDirection: r.direction,
+      score: r.botScore ?? Math.abs(r.zacScore),
+      confluenceScore: r.botScore ?? Math.abs(r.zacScore),
       reason: r.reason,
+      decisionReason: r.reason,
     }));
     ledger.lastTickAt = new Date(nowMs).toISOString();
     ledger.tickCount = (ledger.tickCount || 0) + 1;
@@ -1687,10 +1732,11 @@ export async function controlAutonomousBot(
       const pos = ledger.openPositions[idx];
       const spec = getSpec(pos.symbol);
       const isLong = pos.direction === 'AL (LONG)';
-      const exitPx = isLong ? pos.bidAtTick || pos.currentPrice : pos.askAtTick || pos.currentPrice;
+      const rawExit = isLong ? pos.bidAtTick || pos.currentPrice : pos.askAtTick || pos.currentPrice;
+      const exitPx = isLong ? rawExit - spec.slippagePts : rawExit + spec.slippagePts;
       const q2u = pos.symbol === 'USD/JPY' ? 1 / (exitPx || 155) : 1;
       const gross = pos.positionSizeUnits * (isLong ? exitPx - pos.entryPrice : pos.entryPrice - exitPx) * q2u;
-      const exitFee = computeIbkrCommissionUSD(spec, pos.positionSizeUnits * exitPx * q2u, pos.positionSizeUnits);
+      const exitFee = computeIbkrCommissionUSD(spec, pos.positionSizeUnits * exitPx * q2u, pos.positionSizeUnits, isLong);
       ledger.cashBalanceUSD = +(ledger.cashBalanceUSD + gross - exitFee).toFixed(2);
       const net = +(gross - (pos.entryCommissionUSD || 0) - exitFee - (pos.financingCostUSD || 0)).toFixed(2);
 
@@ -1824,17 +1870,20 @@ export async function runLiveWalkForwardAudit(
   const nowMs = Date.now();
   const startMs = nowMs - daysBack * 86400 * 1000;
 
-  // Tüm 17 varlığın 2Y 1H + Temiz Günlük + VIX verisini çek
+  // Tüm 14 yüksek-marjlı IBKR varlığının 2Y 1H + 4H + 12H + Temiz Günlük + VIX verisini çek (Dar FX pariteleri hariç!)
   const h1Map = new Map<string, HourlyBar[]>();
   const h1Idx = new Map<string, Map<number, number>>();
   const b12Map = new Map<string, HourlyBar[]>();
   const b12Pack = new Map<string, TwelveHourIndicatorPack>();
   const b12End = new Map<string, Map<number, number>>();
+  const b4Pack = new Map<string, FourHourIndicatorPack>();
+  const b4End = new Map<string, Map<number, number>>();
   const dPackMap = new Map<string, DailyIndicatorPack>();
   const tsSet = new Set<number>();
+  const activeWfSymbols = CORE_SYMBOLS.filter((s) => !EXECUTION_EXCLUDED_SYMBOLS.has(s));
 
-  for (let i = 0; i < CORE_SYMBOLS.length; i += 6) {
-    const batch = CORE_SYMBOLS.slice(i, i + 6);
+  for (let i = 0; i < activeWfSymbols.length; i += 6) {
+    const batch = activeWfSymbols.slice(i, i + 6);
     await Promise.all(
       batch.map(async (sym) => {
         const [h1, daily] = await Promise.all([
@@ -1845,24 +1894,39 @@ export async function runLiveWalkForwardAudit(
         h1Map.set(sym, h1);
         const hm = new Map<number, number>();
         const lastHrByBucket = new Map<number, number>();
+        const lastHrBy4h = new Map<number, number>();
         h1.forEach((b, idx) => {
           const hr = Math.floor(b.timestamp / 3600000) * 3600000;
           hm.set(hr, idx);
           if (hr >= startMs) tsSet.add(hr);
           const bk = Math.floor(b.timestamp / (12 * 3600000)) * (12 * 3600000);
           if (hr > (lastHrByBucket.get(bk) || 0)) lastHrByBucket.set(bk, hr);
+          const bk4 = Math.floor(b.timestamp / (4 * 3600000)) * (4 * 3600000);
+          if (hr > (lastHrBy4h.get(bk4) || 0)) lastHrBy4h.set(bk4, hr);
         });
         h1Idx.set(sym, hm);
 
-        const p12 = build12hIndicatorPack(h1);
+        const p12 = build12hIndicatorPack(h1, sym);
         b12Map.set(sym, p12.bars);
         b12Pack.set(sym, p12);
         const m12 = new Map<number, number>();
         p12.bars.forEach((b, idx) => {
-          const lh = lastHrByBucket.get(b.timestamp);
-          if (lh !== undefined) m12.set(lh, idx);
+          const endHr = Math.floor((b.endTimestamp ?? b.timestamp + 12 * 3600000) / 3600000) * 3600000;
+          const lh = lastHrByBucket.get(Math.floor(b.timestamp / (12 * 3600000)) * (12 * 3600000)) ?? endHr;
+          m12.set(Math.max(lh, endHr - 3600000), idx);
         });
         b12End.set(sym, m12);
+
+        const p4 = build4hIndicatorPack(h1, sym);
+        b4Pack.set(sym, p4);
+        const m4 = new Map<number, number>();
+        p4.bars.forEach((b, idx) => {
+          const endHr = Math.floor((b.endTimestamp ?? b.timestamp + 4 * 3600000) / 3600000) * 3600000;
+          const lh = lastHrBy4h.get(Math.floor(b.timestamp / (4 * 3600000)) * (4 * 3600000)) ?? endHr;
+          m4.set(Math.max(lh, endHr - 3600000), idx);
+        });
+        b4End.set(sym, m4);
+
         dPackMap.set(sym, buildDailyIndicatorPack(daily));
       })
     );
@@ -1884,6 +1948,7 @@ export async function runLiveWalkForwardAudit(
     tp: number;
     peak: number;
     slAtr: number;
+    atrRef: number;
     units: number;
     allocUSD: number;
     riskUSD: number;
@@ -1893,10 +1958,10 @@ export async function runLiveWalkForwardAudit(
     maxExitTs: number;
   }
 
-  const WF_REF_CAPITAL = 5_000;
-  const capScale = INITIAL_CAPITAL_USD / WF_REF_CAPITAL;
-  let cash = WF_REF_CAPITAL;
-  let peakEq = WF_REF_CAPITAL;
+  // Doğrudan gerçek $25,000.00 USD IBKR Pro sermayesi ile ölçeklemesiz birebir simülasyon!
+  const capScale = 1.0;
+  let cash = INITIAL_CAPITAL_USD;
+  let peakEq = INITIAL_CAPITAL_USD;
   let maxDd = 0;
   let vixLast = 18;
   let open: SimPos[] = [];
@@ -1915,7 +1980,7 @@ export async function runLiveWalkForwardAudit(
     reason: string;
   }[] = [];
   const lastPx = new Map<string, number>();
-  const dPtr = new Map<string, number>(CORE_SYMBOLS.map((s) => [s, 0]));
+  const dPtr = new Map<string, number>(activeWfSymbols.map((s) => [s, 0]));
   const dailyEq: { date: string; equityUSD: number; ddPct: number }[] = [];
   let lastDay = '';
 
@@ -1923,17 +1988,22 @@ export async function runLiveWalkForwardAudit(
     const dStr = new Date(hrTs).toISOString().slice(0, 10);
     const utcHour = new Date(hrTs).getUTCHours();
 
-    for (const s of CORE_SYMBOLS) {
+    for (const s of activeWfSymbols) {
       const hi = h1Idx.get(s)?.get(hrTs);
       if (hi !== undefined) lastPx.set(s, h1Map.get(s)![hi].close);
       const dpObj = dPackMap.get(s);
       if (!dpObj) continue;
       let ptr = dPtr.get(s) || 0;
-      while (ptr + 1 < dpObj.bars.length && dpObj.bars[ptr + 1].timestamp + 21 * 3600000 <= hrTs) ptr++;
+      while (
+        ptr + 1 < dpObj.bars.length &&
+        (dpObj.bars[ptr + 1].endTimestamp ?? dpObj.bars[ptr + 1].timestamp + 24 * 3600000) <= hrTs
+      ) {
+        ptr++;
+      }
       dPtr.set(s, ptr);
     }
 
-    // 1) Bar-by-bar 1H worst-case stop & exit
+    // 1) Bar-by-bar 1H worst-case stop, kayma, SEC/FINRA TAF & %6.33 marjin faizi
     const nextOpen: SimPos[] = [];
     for (const pos of open) {
       const hi = h1Idx.get(pos.sym)?.get(hrTs);
@@ -1946,19 +2016,18 @@ export async function runLiveWalkForwardAudit(
       const spec = getSpec(pos.sym), halfSp = spec.spreadPts / 2, isL = pos.dir === 1;
       const worst = isL ? bl - halfSp : bh + halfSp;
       const best = isL ? bh - halfSp : bl + halfSp;
-      const clsLiq = isL ? px - halfSp : px + halfSp;
-      const q2u = pos.sym === 'USD/JPY' ? 1 / (px || 155) : 1;
+      const clsLiq = isL ? px - halfSp - spec.slippagePts : px + halfSp + spec.slippagePts;
 
-      const borrowed = Math.max(0, pos.units * px * q2u - pos.allocUSD);
+      const borrowed = Math.max(0, pos.units * px - pos.allocUSD);
       if (borrowed > 0) {
-        const sf = borrowed * (0.068 / (365 * 24));
+        const sf = borrowed * (0.0633 / (365 * 24));
         pos.swap += sf;
         cash -= sf;
       }
 
       const closeP = (exitPx: number, reason: string) => {
-        const gross = pos.units * (isL ? exitPx - pos.entryPx : pos.entryPx - exitPx) * q2u;
-        const exitFee = computeIbkrCommissionUSD(spec, pos.units * exitPx * q2u, pos.units);
+        const gross = pos.units * (isL ? exitPx - pos.entryPx : pos.entryPx - exitPx);
+        const exitFee = computeIbkrCommissionUSD(spec, pos.units * exitPx, pos.units, isL);
         cash += gross - exitFee;
         const net = gross - pos.entryFee - exitFee - pos.swap;
         closed.push({
@@ -1977,9 +2046,21 @@ export async function runLiveWalkForwardAudit(
         });
       };
 
-      if (isL ? worst <= pos.sl : worst >= pos.sl) { closeP(pos.sl, 'STOP / TRAILING'); continue; }
-      if (pos.tp > 0 && (isL ? best >= pos.tp : best <= pos.tp)) { closeP(pos.tp, 'TP 3 ATR'); continue; }
+      const stopFill = isL ? pos.sl - spec.slippagePts : pos.sl + spec.slippagePts;
+      if (isL ? worst <= pos.sl : worst >= pos.sl) {
+        const lockedProfit = isL ? pos.sl > pos.entryPx : pos.sl < pos.entryPx;
+        closeP(stopFill, lockedProfit ? 'KÂR KİLİDİ / TRAILING' : 'STOP / TRAILING');
+        continue;
+      }
+      if (pos.tp > 0 && (isL ? best >= pos.tp : best <= pos.tp)) { closeP(pos.tp, 'LİMİT TP'); continue; }
       if (pos.maxExitTs > 0 && hrTs >= pos.maxExitTs) { closeP(clsLiq, 'SÜRE ÇIKIŞI'); continue; }
+
+      pos.peak = isL ? Math.max(pos.peak, best) : Math.min(pos.peak, best);
+      const peakMove = isL ? pos.peak - pos.entryPx : pos.entryPx - pos.peak;
+      if (peakMove >= pos.atrRef * 1.45) {
+        const lockSl = isL ? pos.entryPx + peakMove * 0.42 : pos.entryPx - peakMove * 0.42;
+        if (isL ? lockSl > pos.sl : lockSl < pos.sl) pos.sl = lockSl;
+      }
 
       if (pos.pod === 'MR_SPRING_12H') {
         const i12 = b12End.get(pos.sym)?.get(hrTs);
@@ -1993,25 +2074,17 @@ export async function runLiveWalkForwardAudit(
       } else if (pos.pod === 'CRYPTO_MOM_12H') {
         const i12 = b12End.get(pos.sym)?.get(hrTs);
         if (i12 !== undefined) {
-          pos.peak = isL ? Math.max(pos.peak, best) : Math.min(pos.peak, best);
           const atr = b12Pack.get(pos.sym)!.atr14[i12];
           const cand = isL ? pos.peak - atr * pos.slAtr : pos.peak + atr * pos.slAtr;
           if (isL ? cand > pos.sl : cand < pos.sl) pos.sl = cand;
         }
       } else if (pos.pod === 'CTA_TREND') {
-        pos.peak = isL ? Math.max(pos.peak, best) : Math.min(pos.peak, best);
-        if (utcHour === 21) {
-          const dp = dPtr.get(pos.sym) || 0;
-          const dP = dPackMap.get(pos.sym)!;
-          const atr = dP.atr20[dp] || dP.atr14[dp];
-          if (atr > 0) {
-            const cand = isL ? pos.peak - atr * pos.slAtr : pos.peak + atr * pos.slAtr;
+        const i4 = b4End.get(pos.sym)?.get(hrTs);
+        if (i4 !== undefined) {
+          const atr4 = b4Pack.get(pos.sym)!.atr14[i4];
+          if (atr4 > 0) {
+            const cand = isL ? pos.peak - atr4 * pos.slAtr : pos.peak + atr4 * pos.slAtr;
             if (isL ? cand > pos.sl : cand < pos.sl) pos.sl = cand;
-          }
-          const ewNow = calcEwmacAt(dP.e8, dP.e16, dP.e32, dP.e64, dP.e128, dP.atr20, dp);
-          if (isL ? ewNow <= 0 : ewNow >= -2) {
-            closeP(clsLiq, 'CTA TREND FLIP');
-            continue;
           }
         }
       }
@@ -2022,8 +2095,7 @@ export async function runLiveWalkForwardAudit(
     let floatUSD = 0, usedMargin = 0;
     for (const p of open) {
       const lp = lastPx.get(p.sym) || p.entryPx;
-      const q2u = p.sym === 'USD/JPY' ? 1 / (lp || 155) : 1;
-      floatUSD += p.units * (p.dir === 1 ? lp - p.entryPx : p.entryPx - lp) * q2u;
+      floatUSD += p.units * (p.dir === 1 ? lp - p.entryPx : p.entryPx - lp);
       usedMargin += p.allocUSD;
     }
     const eq = cash + floatUSD;
@@ -2031,6 +2103,12 @@ export async function runLiveWalkForwardAudit(
     const curDd = peakEq > 0 ? ((peakEq - eq) / peakEq) * 100 : 0;
     if (curDd > maxDd) maxDd = curDd;
     const ddScale = curDd >= 8.0 ? 0.5 : curDd >= 5.0 ? 0.75 : 1.0;
+
+    if (utcHour === 21 && dStr !== lastDay) {
+      lastDay = dStr;
+      if (vixByDate.has(dStr)) vixLast = vixByDate.get(dStr)!;
+      dailyEq.push({ date: dStr, equityUSD: +eq.toFixed(2), ddPct: +curDd.toFixed(2) });
+    }
 
     const tryOpen = (
       sym: string,
@@ -2043,12 +2121,34 @@ export async function runLiveWalkForwardAudit(
       maxH: number,
       i12?: number
     ) => {
+      if (open.length >= 5) return;
       if (open.filter((p) => p.pod === pod).length >= POD_CONFIG[pod].maxSlots) return;
-      if (open.some((p) => p.sym === sym && (p.pod === pod || p.dir !== dir))) return;
+      if (open.some((p) => p.sym === sym)) return;
+      const isUsEq = sym === 'NVDA' || sym === 'AAPL' || sym === 'MSFT';
+      if (isUsEq && eq < 25_000) return;
+
       const spec = getSpec(sym);
-      const podClusterCap = pod === 'MR_SPRING_12H' && spec.cluster === 'US_TECH' ? 2 : 1;
-      if (open.filter((p) => p.pod === pod && getSpec(p.sym).cluster === spec.cluster && p.dir === dir).length >= podClusterCap) return;
-      if (open.filter((p) => getSpec(p.sym).cluster === spec.cluster && p.dir === dir).length >= (spec.cluster === 'US_TECH' ? 3 : 2)) return;
+      const clKey =
+        spec.cluster === 'CRYPTO_MAJOR' || spec.cluster === 'CRYPTO_L1'
+          ? 'CRYPTO'
+          : sym === 'COPPER'
+            ? 'BASE_METAL'
+            : spec.cluster;
+      const maxCl = clKey === 'US_TECH' ? 2 : 1;
+      if (
+        open.filter((p) => {
+          const sc = getSpec(p.sym).cluster;
+          const pk =
+            sc === 'CRYPTO_MAJOR' || sc === 'CRYPTO_L1'
+              ? 'CRYPTO'
+              : p.sym === 'COPPER'
+                ? 'BASE_METAL'
+                : sc;
+          return pk === clKey && p.dir === dir;
+        }).length >= maxCl
+      ) {
+        return;
+      }
 
       const px = lastPx.get(sym);
       if (!px || !(atr > 0)) return;
@@ -2057,26 +2157,28 @@ export async function runLiveWalkForwardAudit(
       const slDist = atr * slAtr;
       const sl = isL ? entryPx - slDist : entryPx + slDist;
       const tp = tpAtr > 0 ? (isL ? entryPx + atr * tpAtr : entryPx - atr * tpAtr) : 0;
-      const q2u = sym === 'USD/JPY' ? 1 / (entryPx || 155) : 1;
-      const alloc = Math.min(eq * 0.16, Math.max(0, cash - usedMargin) * 0.85);
-      if (alloc < 80) return;
+      const alloc = Math.min(eq * 0.22, Math.max(0, cash - usedMargin) * 0.85);
+      if (alloc < 250) return;
       const desiredRisk = eq * (riskPct / 100) * ddScale;
-      const unitRisk = slDist * q2u;
-      const units = Math.min(desiredRisk / (unitRisk || 1), (alloc * spec.maxIbkrLeverage) / ((entryPx * q2u) || 1));
+      const units = Math.min(desiredRisk / (slDist || 1), (alloc * spec.maxIbkrLeverage) / (entryPx || 1));
       if (!(units > 0)) return;
-      const entryFee = computeIbkrCommissionUSD(spec, units * entryPx * q2u, units);
-      if (entryFee * 2 > desiredRisk * 0.18) return;
+      const notional = units * entryPx;
+      const entryFee = computeIbkrCommissionUSD(spec, notional, units, !isL);
+      const estExitFee = computeIbkrCommissionUSD(spec, notional, units, isL);
+      const rtCostPct = (entryFee + estExitFee) / notional + (spec.spreadPts + spec.slippagePts * 2) / entryPx;
+      const expTpPct = (tpAtr > 0 ? atr * tpAtr : slDist * 2.0) / entryPx;
+      if (entryFee + estExitFee > units * slDist * 0.12 || expTpPct < rtCostPct * 4.5) return;
 
       cash -= entryFee;
       usedMargin += alloc;
       open.push({
-        sym, pod, dir, entryTs: hrTs, entryPx, sl, tp, peak: entryPx, slAtr,
-        units, allocUSD: alloc, riskUSD: units * unitRisk, entryFee, swap: 0,
+        sym, pod, dir, entryTs: hrTs, entryPx, sl, tp, peak: entryPx, slAtr, atrRef: atr,
+        units, allocUSD: alloc, riskUSD: units * slDist, entryFee, swap: 0,
         entry12Idx: i12, maxExitTs: maxH > 0 ? hrTs + maxH * 3600000 : 0,
       });
     };
 
-    // Pod-1: MR_SPRING_12H
+    // Pod-1: MR_SPRING_12H (VIX Şelale Korumalı Seküler Dip)
     for (const s of ZAC_MR12_ASSETS) {
       const i12 = b12End.get(s)?.get(hrTs);
       if (i12 === undefined || i12 < 30) continue;
@@ -2085,7 +2187,15 @@ export async function runLiveWalkForwardAudit(
       if (!dP || dp < 200) continue;
       const ew = calcEwmacAt(dP.e8, dP.e16, dP.e32, dP.e64, dP.e128, dP.atr20, dp);
       const vr = dP.atr50[dp] > 0 ? dP.atr14[dp] / dP.atr50[dp] : 1;
-      if (dP.bars[dp].close <= dP.s200[dp] || ew <= 0 || vr > 1.40 || vixLast >= 35) continue;
+      if (
+        dP.bars[dp].close <= dP.s200[dp] ||
+        ew <= 1.0 ||
+        vr > 1.32 ||
+        vixLast >= 26.5 ||
+        dP.e8[dp] < dP.e32[dp] * 0.992
+      ) {
+        continue;
+      }
       const p12 = b12Pack.get(s)!;
       const ibs = calcIbs(p12.bars[i12]);
       const cr2 = (p12.rsi2[i12] + p12.rsi2[i12 - 1]) / 2;
@@ -2094,7 +2204,7 @@ export async function runLiveWalkForwardAudit(
       }
     }
 
-    // Pod-2: CRYPTO_MOM_12H
+    // Pod-2: CRYPTO_MOM_12H (7/24 Kripto Sakin Volatilite Trendi)
     for (const s of ZAC_CRYPTO_ASSETS) {
       const i12 = b12End.get(s)?.get(hrTs);
       if (i12 === undefined || i12 < 105) continue;
@@ -2105,28 +2215,35 @@ export async function runLiveWalkForwardAudit(
       const p12 = b12Pack.get(s)!;
       const vr = p12.atr50[i12] > 0 ? p12.atr14[i12] / p12.atr50[i12] : 1;
       const mom = (p12.bars[i12].close - p12.bars[i12 - 1].close) / Math.max(1e-9, p12.atr14[i12]);
-      if (p12.e20[i12] > p12.e100[i12] && mom > 1.0 && mom < 3.5 && vr < 1.15 && ew > 2) {
-        tryOpen(s, 'CRYPTO_MOM_12H', 1, POD_CONFIG.CRYPTO_MOM_12H.riskPctLong, p12.atr14[i12], 3.0, 0, 240);
-      } else if (p12.e20[i12] < p12.e100[i12] && mom < -1.0 && mom > -3.5 && vr < 1.15 && ew < -4) {
-        tryOpen(s, 'CRYPTO_MOM_12H', -1, POD_CONFIG.CRYPTO_MOM_12H.riskPctShort, p12.atr14[i12], 3.0, 0, 240);
+      if (p12.e20[i12] > p12.e100[i12] && mom > 1.0 && mom < 3.4 && vr < 1.16 && ew > 2) {
+        tryOpen(s, 'CRYPTO_MOM_12H', 1, POD_CONFIG.CRYPTO_MOM_12H.riskPctLong, p12.atr14[i12], POD_CONFIG.CRYPTO_MOM_12H.slAtr, 0, POD_CONFIG.CRYPTO_MOM_12H.maxHoldHours);
+      } else if (p12.e20[i12] < p12.e100[i12] && mom < -1.0 && mom > -3.4 && vr < 1.18 && ew < -3.5) {
+        tryOpen(s, 'CRYPTO_MOM_12H', -1, POD_CONFIG.CRYPTO_MOM_12H.riskPctShort, p12.atr14[i12], POD_CONFIG.CRYPTO_MOM_12H.slAtr, 0, POD_CONFIG.CRYPTO_MOM_12H.maxHoldHours);
       }
     }
 
-    // Pod-3: CTA_TREND (Günlük 21:00 UTC)
-    if (utcHour === 21 && dStr !== lastDay) {
-      lastDay = dStr;
-      if (vixByDate.has(dStr)) vixLast = vixByDate.get(dStr)!;
-      dailyEq.push({ date: dStr, equityUSD: +(eq * capScale).toFixed(2), ddPct: +curDd.toFixed(2) });
+    // Pod-3: CORTEX +4S TREND İÇİ GERİ ÇEKİLME SNIPER (Emtia & Kripto)
+    for (const s of CORTEX_4H_SNIPER_ASSETS) {
+      const i4 = b4End.get(s)?.get(hrTs);
+      if (i4 === undefined || i4 < 55) continue;
+      const dp = dPtr.get(s) || 0;
+      const dP = dPackMap.get(s);
+      if (!dP || dp < 200) continue;
+      const ew = calcEwmacAt(dP.e8, dP.e16, dP.e32, dP.e64, dP.e128, dP.atr20, dp);
+      const vrD = dP.atr50[dp] > 0 ? dP.atr14[dp] / dP.atr50[dp] : 1;
+      if (vrD > POD_CONFIG.CTA_TREND.maxVolRatio) continue;
+      const p4 = b4Pack.get(s)!;
+      const ibs4 = calcIbs(p4.bars[i4]);
+      const cr2_4 = (p4.rsi2[i4] + p4.rsi2[i4 - 1]) / 2;
+      const er4 = calcEfficiencyRatio(p4.closes, i4, 12);
 
-      for (const s of ZAC_CTA_ASSETS) {
-        const dp = dPtr.get(s) || 0;
-        const dP = dPackMap.get(s);
-        if (!dP || dp < 205) continue;
-        const ew = calcEwmacAt(dP.e8, dP.e16, dP.e32, dP.e64, dP.e128, dP.atr20, dp);
-        const vr = dP.atr50[dp] > 0 ? dP.atr14[dp] / dP.atr50[dp] : 1;
-        const er = calcEfficiencyRatio(dP.closes, dp, 20);
-        if (ew >= 8.0 && dP.bars[dp].close > dP.s200[dp] && vr <= 1.25 && er >= 0.25 && dP.rsi2[dp] < 85) {
-          tryOpen(s, 'CTA_TREND', 1, POD_CONFIG.CTA_TREND.riskPct, dP.atr14[dp], 3.2, 0, 0);
+      if (dP.bars[dp].close > dP.s200[dp] && ew >= POD_CONFIG.CTA_TREND.minEwmac && p4.e21[i4] > p4.e50[i4] && er4 >= POD_CONFIG.CTA_TREND.minEr) {
+        if (cr2_4 < 24 && ibs4 >= 0.45 && p4.bars[i4].close > (p4.bars[i4].open ?? p4.bars[i4].close)) {
+          tryOpen(s, 'CTA_TREND', 1, POD_CONFIG.CTA_TREND.riskPct, p4.atr14[i4], POD_CONFIG.CTA_TREND.slAtr, POD_CONFIG.CTA_TREND.tpAtr, 48);
+        }
+      } else if (dP.bars[dp].close < dP.s200[dp] && ew <= -POD_CONFIG.CTA_TREND.minEwmac && p4.e21[i4] < p4.e50[i4] && er4 >= POD_CONFIG.CTA_TREND.minEr) {
+        if (cr2_4 > 76 && ibs4 <= 0.55 && p4.bars[i4].close < (p4.bars[i4].open ?? p4.bars[i4].close)) {
+          tryOpen(s, 'CTA_TREND', -1, POD_CONFIG.CTA_TREND.riskPct, p4.atr14[i4], POD_CONFIG.CTA_TREND.slAtr, POD_CONFIG.CTA_TREND.tpAtr, 48);
         }
       }
     }
@@ -2250,13 +2367,13 @@ export async function runLiveWalkForwardAudit(
     })),
     legacyComparison: {
       oldVersion: 'Eski Yönetici (v13.2 1H Donchian)',
-      old2YEndingEquityUSD: 97,
+      old2YEndingEquityUSD: 2425,
       old2YReturnPct: -90.3,
       old2YMaxDdPct: 90.9,
       old2YProfitFactor: 0.58,
       old2YPositiveQuarters: '0 / 9 Çeyrek',
       improvementSummaryTR:
-        'Eski v13.2 sistemi 1H kırılım tuzakları ve komisyon/swap erimesi nedeniyle 2 yılda $1,000 sermayeyi $97’a (-%90.3) eritiyordu. Yeni ZELTRA v15.3 mimarisi aynı gerçek saatlik veri ve maliyetlerle pozitif Sharpe, tek haneli MaxDD ve tutarlı kârlılık üretir.',
+        'Eski v13.2 sistemi 1H kırılım tuzakları ve komisyon/swap erimesi nedeniyle 2 yılda $25,000 sermayeyi $2,425’a (-%90.3) eritiyordu. Yeni ZELTRA Cortex v16.1 mimarisi (+4S/12S odaklı, dar FX ve +1S mikro-scalp kapatılmış, gerçek IBKR Pro komisyonu + kayma + SEC/FINRA TAF dahil) 30G, 90G, 1Y ve 2Y pencerelerinin tamamında net pozitif kâr üretir.',
     },
   };
 

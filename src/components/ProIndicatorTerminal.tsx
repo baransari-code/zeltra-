@@ -118,8 +118,11 @@ interface ProChartPayload {
     patternLabelTR: string;
     structureState: string;
     structureLabelTR: string;
+    isClosedBarConfirmed?: boolean;
     bslPoolPrice: number;
     sslPoolPrice: number;
+    equalHighsActive?: boolean;
+    equalLowsActive?: boolean;
     sweptSslBullish: boolean;
     sweptBslBearish: boolean;
     bullishFvgActive: boolean;
@@ -135,6 +138,69 @@ interface ProChartPayload {
     ibs1h: number;
     candleVsaScore: number;
     meanRev1hScore: number;
+  };
+  smcOverlay?: {
+    bslPoolPrice: number;
+    sslPoolPrice: number;
+    equalHighsActive: boolean;
+    equalLowsActive: boolean;
+    fvgZones: {
+      type: 'BULL' | 'BEAR';
+      bottom: number;
+      top: number;
+      ce: number;
+      startIndex: number;
+      timestamp: number;
+      mitigated: boolean;
+    }[];
+    orderBlocks: {
+      type: 'BULL' | 'BEAR';
+      low: number;
+      high: number;
+      startIndex: number;
+      timestamp: number;
+    }[];
+    annotations: {
+      index: number;
+      timestamp: number;
+      price: number;
+      direction: 'BULL' | 'BEAR';
+      shortTag: string;
+      pattern: string;
+      detailTR: string;
+    }[];
+  };
+  cortex?: {
+    experts: {
+      E1_MACRO_TREND: number;
+      E2_MICRO_DISPLACEMENT: number;
+      E3_MEAN_REV_SPRING: number;
+      E4_CANDLE_VSA_SWEEP: number;
+      E5_XSMOM_REGIME: number;
+    };
+    horizons: Record<
+      'h1' | 'h4' | 'h24',
+      {
+        horizonHours: 1 | 4 | 24;
+        compositeScore: number;
+        confluenceTier: 'SNIPER' | 'HIGH' | 'STANDARD' | 'CHOP';
+        expectedDirection: 'YÜKSELİŞ' | 'DÜŞÜŞ' | 'YATAY';
+        pUp: number;
+        pDown: number;
+        expectedPrice: number;
+        expectedMovePct: number;
+        lower90: number;
+        upper90: number;
+        dominantExpertLabelTR: string;
+        aiReasoningTR: string;
+      }
+    >;
+    assetProfile?: {
+      hits: number;
+      total: number;
+      accuracyPct: number;
+      assetBiasScore: number;
+    } | null;
   };
   oosSelfAudit: {
     horizonHours: number;
@@ -201,12 +267,13 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
   // Katman anahtarları
   const [showCloud, setShowCloud] = useState(true);
   const [showSma200, setShowSma200] = useState(true);
+  const [showSmc, setShowSmc] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showCone, setShowCone] = useState(true);
   const [subTab, setSubTab] = useState<'smart_money' | 'cones' | 'pillars'>('smart_money');
 
-  const loadChart = useCallback(async (sym: string, timeframe: string) => {
-    setLoading(true);
+  const loadChart = useCallback(async (sym: string, timeframe: string, silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const resp = await fetch(
@@ -216,14 +283,17 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
       const json: ProChartPayload = await resp.json();
       setData(json);
     } catch (e: any) {
-      setError(e?.message || 'ZAC v14 grafik verisi alınamadı.');
+      if (!silent) setError(e?.message || 'Cortex v16.0 grafik verisi alınamadı.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadChart(symbol, tf);
+    setHoverIdx(null);
+    loadChart(symbol, tf, false);
+    const poll = setInterval(() => loadChart(symbol, tf, true), 15_000);
+    return () => clearInterval(poll);
   }, [symbol, tf, loadChart]);
 
   // SVG Geometri Hesabı
@@ -246,10 +316,10 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
     let minP = Infinity;
     let maxP = -Infinity;
     for (const c of candles) {
-      minP = Math.min(minP, c.low, showCloud ? c.zacLower : c.low);
-      maxP = Math.max(maxP, c.high, showCloud ? c.zacUpper : c.high);
+      minP = Math.min(minP, c.low, showCloud && c.zacLower > 0 ? c.zacLower : c.low);
+      maxP = Math.max(maxP, c.high, showCloud && c.zacUpper > 0 ? c.zacUpper : c.high);
       if (showSma200 && c.sma200 > 0) {
-        // SMA200 çok uzaktaysa grafiği aşırı sıkıştırma (max %25 dışına esnet)
+        // SMA200 çok uzaktaysa grafiği aşırı sıkıştırma (max %20 dışına esnet)
         if (c.sma200 >= c.low * 0.8 && c.sma200 <= c.high * 1.2) {
           minP = Math.min(minP, c.sma200);
           maxP = Math.max(maxP, c.sma200);
@@ -257,19 +327,41 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
       }
     }
 
+    if (data.currentPrice > 0) {
+      minP = Math.min(minP, data.currentPrice);
+      maxP = Math.max(maxP, data.currentPrice);
+    }
+
     const h24 = data.forecastCones?.find((h) => h.horizonHours === 24);
     const h72 = data.forecastCones?.find((h) => h.horizonHours === 72);
-    if (showCone && h72) {
-      minP = Math.min(minP, h72.lower90);
-      maxP = Math.max(maxP, h72.upper90);
+    if (showCone) {
+      if (h24 && h24.lower90 > 0 && h24.upper90 > 0) {
+        minP = Math.min(minP, h24.lower90);
+        maxP = Math.max(maxP, h24.upper90);
+      }
+      if (h72 && h72.lower90 > 0 && h72.upper90 > 0) {
+        minP = Math.min(minP, h72.lower90);
+        maxP = Math.max(maxP, h72.upper90);
+      }
     }
     if (data.activeTrade) {
-      minP = Math.min(minP, data.activeTrade.stopLoss, data.activeTrade.entryPrice);
-      maxP = Math.max(maxP, data.activeTrade.stopLoss, data.activeTrade.entryPrice);
-      if (data.activeTrade.takeProfit2 > 0) maxP = Math.max(maxP, data.activeTrade.takeProfit2);
+      if (data.activeTrade.entryPrice > 0) {
+        minP = Math.min(minP, data.activeTrade.entryPrice);
+        maxP = Math.max(maxP, data.activeTrade.entryPrice);
+      }
+      if (data.activeTrade.stopLoss > 0) {
+        minP = Math.min(minP, data.activeTrade.stopLoss);
+        maxP = Math.max(maxP, data.activeTrade.stopLoss);
+      }
+      if (data.activeTrade.takeProfit2 > 0) {
+        minP = Math.min(minP, data.activeTrade.takeProfit2);
+        maxP = Math.max(maxP, data.activeTrade.takeProfit2);
+      }
     } else if (data.zacSnapshot.activeSetup.pod !== 'NONE') {
-      minP = Math.min(minP, data.zacSnapshot.activeSetup.stopLoss);
-      maxP = Math.max(maxP, data.zacSnapshot.activeSetup.stopLoss);
+      if (data.zacSnapshot.activeSetup.stopLoss > 0) {
+        minP = Math.min(minP, data.zacSnapshot.activeSetup.stopLoss);
+        maxP = Math.max(maxP, data.zacSnapshot.activeSetup.stopLoss);
+      }
       if (data.zacSnapshot.activeSetup.takeProfit > 0) {
         maxP = Math.max(maxP, data.zacSnapshot.activeSetup.takeProfit);
         minP = Math.min(minP, data.zacSnapshot.activeSetup.takeProfit);
@@ -304,11 +396,11 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
       .map((c, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOsc(c.zacScore).toFixed(1)}`)
       .join(' ');
 
-    // Sağ Tahmin Konisi Geometri (+24S ve +72S)
+    // Sağ Tahmin Konisi Geometri (+24S ve +72S) — Canlı fiyattan başlar
     const lastIdx = n - 1;
     const lastC = candles[lastIdx];
     const x0 = xOf(lastIdx);
-    const y0 = yOf(lastC.close);
+    const y0 = yOf(data.currentPrice > 0 ? data.currentPrice : lastC.close);
     const x24 = xOf(lastIdx + 6);
     const x72 = xOf(lastIdx + 13);
 
@@ -345,7 +437,7 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-mono font-bold tracking-wider">
-                ZAC v14.0
+                ZAC v14 • CORTEX v16.0
               </span>
               <h1 className="text-lg font-bold text-white tracking-tight">
                 {data?.symbol || symbol}{' '}
@@ -415,6 +507,16 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
               SMA200
             </button>
             <button
+              onClick={() => setShowSmc((v) => !v)}
+              className={`text-[11px] px-2 py-1 rounded border transition-colors ${
+                showSmc
+                  ? 'bg-fuchsia-950/50 border-fuchsia-700/60 text-fuchsia-300'
+                  : 'bg-zinc-950 border-zinc-800 text-zinc-500'
+              }`}
+            >
+              SMC / FVG / OB
+            </button>
+            <button
               onClick={() => setShowMarkers((v) => !v)}
               className={`text-[11px] px-2 py-1 rounded border transition-colors ${
                 showMarkers
@@ -436,7 +538,7 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
             </button>
 
             <button
-              onClick={() => loadChart(symbol, tf)}
+              onClick={() => loadChart(symbol, tf, false)}
               disabled={loading}
               className="p-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
               title="Canlı Yenile"
@@ -635,19 +737,22 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                   </strong>
                 </span>
                 <span>RSI14: <strong className="text-zinc-200">{hoveredCandle.rsi14}</strong></span>
+                <span>ADX14: <strong className="text-amber-300">{hoveredCandle.adx14}</strong></span>
+                <span>RVOL: <strong className="text-cyan-300">{hoveredCandle.rvol}x</strong></span>
               </>
             )}
           </div>
           <div className="flex items-center gap-3 text-[10px]">
             <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-cyan-400 inline-block" /> Fair-Value</span>
             <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-amber-400 inline-block" /> SMA200</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/20 border border-emerald-500/50 inline-block" /> FVG / OB</span>
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500/30 border border-violet-400 inline-block" /> +24S/+72S %90 Koni</span>
           </div>
         </div>
 
         {loading && !data ? (
           <div className="h-[460px] flex items-center justify-center text-xs text-zinc-400 font-mono">
-            Gerçek borsa mumları ve ZAC v14 serileri hesaplanıyor...
+            Gerçek borsa mumları ve Cortex v16.0 SMC serileri hesaplanıyor...
           </div>
         ) : chartGeom && data ? (
           <div className="w-full overflow-x-auto select-none">
@@ -656,6 +761,17 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
               className="w-full min-w-[720px] h-auto block bg-zinc-950 rounded border border-zinc-800/80"
               onMouseLeave={() => setHoverIdx(null)}
             >
+              <defs>
+                <clipPath id="mainPlotClip">
+                  <rect
+                    x={chartGeom.PAD_L}
+                    y={0}
+                    width={chartGeom.W - chartGeom.PAD_L - chartGeom.PAD_R}
+                    height={chartGeom.H_MAIN}
+                  />
+                </clipPath>
+              </defs>
+
               {/* Izgara ve Sağ Fiyat Ekseni */}
               {chartGeom.gridPrices.map((gp, gi) => {
                 const y = chartGeom.yOf(gp);
@@ -685,10 +801,10 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
 
               {/* ZAC Fair-Value Volatilite Bulutu */}
               {showCloud && (
-                <>
+                <g clipPath="url(#mainPlotClip)">
                   <path d={chartGeom.cloudPath} fill="rgba(34,211,238,0.08)" />
                   <path d={chartGeom.fvPath} fill="none" stroke="#22d3ee" strokeWidth="1.5" opacity="0.85" />
-                </>
+                </g>
               )}
 
               {/* SMA200 Seküler Çizgi */}
@@ -700,12 +816,132 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                   strokeWidth="1.4"
                   strokeDasharray="5 4"
                   opacity="0.85"
+                  clipPath="url(#mainPlotClip)"
                 />
+              )}
+
+              {/* CORTEX v16.0 SMART MONEY GÖRSEL KATMANI: FVG KUTULARI, ORDER BLOCKLAR & BSL/SSL HAVUZLARI */}
+              {showSmc && data.smcOverlay && (
+                <g clipPath="url(#mainPlotClip)">
+                  {/* Order Block Bölgeleri */}
+                  {data.smcOverlay.orderBlocks.map((ob, obi) => {
+                    const xStart = chartGeom.xOf(Math.max(0, ob.startIndex));
+                    const xEnd = chartGeom.W - chartGeom.PAD_R;
+                    const yTop = chartGeom.yOf(ob.high);
+                    const yBot = chartGeom.yOf(ob.low);
+                    const isBull = ob.type === 'BULL';
+                    return (
+                      <g key={`ob-${obi}`}>
+                        <rect
+                          x={xStart}
+                          y={Math.min(yTop, yBot)}
+                          width={Math.max(10, xEnd - xStart)}
+                          height={Math.max(2, Math.abs(yBot - yTop))}
+                          fill={isBull ? 'rgba(6,182,212,0.11)' : 'rgba(244,63,94,0.11)'}
+                          stroke={isBull ? 'rgba(34,211,238,0.35)' : 'rgba(251,113,133,0.35)'}
+                          strokeWidth="0.8"
+                        />
+                        <text
+                          x={Math.min(xEnd - 44, xStart + 4)}
+                          y={Math.min(yTop, yBot) + 9}
+                          fill={isBull ? '#67e8f9' : '#fda4af'}
+                          fontSize="8"
+                          fontFamily="monospace"
+                        >
+                          {isBull ? 'BULL OB' : 'BEAR OB'}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Kapatılmamış Fair Value Gap (FVG) + %50 CE Seviyesi */}
+                  {data.smcOverlay.fvgZones.map((fvg, fi) => {
+                    const xStart = chartGeom.xOf(Math.max(0, fvg.startIndex));
+                    const xEnd = chartGeom.W - chartGeom.PAD_R;
+                    const yTop = chartGeom.yOf(fvg.top);
+                    const yBot = chartGeom.yOf(fvg.bottom);
+                    const yCe = chartGeom.yOf(fvg.ce);
+                    const isBull = fvg.type === 'BULL';
+                    return (
+                      <g key={`fvg-${fi}`}>
+                        <rect
+                          x={xStart}
+                          y={Math.min(yTop, yBot)}
+                          width={Math.max(8, xEnd - xStart)}
+                          height={Math.max(2, Math.abs(yBot - yTop))}
+                          fill={isBull ? 'rgba(16,185,129,0.12)' : 'rgba(244,63,94,0.12)'}
+                        />
+                        <line
+                          x1={xStart}
+                          y1={yCe}
+                          x2={xEnd}
+                          y2={yCe}
+                          stroke={isBull ? 'rgba(52,211,153,0.45)' : 'rgba(251,113,133,0.45)'}
+                          strokeDasharray="2 3"
+                          strokeWidth="0.8"
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* Onaylı Swing BSL & SSL Likidite Çizgileri */}
+                  {data.smcOverlay.bslPoolPrice >= chartGeom.minP &&
+                    data.smcOverlay.bslPoolPrice <= chartGeom.maxP && (
+                      <g>
+                        <line
+                          x1={chartGeom.xOf(Math.max(0, data.candles.length - 30))}
+                          y1={chartGeom.yOf(data.smcOverlay.bslPoolPrice)}
+                          x2={chartGeom.W - chartGeom.PAD_R}
+                          y2={chartGeom.yOf(data.smcOverlay.bslPoolPrice)}
+                          stroke="#fb7185"
+                          strokeDasharray="3 3"
+                          strokeWidth="0.9"
+                          opacity="0.7"
+                        />
+                        <text
+                          x={chartGeom.W - chartGeom.PAD_R - 4}
+                          y={chartGeom.yOf(data.smcOverlay.bslPoolPrice) - 3}
+                          fill="#fda4af"
+                          fontSize="8"
+                          fontFamily="monospace"
+                          textAnchor="end"
+                        >
+                          {data.smcOverlay.equalHighsActive ? 'EQH / BSL' : 'BSL Likidite'}
+                        </text>
+                      </g>
+                    )}
+
+                  {data.smcOverlay.sslPoolPrice >= chartGeom.minP &&
+                    data.smcOverlay.sslPoolPrice <= chartGeom.maxP && (
+                      <g>
+                        <line
+                          x1={chartGeom.xOf(Math.max(0, data.candles.length - 30))}
+                          y1={chartGeom.yOf(data.smcOverlay.sslPoolPrice)}
+                          x2={chartGeom.W - chartGeom.PAD_R}
+                          y2={chartGeom.yOf(data.smcOverlay.sslPoolPrice)}
+                          stroke="#34d399"
+                          strokeDasharray="3 3"
+                          strokeWidth="0.9"
+                          opacity="0.7"
+                        />
+                        <text
+                          x={chartGeom.W - chartGeom.PAD_R - 4}
+                          y={chartGeom.yOf(data.smcOverlay.sslPoolPrice) + 9}
+                          fill="#6ee7b7"
+                          fontSize="8"
+                          fontFamily="monospace"
+                          textAnchor="end"
+                        >
+                          {data.smcOverlay.equalLowsActive ? 'EQL / SSL' : 'SSL Likidite'}
+                        </text>
+                      </g>
+                    )}
+                </g>
               )}
 
               {/* +24S / +72S İstatistiksel Olasılık Konisi (%90 Güven Bandı) */}
               {showCone && chartGeom.conePoly && (
-                <g>
+                <g clipPath="url(#mainPlotClip)">
                   <polygon points={chartGeom.conePoly} fill="rgba(139,92,246,0.18)" stroke="rgba(167,139,250,0.45)" strokeWidth="1" />
                   <path d={chartGeom.coneMidPath} fill="none" stroke="#a78bfa" strokeWidth="2" strokeDasharray="4 3" />
                   {chartGeom.h24 && (
@@ -747,9 +983,13 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                 const sl = data.activeTrade ? data.activeTrade.stopLoss : setup!.stopLoss;
                 const tp = data.activeTrade ? data.activeTrade.takeProfit2 : setup!.takeProfit;
                 return (
-                  <g>
-                    <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(entry)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(entry)} stroke="#38bdf8" strokeDasharray="4 3" strokeWidth="1" />
-                    <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(sl)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(sl)} stroke="#f43f5e" strokeDasharray="4 3" strokeWidth="1.2" />
+                  <g clipPath="url(#mainPlotClip)">
+                    {entry > 0 && (
+                      <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(entry)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(entry)} stroke="#38bdf8" strokeDasharray="4 3" strokeWidth="1" />
+                    )}
+                    {sl > 0 && (
+                      <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(sl)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(sl)} stroke="#f43f5e" strokeDasharray="4 3" strokeWidth="1.2" />
+                    )}
                     {tp > 0 && (
                       <line x1={chartGeom.PAD_L} y1={chartGeom.yOf(tp)} x2={chartGeom.W - chartGeom.PAD_R} y2={chartGeom.yOf(tp)} stroke="#10b981" strokeDasharray="4 3" strokeWidth="1.2" />
                     )}
@@ -757,24 +997,27 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                 );
               })()}
 
-              {/* Mum Çubukları */}
+              {/* Mum Çubukları (Doji Simetri ve Nötr Renk Düzeltmeli) */}
               {data.candles.map((c, idx) => {
                 const x = chartGeom.xOf(idx);
-                const isUp = c.close >= c.open;
-                const col = isUp ? '#10b981' : '#f43f5e';
+                const isDoji = Math.abs(c.close - c.open) <= Math.max(1e-9, (c.high - c.low) * 0.03);
+                const isUp = c.close > c.open;
+                const col = isDoji ? '#a1a1aa' : isUp ? '#10b981' : '#f43f5e';
                 const yHi = chartGeom.yOf(c.high);
                 const yLo = chartGeom.yOf(c.low);
                 const yTop = chartGeom.yOf(Math.max(c.open, c.close));
                 const yBot = chartGeom.yOf(Math.min(c.open, c.close));
-                const bodyH = Math.max(1.5, yBot - yTop);
+                const rawH = yBot - yTop;
+                const bodyH = Math.max(1.5, rawH);
+                const rectY = rawH < 1.5 ? (yTop + yBot) / 2 - 0.75 : yTop;
                 const bodyW = Math.max(2.4, chartGeom.stepX * 0.62);
 
                 return (
-                  <g key={c.timestamp}>
+                  <g key={`${c.timestamp}-${idx}`}>
                     <line x1={x} y1={yHi} x2={x} y2={yLo} stroke={col} strokeWidth="1.1" />
                     <rect
                       x={x - bodyW / 2}
-                      y={yTop}
+                      y={rectY}
                       width={bodyW}
                       height={bodyH}
                       fill={col}
@@ -792,6 +1035,35 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                   </g>
                 );
               })}
+
+              {/* Kapanmış Mum SMC Anotasyon Etiketleri (Sweep / Pinbar / Sabah-Akşam Yıldızı / VSA) */}
+              {showSmc &&
+                data.smcOverlay?.annotations?.map((ann, ai) => {
+                  if (ann.index < 0 || ann.index >= data.candles.length) return null;
+                  const x = chartGeom.xOf(ann.index);
+                  const isBull = ann.direction === 'BULL';
+                  const yBase = chartGeom.yOf(ann.price);
+                  const yText = isBull
+                    ? Math.min(chartGeom.H_MAIN - 5, yBase + 11)
+                    : Math.max(11, yBase - 6);
+                  const col = isBull ? '#34d399' : '#fb7185';
+                  return (
+                    <g key={`ann-${ai}`} pointerEvents="none">
+                      <circle cx={x} cy={isBull ? yBase + 3 : yBase - 3} r="2" fill={col} />
+                      <text
+                        x={x}
+                        y={yText}
+                        fill={col}
+                        fontSize="7.5"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
+                        {ann.shortTag}
+                      </text>
+                    </g>
+                  );
+                })}
 
               {/* Tarihsel 3-Pod Tetik İşaretçileri */}
               {showMarkers &&
@@ -970,22 +1242,22 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
         ))}
       </div>
 
-      {/* 3b. MUM ANATOMİSİ, VSA & LİKİDİTE HAVUZLARI */}
+      {/* 3b. MUM ANATOMİSİ, VSA & LİKİDİTE HAVUZLARI + CORTEX v16.0 5-UZMAN KONFLUENSİ */}
       {subTab === 'smart_money' && data?.microstructure && (
-        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3">
+        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
             <h2 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-cyan-400" />
-              Smart Money & Mikroyapı
+              Kapanmış Mum ({tf.toUpperCase()}) Smart Money & Cortex v16.0 Mikroyapı
             </h2>
             <span className="text-[11px] font-mono text-cyan-300">
-              VSA: {data.microstructure.candleVsaScore >= 0 ? `+${data.microstructure.candleVsaScore}` : data.microstructure.candleVsaScore} • 1H Yay: {data.microstructure.meanRev1hScore >= 0 ? `+${data.microstructure.meanRev1hScore}` : data.microstructure.meanRev1hScore}
+              SMC/VSA: {data.microstructure.candleVsaScore >= 0 ? `+${data.microstructure.candleVsaScore}` : data.microstructure.candleVsaScore} • {tf.toUpperCase()} Yay: {data.microstructure.meanRev1hScore >= 0 ? `+${data.microstructure.meanRev1hScore}` : data.microstructure.meanRev1hScore}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs font-mono">
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-              <div className="text-[10px] text-zinc-500 uppercase">Aktif Mum Formasyonu</div>
+              <div className="text-[10px] text-zinc-500 uppercase">Kapanmış Mum Formasyonu ({tf.toUpperCase()})</div>
               <div className="text-zinc-100 font-bold font-sans">{data.microstructure.patternLabelTR}</div>
               <div className="text-[10px] text-zinc-400">
                 Gövde %{Math.round(data.microstructure.bodyRatio * 100)} • Alt Fitil %{Math.round(data.microstructure.lowerWickRatio * 100)} • Üst Fitil %{Math.round(data.microstructure.upperWickRatio * 100)}
@@ -993,29 +1265,68 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
             </div>
 
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-              <div className="text-[10px] text-zinc-500 uppercase">Piyasa Yapısı (BOS / ChoCH)</div>
+              <div className="text-[10px] text-zinc-500 uppercase">Piyasa Yapısı (BOS / ChoCH / OB)</div>
               <div className="text-cyan-300 font-bold font-sans">{data.microstructure.structureLabelTR}</div>
               <div className="text-[10px] text-zinc-400">{data.microstructure.orderBlockZoneTR}</div>
             </div>
 
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-              <div className="text-[10px] text-zinc-500 uppercase">Likidite Havuzları (BSL / SSL)</div>
+              <div className="text-[10px] text-zinc-500 uppercase">Onaylı Swing Likidite (BSL / SSL)</div>
               <div className="text-zinc-200 font-bold">
                 BSL (Üst): <span className="text-rose-400">{data.microstructure.bslPoolPrice}</span>
+                {data.microstructure.equalHighsActive && <span className="ml-1 text-[9px] text-rose-300">(EQH)</span>}
               </div>
               <div className="text-zinc-200 font-bold">
                 SSL (Alt): <span className="text-emerald-400">{data.microstructure.sslPoolPrice}</span>
+                {data.microstructure.equalLowsActive && <span className="ml-1 text-[9px] text-emerald-300">(EQL)</span>}
               </div>
             </div>
 
             <div className="bg-zinc-950 border border-zinc-800 rounded p-2.5 space-y-1">
-              <div className="text-[10px] text-zinc-500 uppercase">VSA Hacim & Yayılım (RVOL {data.microstructure.rvol1h}x)</div>
+              <div className="text-[10px] text-zinc-500 uppercase">Diurnal VSA & Hacim (RVOL {data.microstructure.rvol1h}x)</div>
               <div className="text-zinc-200 font-sans text-[11px] leading-snug">{data.microstructure.vsaDetailTR}</div>
               <div className="text-[10px] text-zinc-500">
-                1H IBS: {data.microstructure.ibs1h} • 1H CumRSI2: {data.microstructure.cumRsi2_1h}
+                {tf.toUpperCase()} IBS: {data.microstructure.ibs1h} • CumRSI2: {data.microstructure.cumRsi2_1h}
               </div>
             </div>
           </div>
+
+          {/* CORTEX v16.0 CANLI +1S / +4S / +24S YAPAY ZEKA ÖZETİ */}
+          {data.cortex && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1 font-mono text-xs">
+              {(['h1', 'h4', 'h24'] as const).map((hk) => {
+                const ch = data.cortex!.horizons[hk];
+                return (
+                  <div key={hk} className="bg-zinc-950/90 border border-zinc-800 rounded p-2.5 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-white">
+                        Cortex +{ch.horizonHours}S ({ch.confluenceTier})
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          ch.expectedDirection === 'YÜKSELİŞ'
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : ch.expectedDirection === 'DÜŞÜŞ'
+                              ? 'bg-rose-500/20 text-rose-300'
+                              : 'bg-zinc-800 text-zinc-400'
+                        }`}
+                      >
+                        {ch.expectedDirection} (%{ch.pUp} ↑)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-zinc-300">
+                      <span>Skor: {ch.compositeScore >= 0 ? `+${ch.compositeScore}` : ch.compositeScore}</span>
+                      <span>
+                        Hedef: <strong className="text-white">{ch.expectedPrice.toFixed(data.digits)}</strong> ({ch.expectedMovePct >= 0 ? '+' : ''}
+                        {ch.expectedMovePct}%)
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-zinc-400 font-sans truncate">{ch.dominantExpertLabelTR}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1037,10 +1348,11 @@ export const ProIndicatorTerminal: React.FC<ProIndicatorTerminalProps> = ({
                           : 'bg-zinc-800 text-zinc-400'
                   }`}
                 >
-                  {p.status}
+                  {p.status} ({p.score >= 0 ? `+${p.score}` : p.score})
                 </span>
               </div>
               <div className="text-xs font-mono font-bold text-white">{p.rawValue}</div>
+              <p className="text-[11px] text-zinc-400 leading-snug">{p.detail}</p>
             </div>
           ))}
         </div>

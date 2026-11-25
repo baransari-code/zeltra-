@@ -84,8 +84,18 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
             }
           }
         });
-      } else if (Array.isArray(n.affectedAssets) && n.sentiment !== 'NÖTR') {
-        const sign = n.sentiment === 'POZİTİF' ? 1 : -1;
+      } else if (
+        Array.isArray(n.affectedAssets) &&
+        (n.sentiment === 'POZİTİF' || n.sentiment === 'NEGATİF' || (n.sentiment === 'KRİTİK' && Math.abs(n.sentimentScore || 0) >= 0.2))
+      ) {
+        const sign =
+          n.sentiment === 'POZİTİF'
+            ? 1
+            : n.sentiment === 'NEGATİF'
+              ? -1
+              : (n.sentimentScore || 0) >= 0
+                ? 1
+                : -1;
         const conv = Math.min(88, Math.round(58 + Math.abs(n.sentimentScore || 0.4) * 35));
         n.affectedAssets.forEach((sym) => {
           const existing = map.get(sym);
@@ -287,6 +297,8 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
                               ? 'text-emerald-400'
                               : n.sentiment === 'NEGATİF'
                               ? 'text-rose-400'
+                              : n.sentiment === 'KRİTİK'
+                              ? 'text-amber-400'
                               : 'text-zinc-300'
                           }`}
                         >
@@ -294,6 +306,8 @@ export const InstitutionTracker: React.FC<InstitutionTrackerProps> = ({
                             ? 'Olumlu Etki'
                             : n.sentiment === 'NEGATİF'
                             ? 'Olumsuz Etki'
+                            : n.sentiment === 'KRİTİK'
+                            ? 'Kritik Makro Başlık'
                             : 'Nötr'}
                         </span>
                         {n.aiAnalysis?.eventCategory && (
