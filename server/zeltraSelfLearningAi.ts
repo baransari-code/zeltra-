@@ -14,7 +14,7 @@ import {
 } from './zeltraAlphaIndicator';
 
 const AI_BRAIN_FILE = path.resolve(process.cwd(), 'data', 'zeltra_ai_brain.json');
-export const CORTEX_AI_VERSION = 'cortex-v16.0-institutional-smc';
+export const CORTEX_AI_VERSION = 'cortex-v16.2-holiday-smc-guard';
 
 export type ExpertId =
   | 'E1_MACRO_TREND'
@@ -1396,10 +1396,27 @@ export function buildExpertVector(
     Math.max(-100, Math.min(100, mr1Adj * 0.42 + mr4Score * 0.33 + mr12Score * 0.25))
   );
 
-  // E4: Kapanmış Mum Anatomisi, VSA & Likidite Süpürmesi (Rejim Filtreli!)
+  // E4: Kapanmış Mum Anatomisi, VSA & Likidite Süpürmesi (Rejim Filtreli — Onaylı Kurumsal Dönüş Mumları Korunur!)
+  const hasConfirmedBullReversal =
+    micro.sweptSslBullish ||
+    micro.pattern === 'BULLISH_ENGULFING_DISPLACEMENT' ||
+    micro.pattern === 'MORNING_STAR_REVERSAL' ||
+    micro.pattern === 'VSA_STOPPING_VOLUME_BULL' ||
+    micro.structureState === 'CHOCH_DÖNÜŞ_YUKARI';
+  const hasConfirmedBearReversal =
+    micro.sweptBslBearish ||
+    micro.pattern === 'BEARISH_ENGULFING_DISPLACEMENT' ||
+    micro.pattern === 'EVENING_STAR_REVERSAL' ||
+    micro.pattern === 'VSA_ABSORPTION_SUPPLY_BEAR' ||
+    micro.structureState === 'CHOCH_DÖNÜŞ_AŞAĞI';
+
   let cAdj = micro.candleVsaScore;
-  if (cAdj > 0 && bearMacro && ewmacDaily < -6 && !micro.sweptSslBullish) cAdj *= 0.35;
-  if (cAdj < 0 && bullMacro && ewmacDaily > 6 && !micro.sweptBslBearish) cAdj *= 0.35;
+  if (cAdj > 0 && bearMacro && ewmacDaily < -6 && !micro.sweptSslBullish) {
+    cAdj *= hasConfirmedBullReversal ? 0.72 : 0.35;
+  }
+  if (cAdj < 0 && bullMacro && ewmacDaily > 6 && !micro.sweptBslBearish) {
+    cAdj *= hasConfirmedBearReversal ? 0.72 : 0.35;
+  }
   const e4 = Math.round(Math.max(-100, Math.min(100, cAdj)));
 
   // E5: Kesitsel Liderlik (XSMOM) + Volatilite Rejimi + Nedensel Haber Katalizörü (-100..+100)
@@ -1535,6 +1552,47 @@ export function computeAdaptiveHorizonForecast(
       exhaustionGuardNote += ' • Ters Haber Şok Freni';
     } else if (newsSign !== 0 && newsSign * rawScore > 0) {
       rawScore += newsSign * 6;
+    }
+  }
+
+  // 6) Kapanmış Ters Mum & İntraday Squeeze Çarpışma Kilidi (+1S ve +4S ufuklarda Boğa Yutan Mum önüne Short / Ayı Yutan önüne Long açmaz!)
+  if (horizonHours <= 4) {
+    const strongBullCandle =
+      micro.sweptSslBullish ||
+      micro.pattern === 'BULLISH_ENGULFING_DISPLACEMENT' ||
+      micro.pattern === 'MORNING_STAR_REVERSAL' ||
+      micro.pattern === 'VSA_STOPPING_VOLUME_BULL' ||
+      micro.pattern === 'BULL_PINBAR_HAMMER' ||
+      micro.pattern === 'ORDER_BLOCK_MITIGATION_BULL' ||
+      micro.structureState === 'CHOCH_DÖNÜŞ_YUKARI' ||
+      micro.structureState === 'BOS_YUKARI' ||
+      micro.candleVsaScore >= 24;
+
+    const strongBearCandle =
+      micro.sweptBslBearish ||
+      micro.pattern === 'BEARISH_ENGULFING_DISPLACEMENT' ||
+      micro.pattern === 'EVENING_STAR_REVERSAL' ||
+      micro.pattern === 'VSA_ABSORPTION_SUPPLY_BEAR' ||
+      micro.pattern === 'BEAR_SHOOTING_STAR' ||
+      micro.pattern === 'ORDER_BLOCK_MITIGATION_BEAR' ||
+      micro.structureState === 'CHOCH_DÖNÜŞ_AŞAĞI' ||
+      micro.structureState === 'BOS_AŞAĞI' ||
+      micro.candleVsaScore <= -24;
+
+    if (rawScore < 0 && strongBullCandle) {
+      rawScore *= horizonHours === 1 ? 0.25 : 0.38;
+      exhaustionGuardNote += ' • Ters Boğa Mumu Kilidi';
+    } else if (rawScore > 0 && strongBearCandle) {
+      rawScore *= horizonHours === 1 ? 0.25 : 0.38;
+      exhaustionGuardNote += ' • Ters Ayı Mumu Kilidi';
+    }
+
+    if (rawScore < 0 && e2Eff >= 16 && micro.zScoreEma20_1h >= 0.35) {
+      rawScore *= 0.52;
+      exhaustionGuardNote += ' • Yukarı Squeeze Freni';
+    } else if (rawScore > 0 && e2Eff <= -16 && micro.zScoreEma20_1h <= -0.35) {
+      rawScore *= 0.52;
+      exhaustionGuardNote += ' • Aşağı İvme Freni';
     }
   }
 
@@ -1678,7 +1736,7 @@ export function learnFromSettledForecast(params: {
     prof.totalLearnedSamples += 1;
     if (params.directionHit) prof.correctCount += 1;
     if (params.inside90Band) prof.band90HitCount += 1;
-    if (isDirectionalCall) {
+    if (isDirectionalCall && actualDir !== 0) {
       prof.directionalSamples = (prof.directionalSamples || 0) + 1;
       if (params.directionHit) prof.directionalHits = (prof.directionalHits || 0) + 1;
     }

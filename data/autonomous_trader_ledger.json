@@ -5,23 +5,65 @@
   "isRunning": true,
   "observationModeActive": false,
   "startedAt": "2026-11-25T17:27:44.240Z",
-  "lastTickAt": "2026-11-25T18:42:56.455Z",
+  "lastTickAt": "2026-11-26T13:20:11.967Z",
   "liveGoTargetIso": "2026-12-01T00:00:00.000Z",
-  "tickCount": 50,
-  "liveUsdTry": 50.6738,
-  "vixLevel": 28.48,
+  "tickCount": 2053,
+  "liveUsdTry": 50.6693,
+  "vixLevel": 27.16,
   "initialCapitalUSD": 25000,
-  "cashBalanceUSD": 24997.99,
-  "allocatedMarginUSD": 5500,
-  "availableCashUSD": 19497.99,
-  "openFloatingPnL_USD": -75.37,
-  "totalEquityUSD": 24922.62,
+  "cashBalanceUSD": 24987.91,
+  "allocatedMarginUSD": 10959.49,
+  "availableCashUSD": 14028.42,
+  "openFloatingPnL_USD": -250.89,
+  "totalEquityUSD": 24737.02,
   "peakEquityUSD": 25007.74,
-  "netProfitUSD": -77.38,
-  "netProfitPercent": -0.31,
+  "netProfitUSD": -262.98,
+  "netProfitPercent": -1.05,
   "drawdownThrottleScale": 1,
   "dailyLossHaltActive": false,
   "openPositions": [
+    {
+      "id": "CORTEX-1795651248646-BTCUSD",
+      "symbol": "BTC/USD",
+      "name": "Bitcoin",
+      "digits": 2,
+      "pod": "CTA_TREND",
+      "podLabel": "Pod-3: Cortex +4S Sniper",
+      "direction": "SAT (SHORT)",
+      "status": "AÇIK",
+      "entryTime": "26.11.2026 03:00:48",
+      "entryTimestamp": 1795651248646,
+      "entryPrice": 60406.4,
+      "currentPrice": 60754.65,
+      "bidAtTick": 60754.6,
+      "askAtTick": 60754.7,
+      "takeProfit1": 57324.07,
+      "takeProfit2": 56296.63,
+      "stopLoss": 63617.16,
+      "initialStopLoss": 63617.16,
+      "peakPrice": 60299.9,
+      "trailingAtrMult": 2.5,
+      "entry12hBucketTs": 1795608000000,
+      "maxExitTimestamp": 1795824048646,
+      "allocatedCapitalUSD": 5459.49,
+      "notionalValueUSD": 5631.96,
+      "effectiveLeverage": 1.03,
+      "positionSizeUnits": 0.0927,
+      "unitLabel": "BTC",
+      "riskUSD": 297.79,
+      "executionCostUSD": 10.08,
+      "entryCommissionUSD": 10.08,
+      "exitCommissionUSD": 0,
+      "financingCostUSD": 0,
+      "grossUnrealizedPnL_USD": -32.29,
+      "tp1Hit": false,
+      "realizedPnL_USD": 0,
+      "unrealizedPnL_USD": -42.43,
+      "totalPnL_USD": -52.51,
+      "totalPnL_Percent": -0.96,
+      "rationale": "[Cortex v16.1 +4S SNIPER • %54.5 Yönlü] Uzman-1: Makro Trend (Günlük EWMAC & SMA200) (%25) • Mum: Boğa Yutan Mum (Kurumsal Alım İvmesi) • Trend+Yay Konfluensi",
+      "lastSwapAccrualMs": 1795699179236
+    },
     {
       "id": "CORTEX-1795627664242-XAUUSD",
       "symbol": "XAU/USD",
@@ -34,9 +76,9 @@
       "entryTime": "25.11.2026 20:27:44",
       "entryTimestamp": 1795627664242,
       "entryPrice": 3532.72,
-      "currentPrice": 3563.8,
-      "bidAtTick": 3563.68,
-      "askAtTick": 3563.93,
+      "currentPrice": 3620.4,
+      "bidAtTick": 3620.27,
+      "askAtTick": 3620.52,
       "takeProfit1": 3410.24,
       "takeProfit2": 3369.41,
       "stopLoss": 3660.32,
@@ -46,7 +88,7 @@
       "entry12hBucketTs": 1795557600000,
       "maxExitTimestamp": 1795800464242,
       "allocatedCapitalUSD": 5500,
-      "notionalValueUSD": 8379.56,
+      "notionalValueUSD": 8512.65,
       "effectiveLeverage": 1.51,
       "positionSizeUnits": 2.3513,
       "unitLabel": "Ons",
@@ -55,18 +97,26 @@
       "entryCommissionUSD": 2,
       "exitCommissionUSD": 0,
       "financingCostUSD": 0.01,
-      "grossUnrealizedPnL_USD": -73.37,
+      "grossUnrealizedPnL_USD": -206.46,
       "tp1Hit": false,
       "realizedPnL_USD": 0,
-      "unrealizedPnL_USD": -75.37,
-      "totalPnL_USD": -77.38,
-      "totalPnL_Percent": -1.41,
+      "unrealizedPnL_USD": -208.46,
+      "totalPnL_USD": -210.47,
+      "totalPnL_Percent": -3.83,
       "rationale": "[Cortex v16.1 +4S SNIPER • %57.1 Yönlü] Uzman-1: Makro Trend (Günlük EWMAC & SMA200) (%33) • Mum: İç Mum Sıkışması (Kapanmış Volatilite Daralması)",
-      "lastSwapAccrualMs": 1795632057939
+      "lastSwapAccrualMs": 1795699179236
     }
   ],
   "closedTrades": [],
   "activityLog": [
+    {
+      "id": "ENT-1795651248646-BTC/USD",
+      "timestamp": "26.11.2026 03:00:48",
+      "type": "ENTRY",
+      "symbol": "BTC/USD",
+      "pod": "CTA_TREND",
+      "message": "[Pod-3: Cortex +4S Sniper] BTC/USD SAT (SHORT) AÇILDI @ 60406.4 | Teminat: $5459 | SL: 63617.16 | TP: 56296.63"
+    },
     {
       "id": "ENT-1795627664242-XAU/USD",
       "timestamp": "25.11.2026 20:27:44",
@@ -150,6 +200,1344 @@
       "timeStr": "25.11.2026 21:40:57",
       "equityUSD": 24922.62,
       "ddPct": 0.34
+    },
+    {
+      "timestamp": 1795632407952,
+      "timeStr": "25.11.2026 21:46:47",
+      "equityUSD": 24938.37,
+      "ddPct": 0.28
+    },
+    {
+      "timestamp": 1795632708063,
+      "timeStr": "25.11.2026 21:51:48",
+      "equityUSD": 24938.37,
+      "ddPct": 0.28
+    },
+    {
+      "timestamp": 1795633017950,
+      "timeStr": "25.11.2026 21:56:57",
+      "equityUSD": 24902.4,
+      "ddPct": 0.42
+    },
+    {
+      "timestamp": 1795633321955,
+      "timeStr": "25.11.2026 22:02:01",
+      "equityUSD": 24902.4,
+      "ddPct": 0.42
+    },
+    {
+      "timestamp": 1795633621968,
+      "timeStr": "25.11.2026 22:07:01",
+      "equityUSD": 24905.45,
+      "ddPct": 0.41
+    },
+    {
+      "timestamp": 1795633921982,
+      "timeStr": "25.11.2026 22:12:01",
+      "equityUSD": 24905.45,
+      "ddPct": 0.41
+    },
+    {
+      "timestamp": 1795634225055,
+      "timeStr": "25.11.2026 22:17:05",
+      "equityUSD": 24887.11,
+      "ddPct": 0.48
+    },
+    {
+      "timestamp": 1795634525060,
+      "timeStr": "25.11.2026 22:22:05",
+      "equityUSD": 24887.11,
+      "ddPct": 0.48
+    },
+    {
+      "timestamp": 1795634826052,
+      "timeStr": "25.11.2026 22:27:06",
+      "equityUSD": 24887.11,
+      "ddPct": 0.48
+    },
+    {
+      "timestamp": 1795635126064,
+      "timeStr": "25.11.2026 22:32:06",
+      "equityUSD": 24887.11,
+      "ddPct": 0.48
+    },
+    {
+      "timestamp": 1795635426072,
+      "timeStr": "25.11.2026 22:37:06",
+      "equityUSD": 24890.88,
+      "ddPct": 0.47
+    },
+    {
+      "timestamp": 1795635726081,
+      "timeStr": "25.11.2026 22:42:06",
+      "equityUSD": 24890.88,
+      "ddPct": 0.47
+    },
+    {
+      "timestamp": 1795636026092,
+      "timeStr": "25.11.2026 22:47:06",
+      "equityUSD": 24898.87,
+      "ddPct": 0.44
+    },
+    {
+      "timestamp": 1795636326097,
+      "timeStr": "25.11.2026 22:52:06",
+      "equityUSD": 24898.87,
+      "ddPct": 0.44
+    },
+    {
+      "timestamp": 1795636626552,
+      "timeStr": "25.11.2026 22:57:06",
+      "equityUSD": 24918.86,
+      "ddPct": 0.36
+    },
+    {
+      "timestamp": 1795636933356,
+      "timeStr": "25.11.2026 23:02:13",
+      "equityUSD": 24918.86,
+      "ddPct": 0.36
+    },
+    {
+      "timestamp": 1795637233366,
+      "timeStr": "25.11.2026 23:07:13",
+      "equityUSD": 24894.87,
+      "ddPct": 0.45
+    },
+    {
+      "timestamp": 1795637533373,
+      "timeStr": "25.11.2026 23:12:13",
+      "equityUSD": 24894.87,
+      "ddPct": 0.45
+    },
+    {
+      "timestamp": 1795637837253,
+      "timeStr": "25.11.2026 23:17:17",
+      "equityUSD": 24879.35,
+      "ddPct": 0.51
+    },
+    {
+      "timestamp": 1795638148756,
+      "timeStr": "25.11.2026 23:22:28",
+      "equityUSD": 24879.35,
+      "ddPct": 0.51
+    },
+    {
+      "timestamp": 1795638448763,
+      "timeStr": "25.11.2026 23:27:28",
+      "equityUSD": 24836.8,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795638748784,
+      "timeStr": "25.11.2026 23:32:28",
+      "equityUSD": 24836.8,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795639048798,
+      "timeStr": "25.11.2026 23:37:28",
+      "equityUSD": 24836.8,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795639350456,
+      "timeStr": "25.11.2026 23:42:30",
+      "equityUSD": 24821.04,
+      "ddPct": 0.75
+    },
+    {
+      "timestamp": 1795639661744,
+      "timeStr": "25.11.2026 23:47:41",
+      "equityUSD": 24821.04,
+      "ddPct": 0.75
+    },
+    {
+      "timestamp": 1795639961745,
+      "timeStr": "25.11.2026 23:52:41",
+      "equityUSD": 24854.2,
+      "ddPct": 0.61
+    },
+    {
+      "timestamp": 1795640276356,
+      "timeStr": "25.11.2026 23:57:56",
+      "equityUSD": 24837.97,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795640577551,
+      "timeStr": "26.11.2026 00:02:57",
+      "equityUSD": 24837.97,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795640877559,
+      "timeStr": "26.11.2026 00:07:57",
+      "equityUSD": 24837.97,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795641180362,
+      "timeStr": "26.11.2026 00:13:00",
+      "equityUSD": 24832.56,
+      "ddPct": 0.7
+    },
+    {
+      "timestamp": 1795641480368,
+      "timeStr": "26.11.2026 00:18:00",
+      "equityUSD": 24832.56,
+      "ddPct": 0.7
+    },
+    {
+      "timestamp": 1795641780555,
+      "timeStr": "26.11.2026 00:23:00",
+      "equityUSD": 24831.15,
+      "ddPct": 0.71
+    },
+    {
+      "timestamp": 1795642080557,
+      "timeStr": "26.11.2026 00:28:00",
+      "equityUSD": 24831.15,
+      "ddPct": 0.71
+    },
+    {
+      "timestamp": 1795642380559,
+      "timeStr": "26.11.2026 00:33:00",
+      "equityUSD": 24838.91,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795642680561,
+      "timeStr": "26.11.2026 00:38:00",
+      "equityUSD": 24838.91,
+      "ddPct": 0.68
+    },
+    {
+      "timestamp": 1795642980564,
+      "timeStr": "26.11.2026 00:43:00",
+      "equityUSD": 24819.16,
+      "ddPct": 0.75
+    },
+    {
+      "timestamp": 1795643280565,
+      "timeStr": "26.11.2026 00:48:00",
+      "equityUSD": 24819.16,
+      "ddPct": 0.75
+    },
+    {
+      "timestamp": 1795643580572,
+      "timeStr": "26.11.2026 00:53:00",
+      "equityUSD": 24830.68,
+      "ddPct": 0.71
+    },
+    {
+      "timestamp": 1795643880580,
+      "timeStr": "26.11.2026 00:58:00",
+      "equityUSD": 24830.68,
+      "ddPct": 0.71
+    },
+    {
+      "timestamp": 1795644187055,
+      "timeStr": "26.11.2026 01:03:07",
+      "equityUSD": 24816.34,
+      "ddPct": 0.77
+    },
+    {
+      "timestamp": 1795644487068,
+      "timeStr": "26.11.2026 01:08:07",
+      "equityUSD": 24816.34,
+      "ddPct": 0.77
+    },
+    {
+      "timestamp": 1795644787080,
+      "timeStr": "26.11.2026 01:13:07",
+      "equityUSD": 24798.7,
+      "ddPct": 0.84
+    },
+    {
+      "timestamp": 1795645087090,
+      "timeStr": "26.11.2026 01:18:07",
+      "equityUSD": 24798.7,
+      "ddPct": 0.84
+    },
+    {
+      "timestamp": 1795645387100,
+      "timeStr": "26.11.2026 01:23:07",
+      "equityUSD": 24798.7,
+      "ddPct": 0.84
+    },
+    {
+      "timestamp": 1795645687114,
+      "timeStr": "26.11.2026 01:28:07",
+      "equityUSD": 24798.7,
+      "ddPct": 0.84
+    },
+    {
+      "timestamp": 1795645996853,
+      "timeStr": "26.11.2026 01:33:16",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795646296865,
+      "timeStr": "26.11.2026 01:38:16",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795646596878,
+      "timeStr": "26.11.2026 01:43:16",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795646899760,
+      "timeStr": "26.11.2026 01:48:19",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795647214470,
+      "timeStr": "26.11.2026 01:53:34",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795647520247,
+      "timeStr": "26.11.2026 01:58:40",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795647820944,
+      "timeStr": "26.11.2026 02:03:40",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795648127545,
+      "timeStr": "26.11.2026 02:08:47",
+      "equityUSD": 24795.65,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795648437463,
+      "timeStr": "26.11.2026 02:13:57",
+      "equityUSD": 24804.11,
+      "ddPct": 0.81
+    },
+    {
+      "timestamp": 1795648737471,
+      "timeStr": "26.11.2026 02:18:57",
+      "equityUSD": 24804.11,
+      "ddPct": 0.81
+    },
+    {
+      "timestamp": 1795649038050,
+      "timeStr": "26.11.2026 02:23:58",
+      "equityUSD": 24843.14,
+      "ddPct": 0.66
+    },
+    {
+      "timestamp": 1795649338056,
+      "timeStr": "26.11.2026 02:28:58",
+      "equityUSD": 24843.14,
+      "ddPct": 0.66
+    },
+    {
+      "timestamp": 1795649638066,
+      "timeStr": "26.11.2026 02:33:58",
+      "equityUSD": 24826.92,
+      "ddPct": 0.72
+    },
+    {
+      "timestamp": 1795649938070,
+      "timeStr": "26.11.2026 02:38:58",
+      "equityUSD": 24826.92,
+      "ddPct": 0.72
+    },
+    {
+      "timestamp": 1795650238750,
+      "timeStr": "26.11.2026 02:43:58",
+      "equityUSD": 24829.27,
+      "ddPct": 0.71
+    },
+    {
+      "timestamp": 1795650538768,
+      "timeStr": "26.11.2026 02:48:58",
+      "equityUSD": 24829.27,
+      "ddPct": 0.71
+    },
+    {
+      "timestamp": 1795650839245,
+      "timeStr": "26.11.2026 02:53:59",
+      "equityUSD": 24815.87,
+      "ddPct": 0.77
+    },
+    {
+      "timestamp": 1795651139247,
+      "timeStr": "26.11.2026 02:58:59",
+      "equityUSD": 24815.87,
+      "ddPct": 0.77
+    },
+    {
+      "timestamp": 1795651442253,
+      "timeStr": "26.11.2026 03:04:02",
+      "equityUSD": 24803.15,
+      "ddPct": 0.82
+    },
+    {
+      "timestamp": 1795651742263,
+      "timeStr": "26.11.2026 03:09:02",
+      "equityUSD": 24794.75,
+      "ddPct": 0.85
+    },
+    {
+      "timestamp": 1795652042273,
+      "timeStr": "26.11.2026 03:14:02",
+      "equityUSD": 24775.68,
+      "ddPct": 0.93
+    },
+    {
+      "timestamp": 1795652342281,
+      "timeStr": "26.11.2026 03:19:02",
+      "equityUSD": 24749.39,
+      "ddPct": 1.03
+    },
+    {
+      "timestamp": 1795652642292,
+      "timeStr": "26.11.2026 03:24:02",
+      "equityUSD": 24758.31,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795652942305,
+      "timeStr": "26.11.2026 03:29:02",
+      "equityUSD": 24772.83,
+      "ddPct": 0.94
+    },
+    {
+      "timestamp": 1795653283748,
+      "timeStr": "26.11.2026 03:34:43",
+      "equityUSD": 24777.63,
+      "ddPct": 0.92
+    },
+    {
+      "timestamp": 1795653602325,
+      "timeStr": "26.11.2026 03:40:02",
+      "equityUSD": 24785.57,
+      "ddPct": 0.89
+    },
+    {
+      "timestamp": 1795653902336,
+      "timeStr": "26.11.2026 03:45:02",
+      "equityUSD": 24790.25,
+      "ddPct": 0.87
+    },
+    {
+      "timestamp": 1795654202346,
+      "timeStr": "26.11.2026 03:50:02",
+      "equityUSD": 24805.07,
+      "ddPct": 0.81
+    },
+    {
+      "timestamp": 1795654502355,
+      "timeStr": "26.11.2026 03:55:02",
+      "equityUSD": 24818.1,
+      "ddPct": 0.76
+    },
+    {
+      "timestamp": 1795654802360,
+      "timeStr": "26.11.2026 04:00:02",
+      "equityUSD": 24815.24,
+      "ddPct": 0.77
+    },
+    {
+      "timestamp": 1795655102372,
+      "timeStr": "26.11.2026 04:05:02",
+      "equityUSD": 24822.71,
+      "ddPct": 0.74
+    },
+    {
+      "timestamp": 1795655402377,
+      "timeStr": "26.11.2026 04:10:02",
+      "equityUSD": 24822.53,
+      "ddPct": 0.74
+    },
+    {
+      "timestamp": 1795655734546,
+      "timeStr": "26.11.2026 04:15:34",
+      "equityUSD": 24808.97,
+      "ddPct": 0.79
+    },
+    {
+      "timestamp": 1795656036047,
+      "timeStr": "26.11.2026 04:20:36",
+      "equityUSD": 24804.96,
+      "ddPct": 0.81
+    },
+    {
+      "timestamp": 1795656341754,
+      "timeStr": "26.11.2026 04:25:41",
+      "equityUSD": 24770.68,
+      "ddPct": 0.95
+    },
+    {
+      "timestamp": 1795656662748,
+      "timeStr": "26.11.2026 04:31:02",
+      "equityUSD": 24777.23,
+      "ddPct": 0.92
+    },
+    {
+      "timestamp": 1795656962750,
+      "timeStr": "26.11.2026 04:36:02",
+      "equityUSD": 24806.21,
+      "ddPct": 0.81
+    },
+    {
+      "timestamp": 1795657262760,
+      "timeStr": "26.11.2026 04:41:02",
+      "equityUSD": 24803.07,
+      "ddPct": 0.82
+    },
+    {
+      "timestamp": 1795657562766,
+      "timeStr": "26.11.2026 04:46:02",
+      "equityUSD": 24824.99,
+      "ddPct": 0.73
+    },
+    {
+      "timestamp": 1795657862850,
+      "timeStr": "26.11.2026 04:51:02",
+      "equityUSD": 24819.18,
+      "ddPct": 0.75
+    },
+    {
+      "timestamp": 1795658162955,
+      "timeStr": "26.11.2026 04:56:02",
+      "equityUSD": 24818.56,
+      "ddPct": 0.76
+    },
+    {
+      "timestamp": 1795658462962,
+      "timeStr": "26.11.2026 05:01:02",
+      "equityUSD": 24831.79,
+      "ddPct": 0.7
+    },
+    {
+      "timestamp": 1795658762972,
+      "timeStr": "26.11.2026 05:06:02",
+      "equityUSD": 24805.38,
+      "ddPct": 0.81
+    },
+    {
+      "timestamp": 1795659062986,
+      "timeStr": "26.11.2026 05:11:02",
+      "equityUSD": 24806.22,
+      "ddPct": 0.81
+    },
+    {
+      "timestamp": 1795659413453,
+      "timeStr": "26.11.2026 05:16:53",
+      "equityUSD": 24770.1,
+      "ddPct": 0.95
+    },
+    {
+      "timestamp": 1795659726352,
+      "timeStr": "26.11.2026 05:22:06",
+      "equityUSD": 24755.1,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795660031450,
+      "timeStr": "26.11.2026 05:27:11",
+      "equityUSD": 24755.23,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795660331459,
+      "timeStr": "26.11.2026 05:32:11",
+      "equityUSD": 24754.72,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795660631471,
+      "timeStr": "26.11.2026 05:37:11",
+      "equityUSD": 24764.7,
+      "ddPct": 0.97
+    },
+    {
+      "timestamp": 1795660934151,
+      "timeStr": "26.11.2026 05:42:14",
+      "equityUSD": 24757.1,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795661246049,
+      "timeStr": "26.11.2026 05:47:26",
+      "equityUSD": 24702.33,
+      "ddPct": 1.22
+    },
+    {
+      "timestamp": 1795661546057,
+      "timeStr": "26.11.2026 05:52:26",
+      "equityUSD": 24720.05,
+      "ddPct": 1.15
+    },
+    {
+      "timestamp": 1795661848647,
+      "timeStr": "26.11.2026 05:57:28",
+      "equityUSD": 24733.44,
+      "ddPct": 1.1
+    },
+    {
+      "timestamp": 1795662148657,
+      "timeStr": "26.11.2026 06:02:28",
+      "equityUSD": 24727.67,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795662448666,
+      "timeStr": "26.11.2026 06:07:28",
+      "equityUSD": 24763.78,
+      "ddPct": 0.98
+    },
+    {
+      "timestamp": 1795662748681,
+      "timeStr": "26.11.2026 06:12:28",
+      "equityUSD": 24758.18,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795663048695,
+      "timeStr": "26.11.2026 06:17:28",
+      "equityUSD": 24755.89,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795663348709,
+      "timeStr": "26.11.2026 06:22:28",
+      "equityUSD": 24763.62,
+      "ddPct": 0.98
+    },
+    {
+      "timestamp": 1795663648729,
+      "timeStr": "26.11.2026 06:27:28",
+      "equityUSD": 24766.09,
+      "ddPct": 0.97
+    },
+    {
+      "timestamp": 1795663948743,
+      "timeStr": "26.11.2026 06:32:28",
+      "equityUSD": 24779.13,
+      "ddPct": 0.91
+    },
+    {
+      "timestamp": 1795664248755,
+      "timeStr": "26.11.2026 06:37:28",
+      "equityUSD": 24781.45,
+      "ddPct": 0.9
+    },
+    {
+      "timestamp": 1795664549753,
+      "timeStr": "26.11.2026 06:42:29",
+      "equityUSD": 24784.43,
+      "ddPct": 0.89
+    },
+    {
+      "timestamp": 1795664849847,
+      "timeStr": "26.11.2026 06:47:29",
+      "equityUSD": 24772.19,
+      "ddPct": 0.94
+    },
+    {
+      "timestamp": 1795665159454,
+      "timeStr": "26.11.2026 06:52:39",
+      "equityUSD": 24776.48,
+      "ddPct": 0.92
+    },
+    {
+      "timestamp": 1795665460750,
+      "timeStr": "26.11.2026 06:57:40",
+      "equityUSD": 24781.63,
+      "ddPct": 0.9
+    },
+    {
+      "timestamp": 1795665761044,
+      "timeStr": "26.11.2026 07:02:41",
+      "equityUSD": 24758.18,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795666061253,
+      "timeStr": "26.11.2026 07:07:41",
+      "equityUSD": 24758.95,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795666368157,
+      "timeStr": "26.11.2026 07:12:48",
+      "equityUSD": 24768.06,
+      "ddPct": 0.96
+    },
+    {
+      "timestamp": 1795666677759,
+      "timeStr": "26.11.2026 07:17:57",
+      "equityUSD": 24767.49,
+      "ddPct": 0.96
+    },
+    {
+      "timestamp": 1795666979049,
+      "timeStr": "26.11.2026 07:22:59",
+      "equityUSD": 24753.18,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795667279051,
+      "timeStr": "26.11.2026 07:27:59",
+      "equityUSD": 24749.1,
+      "ddPct": 1.03
+    },
+    {
+      "timestamp": 1795667579349,
+      "timeStr": "26.11.2026 07:32:59",
+      "equityUSD": 24739.17,
+      "ddPct": 1.07
+    },
+    {
+      "timestamp": 1795667879351,
+      "timeStr": "26.11.2026 07:37:59",
+      "equityUSD": 24742.34,
+      "ddPct": 1.06
+    },
+    {
+      "timestamp": 1795668180455,
+      "timeStr": "26.11.2026 07:43:00",
+      "equityUSD": 24720.61,
+      "ddPct": 1.15
+    },
+    {
+      "timestamp": 1795668480459,
+      "timeStr": "26.11.2026 07:48:00",
+      "equityUSD": 24729.71,
+      "ddPct": 1.11
+    },
+    {
+      "timestamp": 1795668781453,
+      "timeStr": "26.11.2026 07:53:01",
+      "equityUSD": 24719.34,
+      "ddPct": 1.15
+    },
+    {
+      "timestamp": 1795669081461,
+      "timeStr": "26.11.2026 07:58:01",
+      "equityUSD": 24723.89,
+      "ddPct": 1.14
+    },
+    {
+      "timestamp": 1795669382865,
+      "timeStr": "26.11.2026 08:03:02",
+      "equityUSD": 24727.08,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795669682876,
+      "timeStr": "26.11.2026 08:08:02",
+      "equityUSD": 24725.25,
+      "ddPct": 1.13
+    },
+    {
+      "timestamp": 1795669982895,
+      "timeStr": "26.11.2026 08:13:02",
+      "equityUSD": 24730.83,
+      "ddPct": 1.11
+    },
+    {
+      "timestamp": 1795670282907,
+      "timeStr": "26.11.2026 08:18:02",
+      "equityUSD": 24725.51,
+      "ddPct": 1.13
+    },
+    {
+      "timestamp": 1795670583253,
+      "timeStr": "26.11.2026 08:23:03",
+      "equityUSD": 24728.09,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795670883265,
+      "timeStr": "26.11.2026 08:28:03",
+      "equityUSD": 24718.63,
+      "ddPct": 1.16
+    },
+    {
+      "timestamp": 1795671184048,
+      "timeStr": "26.11.2026 08:33:04",
+      "equityUSD": 24723.27,
+      "ddPct": 1.14
+    },
+    {
+      "timestamp": 1795671484049,
+      "timeStr": "26.11.2026 08:38:04",
+      "equityUSD": 24718.73,
+      "ddPct": 1.16
+    },
+    {
+      "timestamp": 1795671784247,
+      "timeStr": "26.11.2026 08:43:04",
+      "equityUSD": 24729.04,
+      "ddPct": 1.11
+    },
+    {
+      "timestamp": 1795672088166,
+      "timeStr": "26.11.2026 08:48:08",
+      "equityUSD": 24737.31,
+      "ddPct": 1.08
+    },
+    {
+      "timestamp": 1795672395648,
+      "timeStr": "26.11.2026 08:53:15",
+      "equityUSD": 24738.82,
+      "ddPct": 1.08
+    },
+    {
+      "timestamp": 1795672695652,
+      "timeStr": "26.11.2026 08:58:15",
+      "equityUSD": 24738.92,
+      "ddPct": 1.07
+    },
+    {
+      "timestamp": 1795673003858,
+      "timeStr": "26.11.2026 09:03:23",
+      "equityUSD": 24752.07,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795673303863,
+      "timeStr": "26.11.2026 09:08:23",
+      "equityUSD": 24754.67,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795673608564,
+      "timeStr": "26.11.2026 09:13:28",
+      "equityUSD": 24765.58,
+      "ddPct": 0.97
+    },
+    {
+      "timestamp": 1795673908582,
+      "timeStr": "26.11.2026 09:18:28",
+      "equityUSD": 24777.66,
+      "ddPct": 0.92
+    },
+    {
+      "timestamp": 1795674209449,
+      "timeStr": "26.11.2026 09:23:29",
+      "equityUSD": 24760.95,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795674509453,
+      "timeStr": "26.11.2026 09:28:29",
+      "equityUSD": 24760.68,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795674809456,
+      "timeStr": "26.11.2026 09:33:29",
+      "equityUSD": 24754.11,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795675120751,
+      "timeStr": "26.11.2026 09:38:40",
+      "equityUSD": 24760.77,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795675420859,
+      "timeStr": "26.11.2026 09:43:40",
+      "equityUSD": 24768.61,
+      "ddPct": 0.96
+    },
+    {
+      "timestamp": 1795675735253,
+      "timeStr": "26.11.2026 09:48:55",
+      "equityUSD": 24770.04,
+      "ddPct": 0.95
+    },
+    {
+      "timestamp": 1795676035452,
+      "timeStr": "26.11.2026 09:53:55",
+      "equityUSD": 24764.11,
+      "ddPct": 0.97
+    },
+    {
+      "timestamp": 1795676335460,
+      "timeStr": "26.11.2026 09:58:55",
+      "equityUSD": 24760.58,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795676635466,
+      "timeStr": "26.11.2026 10:03:55",
+      "equityUSD": 24763.26,
+      "ddPct": 0.98
+    },
+    {
+      "timestamp": 1795676937149,
+      "timeStr": "26.11.2026 10:08:57",
+      "equityUSD": 24769.71,
+      "ddPct": 0.95
+    },
+    {
+      "timestamp": 1795677237159,
+      "timeStr": "26.11.2026 10:13:57",
+      "equityUSD": 24768.32,
+      "ddPct": 0.96
+    },
+    {
+      "timestamp": 1795677538055,
+      "timeStr": "26.11.2026 10:18:58",
+      "equityUSD": 24766.11,
+      "ddPct": 0.97
+    },
+    {
+      "timestamp": 1795677839348,
+      "timeStr": "26.11.2026 10:23:59",
+      "equityUSD": 24756.59,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795678139352,
+      "timeStr": "26.11.2026 10:28:59",
+      "equityUSD": 24759.65,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795678448145,
+      "timeStr": "26.11.2026 10:34:08",
+      "equityUSD": 24763.24,
+      "ddPct": 0.98
+    },
+    {
+      "timestamp": 1795678748155,
+      "timeStr": "26.11.2026 10:39:08",
+      "equityUSD": 24758.14,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795679048172,
+      "timeStr": "26.11.2026 10:44:08",
+      "equityUSD": 24752.12,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795679348183,
+      "timeStr": "26.11.2026 10:49:08",
+      "equityUSD": 24756.69,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795679648189,
+      "timeStr": "26.11.2026 10:54:08",
+      "equityUSD": 24759.41,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795679950058,
+      "timeStr": "26.11.2026 10:59:10",
+      "equityUSD": 24765.87,
+      "ddPct": 0.97
+    },
+    {
+      "timestamp": 1795680252763,
+      "timeStr": "26.11.2026 11:04:12",
+      "equityUSD": 24755.52,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795680552774,
+      "timeStr": "26.11.2026 11:09:12",
+      "equityUSD": 24753.43,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795680852845,
+      "timeStr": "26.11.2026 11:14:12",
+      "equityUSD": 24755.84,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795681157060,
+      "timeStr": "26.11.2026 11:19:17",
+      "equityUSD": 24754.45,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795681457070,
+      "timeStr": "26.11.2026 11:24:17",
+      "equityUSD": 24749.07,
+      "ddPct": 1.03
+    },
+    {
+      "timestamp": 1795681761954,
+      "timeStr": "26.11.2026 11:29:21",
+      "equityUSD": 24751.07,
+      "ddPct": 1.03
+    },
+    {
+      "timestamp": 1795682061963,
+      "timeStr": "26.11.2026 11:34:21",
+      "equityUSD": 24755.83,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795682361977,
+      "timeStr": "26.11.2026 11:39:21",
+      "equityUSD": 24746.59,
+      "ddPct": 1.04
+    },
+    {
+      "timestamp": 1795682661992,
+      "timeStr": "26.11.2026 11:44:21",
+      "equityUSD": 24745.22,
+      "ddPct": 1.05
+    },
+    {
+      "timestamp": 1795682967056,
+      "timeStr": "26.11.2026 11:49:27",
+      "equityUSD": 24720.68,
+      "ddPct": 1.15
+    },
+    {
+      "timestamp": 1795683267069,
+      "timeStr": "26.11.2026 11:54:27",
+      "equityUSD": 24727.42,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795683567079,
+      "timeStr": "26.11.2026 11:59:27",
+      "equityUSD": 24730.51,
+      "ddPct": 1.11
+    },
+    {
+      "timestamp": 1795683867092,
+      "timeStr": "26.11.2026 12:04:27",
+      "equityUSD": 24735.9,
+      "ddPct": 1.09
+    },
+    {
+      "timestamp": 1795684169948,
+      "timeStr": "26.11.2026 12:09:29",
+      "equityUSD": 24735.4,
+      "ddPct": 1.09
+    },
+    {
+      "timestamp": 1795684469952,
+      "timeStr": "26.11.2026 12:14:29",
+      "equityUSD": 24727.82,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795684780355,
+      "timeStr": "26.11.2026 12:19:40",
+      "equityUSD": 24733.28,
+      "ddPct": 1.1
+    },
+    {
+      "timestamp": 1795685093459,
+      "timeStr": "26.11.2026 12:24:53",
+      "equityUSD": 24739.26,
+      "ddPct": 1.07
+    },
+    {
+      "timestamp": 1795685400050,
+      "timeStr": "26.11.2026 12:30:00",
+      "equityUSD": 24744.11,
+      "ddPct": 1.05
+    },
+    {
+      "timestamp": 1795685705068,
+      "timeStr": "26.11.2026 12:35:05",
+      "equityUSD": 24739.29,
+      "ddPct": 1.07
+    },
+    {
+      "timestamp": 1795686012763,
+      "timeStr": "26.11.2026 12:40:12",
+      "equityUSD": 24730.02,
+      "ddPct": 1.11
+    },
+    {
+      "timestamp": 1795686315054,
+      "timeStr": "26.11.2026 12:45:15",
+      "equityUSD": 24726.01,
+      "ddPct": 1.13
+    },
+    {
+      "timestamp": 1795686628745,
+      "timeStr": "26.11.2026 12:50:28",
+      "equityUSD": 24725.69,
+      "ddPct": 1.13
+    },
+    {
+      "timestamp": 1795686929446,
+      "timeStr": "26.11.2026 12:55:29",
+      "equityUSD": 24726.95,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795687230864,
+      "timeStr": "26.11.2026 13:00:30",
+      "equityUSD": 24728.69,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795687530871,
+      "timeStr": "26.11.2026 13:05:30",
+      "equityUSD": 24731.42,
+      "ddPct": 1.1
+    },
+    {
+      "timestamp": 1795687837649,
+      "timeStr": "26.11.2026 13:10:37",
+      "equityUSD": 24724.33,
+      "ddPct": 1.13
+    },
+    {
+      "timestamp": 1795688139450,
+      "timeStr": "26.11.2026 13:15:39",
+      "equityUSD": 24727.53,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795688439453,
+      "timeStr": "26.11.2026 13:20:39",
+      "equityUSD": 24733.57,
+      "ddPct": 1.1
+    },
+    {
+      "timestamp": 1795688739454,
+      "timeStr": "26.11.2026 13:25:39",
+      "equityUSD": 24736.42,
+      "ddPct": 1.08
+    },
+    {
+      "timestamp": 1795689043454,
+      "timeStr": "26.11.2026 13:30:43",
+      "equityUSD": 24737.1,
+      "ddPct": 1.08
+    },
+    {
+      "timestamp": 1795689343463,
+      "timeStr": "26.11.2026 13:35:43",
+      "equityUSD": 24742.09,
+      "ddPct": 1.06
+    },
+    {
+      "timestamp": 1795689643474,
+      "timeStr": "26.11.2026 13:40:43",
+      "equityUSD": 24754.74,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795689943483,
+      "timeStr": "26.11.2026 13:45:43",
+      "equityUSD": 24769.97,
+      "ddPct": 0.95
+    },
+    {
+      "timestamp": 1795690247256,
+      "timeStr": "26.11.2026 13:50:47",
+      "equityUSD": 24765.17,
+      "ddPct": 0.97
+    },
+    {
+      "timestamp": 1795690547264,
+      "timeStr": "26.11.2026 13:55:47",
+      "equityUSD": 24768.1,
+      "ddPct": 0.96
+    },
+    {
+      "timestamp": 1795690847550,
+      "timeStr": "26.11.2026 14:00:47",
+      "equityUSD": 24768.06,
+      "ddPct": 0.96
+    },
+    {
+      "timestamp": 1795691147559,
+      "timeStr": "26.11.2026 14:05:47",
+      "equityUSD": 24767.4,
+      "ddPct": 0.96
+    },
+    {
+      "timestamp": 1795691458959,
+      "timeStr": "26.11.2026 14:10:58",
+      "equityUSD": 24761.18,
+      "ddPct": 0.99
+    },
+    {
+      "timestamp": 1795691758979,
+      "timeStr": "26.11.2026 14:15:58",
+      "equityUSD": 24756.26,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795692058989,
+      "timeStr": "26.11.2026 14:20:58",
+      "equityUSD": 24752.52,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795692358997,
+      "timeStr": "26.11.2026 14:25:58",
+      "equityUSD": 24750.09,
+      "ddPct": 1.03
+    },
+    {
+      "timestamp": 1795692663954,
+      "timeStr": "26.11.2026 14:31:03",
+      "equityUSD": 24754.01,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795692963965,
+      "timeStr": "26.11.2026 14:36:03",
+      "equityUSD": 24753.21,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795693263980,
+      "timeStr": "26.11.2026 14:41:03",
+      "equityUSD": 24747.09,
+      "ddPct": 1.04
+    },
+    {
+      "timestamp": 1795693564052,
+      "timeStr": "26.11.2026 14:46:04",
+      "equityUSD": 24747.91,
+      "ddPct": 1.04
+    },
+    {
+      "timestamp": 1795693869059,
+      "timeStr": "26.11.2026 14:51:09",
+      "equityUSD": 24748.18,
+      "ddPct": 1.04
+    },
+    {
+      "timestamp": 1795694171967,
+      "timeStr": "26.11.2026 14:56:11",
+      "equityUSD": 24749.17,
+      "ddPct": 1.03
+    },
+    {
+      "timestamp": 1795694471980,
+      "timeStr": "26.11.2026 15:01:11",
+      "equityUSD": 24741.87,
+      "ddPct": 1.06
+    },
+    {
+      "timestamp": 1795694781057,
+      "timeStr": "26.11.2026 15:06:21",
+      "equityUSD": 24735.81,
+      "ddPct": 1.09
+    },
+    {
+      "timestamp": 1795695081065,
+      "timeStr": "26.11.2026 15:11:21",
+      "equityUSD": 24746.4,
+      "ddPct": 1.05
+    },
+    {
+      "timestamp": 1795695389747,
+      "timeStr": "26.11.2026 15:16:29",
+      "equityUSD": 24751.8,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795695692755,
+      "timeStr": "26.11.2026 15:21:32",
+      "equityUSD": 24752.6,
+      "ddPct": 1.02
+    },
+    {
+      "timestamp": 1795695996959,
+      "timeStr": "26.11.2026 15:26:36",
+      "equityUSD": 24756.34,
+      "ddPct": 1.01
+    },
+    {
+      "timestamp": 1795696303657,
+      "timeStr": "26.11.2026 15:31:43",
+      "equityUSD": 24758.82,
+      "ddPct": 1
+    },
+    {
+      "timestamp": 1795696612462,
+      "timeStr": "26.11.2026 15:36:52",
+      "equityUSD": 24743.24,
+      "ddPct": 1.06
+    },
+    {
+      "timestamp": 1795696912475,
+      "timeStr": "26.11.2026 15:41:52",
+      "equityUSD": 24726.63,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795697212483,
+      "timeStr": "26.11.2026 15:46:52",
+      "equityUSD": 24726.51,
+      "ddPct": 1.12
+    },
+    {
+      "timestamp": 1795697479646,
+      "timeStr": "26.11.2026 15:51:19",
+      "equityUSD": 24731.67,
+      "ddPct": 1.1
+    },
+    {
+      "timestamp": 1795697784251,
+      "timeStr": "26.11.2026 15:56:24",
+      "equityUSD": 24728.98,
+      "ddPct": 1.11
+    },
+    {
+      "timestamp": 1795698089052,
+      "timeStr": "26.11.2026 16:01:29",
+      "equityUSD": 24739.47,
+      "ddPct": 1.07
+    },
+    {
+      "timestamp": 1795698405251,
+      "timeStr": "26.11.2026 16:06:45",
+      "equityUSD": 24738.49,
+      "ddPct": 1.08
+    },
+    {
+      "timestamp": 1795698729059,
+      "timeStr": "26.11.2026 16:12:09",
+      "equityUSD": 24735.35,
+      "ddPct": 1.09
+    },
+    {
+      "timestamp": 1795699030161,
+      "timeStr": "26.11.2026 16:17:10",
+      "equityUSD": 24737.64,
+      "ddPct": 1.08
+    },
+    {
+      "timestamp": 1795699179236,
+      "timeStr": "26.11.2026 16:19:39",
+      "equityUSD": 24737.53,
+      "ddPct": 1.08
+    },
+    {
+      "timestamp": 1795699180389,
+      "timeStr": "26.11.2026 16:19:40",
+      "equityUSD": 24737.53,
+      "ddPct": 1.08
     }
   ],
   "equityCurve": [
@@ -218,229 +1606,1606 @@
       "timeStr": "25.11.2026 21:40:57",
       "equityUSD": 24922.62,
       "drawdownPercent": 0.34
+    },
+    {
+      "timestamp": 1795632407952,
+      "timeStr": "25.11.2026 21:46:47",
+      "equityUSD": 24938.37,
+      "drawdownPercent": 0.28
+    },
+    {
+      "timestamp": 1795632708063,
+      "timeStr": "25.11.2026 21:51:48",
+      "equityUSD": 24938.37,
+      "drawdownPercent": 0.28
+    },
+    {
+      "timestamp": 1795633017950,
+      "timeStr": "25.11.2026 21:56:57",
+      "equityUSD": 24902.4,
+      "drawdownPercent": 0.42
+    },
+    {
+      "timestamp": 1795633321955,
+      "timeStr": "25.11.2026 22:02:01",
+      "equityUSD": 24902.4,
+      "drawdownPercent": 0.42
+    },
+    {
+      "timestamp": 1795633621968,
+      "timeStr": "25.11.2026 22:07:01",
+      "equityUSD": 24905.45,
+      "drawdownPercent": 0.41
+    },
+    {
+      "timestamp": 1795633921982,
+      "timeStr": "25.11.2026 22:12:01",
+      "equityUSD": 24905.45,
+      "drawdownPercent": 0.41
+    },
+    {
+      "timestamp": 1795634225055,
+      "timeStr": "25.11.2026 22:17:05",
+      "equityUSD": 24887.11,
+      "drawdownPercent": 0.48
+    },
+    {
+      "timestamp": 1795634525060,
+      "timeStr": "25.11.2026 22:22:05",
+      "equityUSD": 24887.11,
+      "drawdownPercent": 0.48
+    },
+    {
+      "timestamp": 1795634826052,
+      "timeStr": "25.11.2026 22:27:06",
+      "equityUSD": 24887.11,
+      "drawdownPercent": 0.48
+    },
+    {
+      "timestamp": 1795635126064,
+      "timeStr": "25.11.2026 22:32:06",
+      "equityUSD": 24887.11,
+      "drawdownPercent": 0.48
+    },
+    {
+      "timestamp": 1795635426072,
+      "timeStr": "25.11.2026 22:37:06",
+      "equityUSD": 24890.88,
+      "drawdownPercent": 0.47
+    },
+    {
+      "timestamp": 1795635726081,
+      "timeStr": "25.11.2026 22:42:06",
+      "equityUSD": 24890.88,
+      "drawdownPercent": 0.47
+    },
+    {
+      "timestamp": 1795636026092,
+      "timeStr": "25.11.2026 22:47:06",
+      "equityUSD": 24898.87,
+      "drawdownPercent": 0.44
+    },
+    {
+      "timestamp": 1795636326097,
+      "timeStr": "25.11.2026 22:52:06",
+      "equityUSD": 24898.87,
+      "drawdownPercent": 0.44
+    },
+    {
+      "timestamp": 1795636626552,
+      "timeStr": "25.11.2026 22:57:06",
+      "equityUSD": 24918.86,
+      "drawdownPercent": 0.36
+    },
+    {
+      "timestamp": 1795636933356,
+      "timeStr": "25.11.2026 23:02:13",
+      "equityUSD": 24918.86,
+      "drawdownPercent": 0.36
+    },
+    {
+      "timestamp": 1795637233366,
+      "timeStr": "25.11.2026 23:07:13",
+      "equityUSD": 24894.87,
+      "drawdownPercent": 0.45
+    },
+    {
+      "timestamp": 1795637533373,
+      "timeStr": "25.11.2026 23:12:13",
+      "equityUSD": 24894.87,
+      "drawdownPercent": 0.45
+    },
+    {
+      "timestamp": 1795637837253,
+      "timeStr": "25.11.2026 23:17:17",
+      "equityUSD": 24879.35,
+      "drawdownPercent": 0.51
+    },
+    {
+      "timestamp": 1795638148756,
+      "timeStr": "25.11.2026 23:22:28",
+      "equityUSD": 24879.35,
+      "drawdownPercent": 0.51
+    },
+    {
+      "timestamp": 1795638448763,
+      "timeStr": "25.11.2026 23:27:28",
+      "equityUSD": 24836.8,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795638748784,
+      "timeStr": "25.11.2026 23:32:28",
+      "equityUSD": 24836.8,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795639048798,
+      "timeStr": "25.11.2026 23:37:28",
+      "equityUSD": 24836.8,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795639350456,
+      "timeStr": "25.11.2026 23:42:30",
+      "equityUSD": 24821.04,
+      "drawdownPercent": 0.75
+    },
+    {
+      "timestamp": 1795639661744,
+      "timeStr": "25.11.2026 23:47:41",
+      "equityUSD": 24821.04,
+      "drawdownPercent": 0.75
+    },
+    {
+      "timestamp": 1795639961745,
+      "timeStr": "25.11.2026 23:52:41",
+      "equityUSD": 24854.2,
+      "drawdownPercent": 0.61
+    },
+    {
+      "timestamp": 1795640276356,
+      "timeStr": "25.11.2026 23:57:56",
+      "equityUSD": 24837.97,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795640577551,
+      "timeStr": "26.11.2026 00:02:57",
+      "equityUSD": 24837.97,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795640877559,
+      "timeStr": "26.11.2026 00:07:57",
+      "equityUSD": 24837.97,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795641180362,
+      "timeStr": "26.11.2026 00:13:00",
+      "equityUSD": 24832.56,
+      "drawdownPercent": 0.7
+    },
+    {
+      "timestamp": 1795641480368,
+      "timeStr": "26.11.2026 00:18:00",
+      "equityUSD": 24832.56,
+      "drawdownPercent": 0.7
+    },
+    {
+      "timestamp": 1795641780555,
+      "timeStr": "26.11.2026 00:23:00",
+      "equityUSD": 24831.15,
+      "drawdownPercent": 0.71
+    },
+    {
+      "timestamp": 1795642080557,
+      "timeStr": "26.11.2026 00:28:00",
+      "equityUSD": 24831.15,
+      "drawdownPercent": 0.71
+    },
+    {
+      "timestamp": 1795642380559,
+      "timeStr": "26.11.2026 00:33:00",
+      "equityUSD": 24838.91,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795642680561,
+      "timeStr": "26.11.2026 00:38:00",
+      "equityUSD": 24838.91,
+      "drawdownPercent": 0.68
+    },
+    {
+      "timestamp": 1795642980564,
+      "timeStr": "26.11.2026 00:43:00",
+      "equityUSD": 24819.16,
+      "drawdownPercent": 0.75
+    },
+    {
+      "timestamp": 1795643280565,
+      "timeStr": "26.11.2026 00:48:00",
+      "equityUSD": 24819.16,
+      "drawdownPercent": 0.75
+    },
+    {
+      "timestamp": 1795643580572,
+      "timeStr": "26.11.2026 00:53:00",
+      "equityUSD": 24830.68,
+      "drawdownPercent": 0.71
+    },
+    {
+      "timestamp": 1795643880580,
+      "timeStr": "26.11.2026 00:58:00",
+      "equityUSD": 24830.68,
+      "drawdownPercent": 0.71
+    },
+    {
+      "timestamp": 1795644187055,
+      "timeStr": "26.11.2026 01:03:07",
+      "equityUSD": 24816.34,
+      "drawdownPercent": 0.77
+    },
+    {
+      "timestamp": 1795644487068,
+      "timeStr": "26.11.2026 01:08:07",
+      "equityUSD": 24816.34,
+      "drawdownPercent": 0.77
+    },
+    {
+      "timestamp": 1795644787080,
+      "timeStr": "26.11.2026 01:13:07",
+      "equityUSD": 24798.7,
+      "drawdownPercent": 0.84
+    },
+    {
+      "timestamp": 1795645087090,
+      "timeStr": "26.11.2026 01:18:07",
+      "equityUSD": 24798.7,
+      "drawdownPercent": 0.84
+    },
+    {
+      "timestamp": 1795645387100,
+      "timeStr": "26.11.2026 01:23:07",
+      "equityUSD": 24798.7,
+      "drawdownPercent": 0.84
+    },
+    {
+      "timestamp": 1795645687114,
+      "timeStr": "26.11.2026 01:28:07",
+      "equityUSD": 24798.7,
+      "drawdownPercent": 0.84
+    },
+    {
+      "timestamp": 1795645996853,
+      "timeStr": "26.11.2026 01:33:16",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795646296865,
+      "timeStr": "26.11.2026 01:38:16",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795646596878,
+      "timeStr": "26.11.2026 01:43:16",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795646899760,
+      "timeStr": "26.11.2026 01:48:19",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795647214470,
+      "timeStr": "26.11.2026 01:53:34",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795647520247,
+      "timeStr": "26.11.2026 01:58:40",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795647820944,
+      "timeStr": "26.11.2026 02:03:40",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795648127545,
+      "timeStr": "26.11.2026 02:08:47",
+      "equityUSD": 24795.65,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795648437463,
+      "timeStr": "26.11.2026 02:13:57",
+      "equityUSD": 24804.11,
+      "drawdownPercent": 0.81
+    },
+    {
+      "timestamp": 1795648737471,
+      "timeStr": "26.11.2026 02:18:57",
+      "equityUSD": 24804.11,
+      "drawdownPercent": 0.81
+    },
+    {
+      "timestamp": 1795649038050,
+      "timeStr": "26.11.2026 02:23:58",
+      "equityUSD": 24843.14,
+      "drawdownPercent": 0.66
+    },
+    {
+      "timestamp": 1795649338056,
+      "timeStr": "26.11.2026 02:28:58",
+      "equityUSD": 24843.14,
+      "drawdownPercent": 0.66
+    },
+    {
+      "timestamp": 1795649638066,
+      "timeStr": "26.11.2026 02:33:58",
+      "equityUSD": 24826.92,
+      "drawdownPercent": 0.72
+    },
+    {
+      "timestamp": 1795649938070,
+      "timeStr": "26.11.2026 02:38:58",
+      "equityUSD": 24826.92,
+      "drawdownPercent": 0.72
+    },
+    {
+      "timestamp": 1795650238750,
+      "timeStr": "26.11.2026 02:43:58",
+      "equityUSD": 24829.27,
+      "drawdownPercent": 0.71
+    },
+    {
+      "timestamp": 1795650538768,
+      "timeStr": "26.11.2026 02:48:58",
+      "equityUSD": 24829.27,
+      "drawdownPercent": 0.71
+    },
+    {
+      "timestamp": 1795650839245,
+      "timeStr": "26.11.2026 02:53:59",
+      "equityUSD": 24815.87,
+      "drawdownPercent": 0.77
+    },
+    {
+      "timestamp": 1795651139247,
+      "timeStr": "26.11.2026 02:58:59",
+      "equityUSD": 24815.87,
+      "drawdownPercent": 0.77
+    },
+    {
+      "timestamp": 1795651442253,
+      "timeStr": "26.11.2026 03:04:02",
+      "equityUSD": 24803.15,
+      "drawdownPercent": 0.82
+    },
+    {
+      "timestamp": 1795651742263,
+      "timeStr": "26.11.2026 03:09:02",
+      "equityUSD": 24794.75,
+      "drawdownPercent": 0.85
+    },
+    {
+      "timestamp": 1795652042273,
+      "timeStr": "26.11.2026 03:14:02",
+      "equityUSD": 24775.68,
+      "drawdownPercent": 0.93
+    },
+    {
+      "timestamp": 1795652342281,
+      "timeStr": "26.11.2026 03:19:02",
+      "equityUSD": 24749.39,
+      "drawdownPercent": 1.03
+    },
+    {
+      "timestamp": 1795652642292,
+      "timeStr": "26.11.2026 03:24:02",
+      "equityUSD": 24758.31,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795652942305,
+      "timeStr": "26.11.2026 03:29:02",
+      "equityUSD": 24772.83,
+      "drawdownPercent": 0.94
+    },
+    {
+      "timestamp": 1795653283748,
+      "timeStr": "26.11.2026 03:34:43",
+      "equityUSD": 24777.63,
+      "drawdownPercent": 0.92
+    },
+    {
+      "timestamp": 1795653602325,
+      "timeStr": "26.11.2026 03:40:02",
+      "equityUSD": 24785.57,
+      "drawdownPercent": 0.89
+    },
+    {
+      "timestamp": 1795653902336,
+      "timeStr": "26.11.2026 03:45:02",
+      "equityUSD": 24790.25,
+      "drawdownPercent": 0.87
+    },
+    {
+      "timestamp": 1795654202346,
+      "timeStr": "26.11.2026 03:50:02",
+      "equityUSD": 24805.07,
+      "drawdownPercent": 0.81
+    },
+    {
+      "timestamp": 1795654502355,
+      "timeStr": "26.11.2026 03:55:02",
+      "equityUSD": 24818.1,
+      "drawdownPercent": 0.76
+    },
+    {
+      "timestamp": 1795654802360,
+      "timeStr": "26.11.2026 04:00:02",
+      "equityUSD": 24815.24,
+      "drawdownPercent": 0.77
+    },
+    {
+      "timestamp": 1795655102372,
+      "timeStr": "26.11.2026 04:05:02",
+      "equityUSD": 24822.71,
+      "drawdownPercent": 0.74
+    },
+    {
+      "timestamp": 1795655402377,
+      "timeStr": "26.11.2026 04:10:02",
+      "equityUSD": 24822.53,
+      "drawdownPercent": 0.74
+    },
+    {
+      "timestamp": 1795655734546,
+      "timeStr": "26.11.2026 04:15:34",
+      "equityUSD": 24808.97,
+      "drawdownPercent": 0.79
+    },
+    {
+      "timestamp": 1795656036047,
+      "timeStr": "26.11.2026 04:20:36",
+      "equityUSD": 24804.96,
+      "drawdownPercent": 0.81
+    },
+    {
+      "timestamp": 1795656341754,
+      "timeStr": "26.11.2026 04:25:41",
+      "equityUSD": 24770.68,
+      "drawdownPercent": 0.95
+    },
+    {
+      "timestamp": 1795656662748,
+      "timeStr": "26.11.2026 04:31:02",
+      "equityUSD": 24777.23,
+      "drawdownPercent": 0.92
+    },
+    {
+      "timestamp": 1795656962750,
+      "timeStr": "26.11.2026 04:36:02",
+      "equityUSD": 24806.21,
+      "drawdownPercent": 0.81
+    },
+    {
+      "timestamp": 1795657262760,
+      "timeStr": "26.11.2026 04:41:02",
+      "equityUSD": 24803.07,
+      "drawdownPercent": 0.82
+    },
+    {
+      "timestamp": 1795657562766,
+      "timeStr": "26.11.2026 04:46:02",
+      "equityUSD": 24824.99,
+      "drawdownPercent": 0.73
+    },
+    {
+      "timestamp": 1795657862850,
+      "timeStr": "26.11.2026 04:51:02",
+      "equityUSD": 24819.18,
+      "drawdownPercent": 0.75
+    },
+    {
+      "timestamp": 1795658162955,
+      "timeStr": "26.11.2026 04:56:02",
+      "equityUSD": 24818.56,
+      "drawdownPercent": 0.76
+    },
+    {
+      "timestamp": 1795658462962,
+      "timeStr": "26.11.2026 05:01:02",
+      "equityUSD": 24831.79,
+      "drawdownPercent": 0.7
+    },
+    {
+      "timestamp": 1795658762972,
+      "timeStr": "26.11.2026 05:06:02",
+      "equityUSD": 24805.38,
+      "drawdownPercent": 0.81
+    },
+    {
+      "timestamp": 1795659062986,
+      "timeStr": "26.11.2026 05:11:02",
+      "equityUSD": 24806.22,
+      "drawdownPercent": 0.81
+    },
+    {
+      "timestamp": 1795659413453,
+      "timeStr": "26.11.2026 05:16:53",
+      "equityUSD": 24770.1,
+      "drawdownPercent": 0.95
+    },
+    {
+      "timestamp": 1795659726352,
+      "timeStr": "26.11.2026 05:22:06",
+      "equityUSD": 24755.1,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795660031450,
+      "timeStr": "26.11.2026 05:27:11",
+      "equityUSD": 24755.23,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795660331459,
+      "timeStr": "26.11.2026 05:32:11",
+      "equityUSD": 24754.72,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795660631471,
+      "timeStr": "26.11.2026 05:37:11",
+      "equityUSD": 24764.7,
+      "drawdownPercent": 0.97
+    },
+    {
+      "timestamp": 1795660934151,
+      "timeStr": "26.11.2026 05:42:14",
+      "equityUSD": 24757.1,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795661246049,
+      "timeStr": "26.11.2026 05:47:26",
+      "equityUSD": 24702.33,
+      "drawdownPercent": 1.22
+    },
+    {
+      "timestamp": 1795661546057,
+      "timeStr": "26.11.2026 05:52:26",
+      "equityUSD": 24720.05,
+      "drawdownPercent": 1.15
+    },
+    {
+      "timestamp": 1795661848647,
+      "timeStr": "26.11.2026 05:57:28",
+      "equityUSD": 24733.44,
+      "drawdownPercent": 1.1
+    },
+    {
+      "timestamp": 1795662148657,
+      "timeStr": "26.11.2026 06:02:28",
+      "equityUSD": 24727.67,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795662448666,
+      "timeStr": "26.11.2026 06:07:28",
+      "equityUSD": 24763.78,
+      "drawdownPercent": 0.98
+    },
+    {
+      "timestamp": 1795662748681,
+      "timeStr": "26.11.2026 06:12:28",
+      "equityUSD": 24758.18,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795663048695,
+      "timeStr": "26.11.2026 06:17:28",
+      "equityUSD": 24755.89,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795663348709,
+      "timeStr": "26.11.2026 06:22:28",
+      "equityUSD": 24763.62,
+      "drawdownPercent": 0.98
+    },
+    {
+      "timestamp": 1795663648729,
+      "timeStr": "26.11.2026 06:27:28",
+      "equityUSD": 24766.09,
+      "drawdownPercent": 0.97
+    },
+    {
+      "timestamp": 1795663948743,
+      "timeStr": "26.11.2026 06:32:28",
+      "equityUSD": 24779.13,
+      "drawdownPercent": 0.91
+    },
+    {
+      "timestamp": 1795664248755,
+      "timeStr": "26.11.2026 06:37:28",
+      "equityUSD": 24781.45,
+      "drawdownPercent": 0.9
+    },
+    {
+      "timestamp": 1795664549753,
+      "timeStr": "26.11.2026 06:42:29",
+      "equityUSD": 24784.43,
+      "drawdownPercent": 0.89
+    },
+    {
+      "timestamp": 1795664849847,
+      "timeStr": "26.11.2026 06:47:29",
+      "equityUSD": 24772.19,
+      "drawdownPercent": 0.94
+    },
+    {
+      "timestamp": 1795665159454,
+      "timeStr": "26.11.2026 06:52:39",
+      "equityUSD": 24776.48,
+      "drawdownPercent": 0.92
+    },
+    {
+      "timestamp": 1795665460750,
+      "timeStr": "26.11.2026 06:57:40",
+      "equityUSD": 24781.63,
+      "drawdownPercent": 0.9
+    },
+    {
+      "timestamp": 1795665761044,
+      "timeStr": "26.11.2026 07:02:41",
+      "equityUSD": 24758.18,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795666061253,
+      "timeStr": "26.11.2026 07:07:41",
+      "equityUSD": 24758.95,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795666368157,
+      "timeStr": "26.11.2026 07:12:48",
+      "equityUSD": 24768.06,
+      "drawdownPercent": 0.96
+    },
+    {
+      "timestamp": 1795666677759,
+      "timeStr": "26.11.2026 07:17:57",
+      "equityUSD": 24767.49,
+      "drawdownPercent": 0.96
+    },
+    {
+      "timestamp": 1795666979049,
+      "timeStr": "26.11.2026 07:22:59",
+      "equityUSD": 24753.18,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795667279051,
+      "timeStr": "26.11.2026 07:27:59",
+      "equityUSD": 24749.1,
+      "drawdownPercent": 1.03
+    },
+    {
+      "timestamp": 1795667579349,
+      "timeStr": "26.11.2026 07:32:59",
+      "equityUSD": 24739.17,
+      "drawdownPercent": 1.07
+    },
+    {
+      "timestamp": 1795667879351,
+      "timeStr": "26.11.2026 07:37:59",
+      "equityUSD": 24742.34,
+      "drawdownPercent": 1.06
+    },
+    {
+      "timestamp": 1795668180455,
+      "timeStr": "26.11.2026 07:43:00",
+      "equityUSD": 24720.61,
+      "drawdownPercent": 1.15
+    },
+    {
+      "timestamp": 1795668480459,
+      "timeStr": "26.11.2026 07:48:00",
+      "equityUSD": 24729.71,
+      "drawdownPercent": 1.11
+    },
+    {
+      "timestamp": 1795668781453,
+      "timeStr": "26.11.2026 07:53:01",
+      "equityUSD": 24719.34,
+      "drawdownPercent": 1.15
+    },
+    {
+      "timestamp": 1795669081461,
+      "timeStr": "26.11.2026 07:58:01",
+      "equityUSD": 24723.89,
+      "drawdownPercent": 1.14
+    },
+    {
+      "timestamp": 1795669382865,
+      "timeStr": "26.11.2026 08:03:02",
+      "equityUSD": 24727.08,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795669682876,
+      "timeStr": "26.11.2026 08:08:02",
+      "equityUSD": 24725.25,
+      "drawdownPercent": 1.13
+    },
+    {
+      "timestamp": 1795669982895,
+      "timeStr": "26.11.2026 08:13:02",
+      "equityUSD": 24730.83,
+      "drawdownPercent": 1.11
+    },
+    {
+      "timestamp": 1795670282907,
+      "timeStr": "26.11.2026 08:18:02",
+      "equityUSD": 24725.51,
+      "drawdownPercent": 1.13
+    },
+    {
+      "timestamp": 1795670583253,
+      "timeStr": "26.11.2026 08:23:03",
+      "equityUSD": 24728.09,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795670883265,
+      "timeStr": "26.11.2026 08:28:03",
+      "equityUSD": 24718.63,
+      "drawdownPercent": 1.16
+    },
+    {
+      "timestamp": 1795671184048,
+      "timeStr": "26.11.2026 08:33:04",
+      "equityUSD": 24723.27,
+      "drawdownPercent": 1.14
+    },
+    {
+      "timestamp": 1795671484049,
+      "timeStr": "26.11.2026 08:38:04",
+      "equityUSD": 24718.73,
+      "drawdownPercent": 1.16
+    },
+    {
+      "timestamp": 1795671784247,
+      "timeStr": "26.11.2026 08:43:04",
+      "equityUSD": 24729.04,
+      "drawdownPercent": 1.11
+    },
+    {
+      "timestamp": 1795672088166,
+      "timeStr": "26.11.2026 08:48:08",
+      "equityUSD": 24737.31,
+      "drawdownPercent": 1.08
+    },
+    {
+      "timestamp": 1795672395648,
+      "timeStr": "26.11.2026 08:53:15",
+      "equityUSD": 24738.82,
+      "drawdownPercent": 1.08
+    },
+    {
+      "timestamp": 1795672695652,
+      "timeStr": "26.11.2026 08:58:15",
+      "equityUSD": 24738.92,
+      "drawdownPercent": 1.07
+    },
+    {
+      "timestamp": 1795673003858,
+      "timeStr": "26.11.2026 09:03:23",
+      "equityUSD": 24752.07,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795673303863,
+      "timeStr": "26.11.2026 09:08:23",
+      "equityUSD": 24754.67,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795673608564,
+      "timeStr": "26.11.2026 09:13:28",
+      "equityUSD": 24765.58,
+      "drawdownPercent": 0.97
+    },
+    {
+      "timestamp": 1795673908582,
+      "timeStr": "26.11.2026 09:18:28",
+      "equityUSD": 24777.66,
+      "drawdownPercent": 0.92
+    },
+    {
+      "timestamp": 1795674209449,
+      "timeStr": "26.11.2026 09:23:29",
+      "equityUSD": 24760.95,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795674509453,
+      "timeStr": "26.11.2026 09:28:29",
+      "equityUSD": 24760.68,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795674809456,
+      "timeStr": "26.11.2026 09:33:29",
+      "equityUSD": 24754.11,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795675120751,
+      "timeStr": "26.11.2026 09:38:40",
+      "equityUSD": 24760.77,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795675420859,
+      "timeStr": "26.11.2026 09:43:40",
+      "equityUSD": 24768.61,
+      "drawdownPercent": 0.96
+    },
+    {
+      "timestamp": 1795675735253,
+      "timeStr": "26.11.2026 09:48:55",
+      "equityUSD": 24770.04,
+      "drawdownPercent": 0.95
+    },
+    {
+      "timestamp": 1795676035452,
+      "timeStr": "26.11.2026 09:53:55",
+      "equityUSD": 24764.11,
+      "drawdownPercent": 0.97
+    },
+    {
+      "timestamp": 1795676335460,
+      "timeStr": "26.11.2026 09:58:55",
+      "equityUSD": 24760.58,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795676635466,
+      "timeStr": "26.11.2026 10:03:55",
+      "equityUSD": 24763.26,
+      "drawdownPercent": 0.98
+    },
+    {
+      "timestamp": 1795676937149,
+      "timeStr": "26.11.2026 10:08:57",
+      "equityUSD": 24769.71,
+      "drawdownPercent": 0.95
+    },
+    {
+      "timestamp": 1795677237159,
+      "timeStr": "26.11.2026 10:13:57",
+      "equityUSD": 24768.32,
+      "drawdownPercent": 0.96
+    },
+    {
+      "timestamp": 1795677538055,
+      "timeStr": "26.11.2026 10:18:58",
+      "equityUSD": 24766.11,
+      "drawdownPercent": 0.97
+    },
+    {
+      "timestamp": 1795677839348,
+      "timeStr": "26.11.2026 10:23:59",
+      "equityUSD": 24756.59,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795678139352,
+      "timeStr": "26.11.2026 10:28:59",
+      "equityUSD": 24759.65,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795678448145,
+      "timeStr": "26.11.2026 10:34:08",
+      "equityUSD": 24763.24,
+      "drawdownPercent": 0.98
+    },
+    {
+      "timestamp": 1795678748155,
+      "timeStr": "26.11.2026 10:39:08",
+      "equityUSD": 24758.14,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795679048172,
+      "timeStr": "26.11.2026 10:44:08",
+      "equityUSD": 24752.12,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795679348183,
+      "timeStr": "26.11.2026 10:49:08",
+      "equityUSD": 24756.69,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795679648189,
+      "timeStr": "26.11.2026 10:54:08",
+      "equityUSD": 24759.41,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795679950058,
+      "timeStr": "26.11.2026 10:59:10",
+      "equityUSD": 24765.87,
+      "drawdownPercent": 0.97
+    },
+    {
+      "timestamp": 1795680252763,
+      "timeStr": "26.11.2026 11:04:12",
+      "equityUSD": 24755.52,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795680552774,
+      "timeStr": "26.11.2026 11:09:12",
+      "equityUSD": 24753.43,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795680852845,
+      "timeStr": "26.11.2026 11:14:12",
+      "equityUSD": 24755.84,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795681157060,
+      "timeStr": "26.11.2026 11:19:17",
+      "equityUSD": 24754.45,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795681457070,
+      "timeStr": "26.11.2026 11:24:17",
+      "equityUSD": 24749.07,
+      "drawdownPercent": 1.03
+    },
+    {
+      "timestamp": 1795681761954,
+      "timeStr": "26.11.2026 11:29:21",
+      "equityUSD": 24751.07,
+      "drawdownPercent": 1.03
+    },
+    {
+      "timestamp": 1795682061963,
+      "timeStr": "26.11.2026 11:34:21",
+      "equityUSD": 24755.83,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795682361977,
+      "timeStr": "26.11.2026 11:39:21",
+      "equityUSD": 24746.59,
+      "drawdownPercent": 1.04
+    },
+    {
+      "timestamp": 1795682661992,
+      "timeStr": "26.11.2026 11:44:21",
+      "equityUSD": 24745.22,
+      "drawdownPercent": 1.05
+    },
+    {
+      "timestamp": 1795682967056,
+      "timeStr": "26.11.2026 11:49:27",
+      "equityUSD": 24720.68,
+      "drawdownPercent": 1.15
+    },
+    {
+      "timestamp": 1795683267069,
+      "timeStr": "26.11.2026 11:54:27",
+      "equityUSD": 24727.42,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795683567079,
+      "timeStr": "26.11.2026 11:59:27",
+      "equityUSD": 24730.51,
+      "drawdownPercent": 1.11
+    },
+    {
+      "timestamp": 1795683867092,
+      "timeStr": "26.11.2026 12:04:27",
+      "equityUSD": 24735.9,
+      "drawdownPercent": 1.09
+    },
+    {
+      "timestamp": 1795684169948,
+      "timeStr": "26.11.2026 12:09:29",
+      "equityUSD": 24735.4,
+      "drawdownPercent": 1.09
+    },
+    {
+      "timestamp": 1795684469952,
+      "timeStr": "26.11.2026 12:14:29",
+      "equityUSD": 24727.82,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795684780355,
+      "timeStr": "26.11.2026 12:19:40",
+      "equityUSD": 24733.28,
+      "drawdownPercent": 1.1
+    },
+    {
+      "timestamp": 1795685093459,
+      "timeStr": "26.11.2026 12:24:53",
+      "equityUSD": 24739.26,
+      "drawdownPercent": 1.07
+    },
+    {
+      "timestamp": 1795685400050,
+      "timeStr": "26.11.2026 12:30:00",
+      "equityUSD": 24744.11,
+      "drawdownPercent": 1.05
+    },
+    {
+      "timestamp": 1795685705068,
+      "timeStr": "26.11.2026 12:35:05",
+      "equityUSD": 24739.29,
+      "drawdownPercent": 1.07
+    },
+    {
+      "timestamp": 1795686012763,
+      "timeStr": "26.11.2026 12:40:12",
+      "equityUSD": 24730.02,
+      "drawdownPercent": 1.11
+    },
+    {
+      "timestamp": 1795686315054,
+      "timeStr": "26.11.2026 12:45:15",
+      "equityUSD": 24726.01,
+      "drawdownPercent": 1.13
+    },
+    {
+      "timestamp": 1795686628745,
+      "timeStr": "26.11.2026 12:50:28",
+      "equityUSD": 24725.69,
+      "drawdownPercent": 1.13
+    },
+    {
+      "timestamp": 1795686929446,
+      "timeStr": "26.11.2026 12:55:29",
+      "equityUSD": 24726.95,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795687230864,
+      "timeStr": "26.11.2026 13:00:30",
+      "equityUSD": 24728.69,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795687530871,
+      "timeStr": "26.11.2026 13:05:30",
+      "equityUSD": 24731.42,
+      "drawdownPercent": 1.1
+    },
+    {
+      "timestamp": 1795687837649,
+      "timeStr": "26.11.2026 13:10:37",
+      "equityUSD": 24724.33,
+      "drawdownPercent": 1.13
+    },
+    {
+      "timestamp": 1795688139450,
+      "timeStr": "26.11.2026 13:15:39",
+      "equityUSD": 24727.53,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795688439453,
+      "timeStr": "26.11.2026 13:20:39",
+      "equityUSD": 24733.57,
+      "drawdownPercent": 1.1
+    },
+    {
+      "timestamp": 1795688739454,
+      "timeStr": "26.11.2026 13:25:39",
+      "equityUSD": 24736.42,
+      "drawdownPercent": 1.08
+    },
+    {
+      "timestamp": 1795689043454,
+      "timeStr": "26.11.2026 13:30:43",
+      "equityUSD": 24737.1,
+      "drawdownPercent": 1.08
+    },
+    {
+      "timestamp": 1795689343463,
+      "timeStr": "26.11.2026 13:35:43",
+      "equityUSD": 24742.09,
+      "drawdownPercent": 1.06
+    },
+    {
+      "timestamp": 1795689643474,
+      "timeStr": "26.11.2026 13:40:43",
+      "equityUSD": 24754.74,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795689943483,
+      "timeStr": "26.11.2026 13:45:43",
+      "equityUSD": 24769.97,
+      "drawdownPercent": 0.95
+    },
+    {
+      "timestamp": 1795690247256,
+      "timeStr": "26.11.2026 13:50:47",
+      "equityUSD": 24765.17,
+      "drawdownPercent": 0.97
+    },
+    {
+      "timestamp": 1795690547264,
+      "timeStr": "26.11.2026 13:55:47",
+      "equityUSD": 24768.1,
+      "drawdownPercent": 0.96
+    },
+    {
+      "timestamp": 1795690847550,
+      "timeStr": "26.11.2026 14:00:47",
+      "equityUSD": 24768.06,
+      "drawdownPercent": 0.96
+    },
+    {
+      "timestamp": 1795691147559,
+      "timeStr": "26.11.2026 14:05:47",
+      "equityUSD": 24767.4,
+      "drawdownPercent": 0.96
+    },
+    {
+      "timestamp": 1795691458959,
+      "timeStr": "26.11.2026 14:10:58",
+      "equityUSD": 24761.18,
+      "drawdownPercent": 0.99
+    },
+    {
+      "timestamp": 1795691758979,
+      "timeStr": "26.11.2026 14:15:58",
+      "equityUSD": 24756.26,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795692058989,
+      "timeStr": "26.11.2026 14:20:58",
+      "equityUSD": 24752.52,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795692358997,
+      "timeStr": "26.11.2026 14:25:58",
+      "equityUSD": 24750.09,
+      "drawdownPercent": 1.03
+    },
+    {
+      "timestamp": 1795692663954,
+      "timeStr": "26.11.2026 14:31:03",
+      "equityUSD": 24754.01,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795692963965,
+      "timeStr": "26.11.2026 14:36:03",
+      "equityUSD": 24753.21,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795693263980,
+      "timeStr": "26.11.2026 14:41:03",
+      "equityUSD": 24747.09,
+      "drawdownPercent": 1.04
+    },
+    {
+      "timestamp": 1795693564052,
+      "timeStr": "26.11.2026 14:46:04",
+      "equityUSD": 24747.91,
+      "drawdownPercent": 1.04
+    },
+    {
+      "timestamp": 1795693869059,
+      "timeStr": "26.11.2026 14:51:09",
+      "equityUSD": 24748.18,
+      "drawdownPercent": 1.04
+    },
+    {
+      "timestamp": 1795694171967,
+      "timeStr": "26.11.2026 14:56:11",
+      "equityUSD": 24749.17,
+      "drawdownPercent": 1.03
+    },
+    {
+      "timestamp": 1795694471980,
+      "timeStr": "26.11.2026 15:01:11",
+      "equityUSD": 24741.87,
+      "drawdownPercent": 1.06
+    },
+    {
+      "timestamp": 1795694781057,
+      "timeStr": "26.11.2026 15:06:21",
+      "equityUSD": 24735.81,
+      "drawdownPercent": 1.09
+    },
+    {
+      "timestamp": 1795695081065,
+      "timeStr": "26.11.2026 15:11:21",
+      "equityUSD": 24746.4,
+      "drawdownPercent": 1.05
+    },
+    {
+      "timestamp": 1795695389747,
+      "timeStr": "26.11.2026 15:16:29",
+      "equityUSD": 24751.8,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795695692755,
+      "timeStr": "26.11.2026 15:21:32",
+      "equityUSD": 24752.6,
+      "drawdownPercent": 1.02
+    },
+    {
+      "timestamp": 1795695996959,
+      "timeStr": "26.11.2026 15:26:36",
+      "equityUSD": 24756.34,
+      "drawdownPercent": 1.01
+    },
+    {
+      "timestamp": 1795696303657,
+      "timeStr": "26.11.2026 15:31:43",
+      "equityUSD": 24758.82,
+      "drawdownPercent": 1
+    },
+    {
+      "timestamp": 1795696612462,
+      "timeStr": "26.11.2026 15:36:52",
+      "equityUSD": 24743.24,
+      "drawdownPercent": 1.06
+    },
+    {
+      "timestamp": 1795696912475,
+      "timeStr": "26.11.2026 15:41:52",
+      "equityUSD": 24726.63,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795697212483,
+      "timeStr": "26.11.2026 15:46:52",
+      "equityUSD": 24726.51,
+      "drawdownPercent": 1.12
+    },
+    {
+      "timestamp": 1795697479646,
+      "timeStr": "26.11.2026 15:51:19",
+      "equityUSD": 24731.67,
+      "drawdownPercent": 1.1
+    },
+    {
+      "timestamp": 1795697784251,
+      "timeStr": "26.11.2026 15:56:24",
+      "equityUSD": 24728.98,
+      "drawdownPercent": 1.11
+    },
+    {
+      "timestamp": 1795698089052,
+      "timeStr": "26.11.2026 16:01:29",
+      "equityUSD": 24739.47,
+      "drawdownPercent": 1.07
+    },
+    {
+      "timestamp": 1795698405251,
+      "timeStr": "26.11.2026 16:06:45",
+      "equityUSD": 24738.49,
+      "drawdownPercent": 1.08
+    },
+    {
+      "timestamp": 1795698729059,
+      "timeStr": "26.11.2026 16:12:09",
+      "equityUSD": 24735.35,
+      "drawdownPercent": 1.09
+    },
+    {
+      "timestamp": 1795699030161,
+      "timeStr": "26.11.2026 16:17:10",
+      "equityUSD": 24737.64,
+      "drawdownPercent": 1.08
+    },
+    {
+      "timestamp": 1795699179236,
+      "timeStr": "26.11.2026 16:19:39",
+      "equityUSD": 24737.53,
+      "drawdownPercent": 1.08
+    },
+    {
+      "timestamp": 1795699180389,
+      "timeStr": "26.11.2026 16:19:40",
+      "equityUSD": 24737.53,
+      "drawdownPercent": 1.08
     }
   ],
   "lastMarketRadar": [
     {
-      "symbol": "SOL/USD",
-      "name": "Solana",
-      "cluster": "CRYPTO_L1",
-      "digits": 2,
-      "price": 69.47,
-      "bid": 69.46,
-      "ask": 69.47,
-      "change24hPercent": 0.33,
-      "isOpen": true,
-      "zacScore": -53,
-      "regime": "CRYPTO_CALM_MOM",
-      "regimeLabelTR": "Kripto Sakin Düşüş İvmesi",
-      "ewmac": -9.83,
+      "symbol": "XAG/USD",
+      "name": "Ons Gümüş",
+      "cluster": "PRECIOUS",
+      "digits": 3,
+      "price": 42.085,
+      "bid": 42.072,
+      "ask": 42.097,
+      "change24hPercent": 3.68,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
+      "zacScore": -49,
+      "regime": "BEAR_DEFENSE",
+      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
+      "ewmac": -12.94,
       "aboveSma200": false,
-      "sma200": 88.14,
-      "volRatio": 1.06,
-      "efficiencyRatio": 0.56,
-      "ibs12h": 0.096,
-      "cumRsi2_12h": 8.2,
-      "mom12hAtr": -0.67,
-      "xsmomRank": 15,
-      "xsmomScore30d": -1.198,
-      "activePod": "NONE",
-      "direction": "BEKLE",
-      "conviction": 29,
-      "pred24hPct": -0.64,
-      "pUp24h": 45,
-      "status": "Kripto Sakin Düşüş İvmesi",
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -53, EWMAC -9.8, IBS12 0.10).",
-      "botStatus": "Kripto Sakin Düşüş İvmesi",
-      "botDirection": "BEKLE",
-      "botScore": 74,
-      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -53, EWMAC -9.8, IBS12 0.10)."
+      "sma200": 67.003,
+      "volRatio": 0.94,
+      "efficiencyRatio": 0.41,
+      "ibs12h": 0.743,
+      "cumRsi2_12h": 74.4,
+      "mom12hAtr": 0.22,
+      "xsmomRank": 16,
+      "xsmomScore30d": -1.071,
+      "activePod": "CTA_TREND",
+      "direction": "SAT (SHORT)",
+      "conviction": 78,
+      "pred24hPct": -0.85,
+      "pUp24h": 42,
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "CTA MAKRO AYI TRENDİ TETİKLENDİ: EWMAC=-12.9 (≤-10.5), Fiyat < SMA200, 12H Tepki Satışı (IBS12=0.74≥0.65), Verimlilik ER=0.41. 3.2 ATR İz Süren Stop ile ayı trendi sürülür.",
+      "botStatus": "SEANS KAPALI (İzlemede)",
+      "botDirection": "SAT (SHORT)",
+      "botScore": 72,
+      "botReason": "CTA MAKRO AYI TRENDİ TETİKLENDİ: EWMAC=-12.9 (≤-10.5), Fiyat < SMA200, 12H Tepki Satışı (IBS12=0.74≥0.65), Verimlilik ER=0.41. 3.2 ATR İz Süren Stop ile ayı trendi sürülür."
     },
     {
       "symbol": "BTC/USD",
       "name": "Bitcoin",
       "cluster": "CRYPTO_MAJOR",
       "digits": 2,
-      "price": 59586.75,
-      "bid": 59586.7,
-      "ask": 59586.8,
-      "change24hPercent": -0.37,
+      "price": 60754.65,
+      "bid": 60754.6,
+      "ask": 60754.7,
+      "change24hPercent": 4.73,
       "isOpen": true,
-      "zacScore": -47,
+      "zacScore": -43,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -9.98,
+      "ewmac": -9.96,
       "aboveSma200": false,
-      "sma200": 72133.03,
+      "sma200": 72031.61,
       "volRatio": 1.23,
-      "efficiencyRatio": 0.7,
-      "ibs12h": 0.14,
-      "cumRsi2_12h": 5.3,
-      "mom12hAtr": -0.54,
+      "efficiencyRatio": 0.61,
+      "ibs12h": 0.291,
+      "cumRsi2_12h": 70.6,
+      "mom12hAtr": 0.13,
       "xsmomRank": 17,
-      "xsmomScore30d": -1.291,
+      "xsmomScore30d": -1.24,
       "activePod": "NONE",
       "direction": "BEKLE",
-      "conviction": 26,
-      "pred24hPct": -0.45,
+      "conviction": 24,
+      "pred24hPct": -0.41,
       "pUp24h": 46,
-      "status": "Ayı / Riskten Kaçış Rejimi",
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.14).",
-      "botStatus": "Ayı / Riskten Kaçış Rejimi",
+      "status": "AÇIK (CTA_TREND)",
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -43, EWMAC -10.0, IBS12 0.29).",
+      "botStatus": "AÇIK (CTA_TREND)",
       "botDirection": "BEKLE",
-      "botScore": 71,
-      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.14)."
+      "botScore": 69,
+      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -43, EWMAC -10.0, IBS12 0.29)."
     },
     {
       "symbol": "ETH/USD",
       "name": "Ethereum",
       "cluster": "CRYPTO_MAJOR",
       "digits": 2,
-      "price": 1678.82,
-      "bid": 1678.81,
-      "ask": 1678.82,
-      "change24hPercent": 0.11,
+      "price": 1703.95,
+      "bid": 1703.94,
+      "ask": 1703.95,
+      "change24hPercent": 4.55,
       "isOpen": true,
-      "zacScore": -47,
+      "zacScore": -38,
       "regime": "CRYPTO_CALM_MOM",
       "regimeLabelTR": "Kripto Sakin Düşüş İvmesi",
-      "ewmac": -10,
+      "ewmac": -10.06,
       "aboveSma200": false,
-      "sma200": 2116.32,
-      "volRatio": 1.13,
-      "efficiencyRatio": 0.67,
-      "ibs12h": 0.11,
-      "cumRsi2_12h": 5.2,
-      "mom12hAtr": -0.56,
-      "xsmomRank": 12,
-      "xsmomScore30d": -1.109,
-      "activePod": "NONE",
-      "direction": "BEKLE",
-      "conviction": 26,
-      "pred24hPct": -0.55,
-      "pUp24h": 46,
-      "status": "Kripto Sakin Düşüş İvmesi",
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.11).",
-      "botStatus": "Kripto Sakin Düşüş İvmesi",
-      "botDirection": "BEKLE",
-      "botScore": 71,
-      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.11)."
-    },
-    {
-      "symbol": "XAG/USD",
-      "name": "Ons Gümüş",
-      "cluster": "PRECIOUS",
-      "digits": 3,
-      "price": 40.65,
-      "bid": 40.638,
-      "ask": 40.663,
-      "change24hPercent": -0.55,
-      "isOpen": true,
-      "zacScore": -46,
-      "regime": "BEAR_DEFENSE",
-      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -12.95,
-      "aboveSma200": false,
-      "sma200": 67.181,
-      "volRatio": 0.92,
-      "efficiencyRatio": 0.46,
-      "ibs12h": 0.516,
-      "cumRsi2_12h": 14,
-      "mom12hAtr": -0.07,
+      "sma200": 2113.14,
+      "volRatio": 1.12,
+      "efficiencyRatio": 0.58,
+      "ibs12h": 0.372,
+      "cumRsi2_12h": 68.5,
+      "mom12hAtr": 0.11,
       "xsmomRank": 14,
-      "xsmomScore30d": -1.444,
-      "activePod": "NONE",
-      "direction": "BEKLE",
-      "conviction": 25,
-      "pred24hPct": -0.53,
-      "pUp24h": 46,
-      "status": "Ayı / Riskten Kaçış Rejimi",
-      "reason": "Fiyat 200G ortalamanın (67.181) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Ayı / Riskten Kaçış Rejimi",
-      "botDirection": "BEKLE",
-      "botScore": 71,
-      "botReason": "Fiyat 200G ortalamanın (67.181) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
-    },
-    {
-      "symbol": "COPPER",
-      "name": "Bakır",
-      "cluster": "PRECIOUS",
-      "digits": 4,
-      "price": 5.453,
-      "bid": 5.452,
-      "ask": 5.454,
-      "change24hPercent": -0.03,
-      "isOpen": true,
-      "zacScore": -39,
-      "regime": "BEAR_DEFENSE",
-      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -8.13,
-      "aboveSma200": false,
-      "sma200": 6.2594,
-      "volRatio": 1.19,
-      "efficiencyRatio": 0.6,
-      "ibs12h": 0.275,
-      "cumRsi2_12h": 15.8,
-      "mom12hAtr": -0.5,
-      "xsmomRank": 16,
-      "xsmomScore30d": -1.294,
+      "xsmomScore30d": -1.084,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 21,
-      "pred24hPct": -0.3,
-      "pUp24h": 46,
-      "status": "Ayı / Riskten Kaçış Rejimi",
-      "reason": "Fiyat 200G ortalamanın (6.2594) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Ayı / Riskten Kaçış Rejimi",
+      "pred24hPct": -0.43,
+      "pUp24h": 47,
+      "status": "Kripto Sakin Düşüş İvmesi",
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -10.1, IBS12 0.37).",
+      "botStatus": "Kripto Sakin Düşüş İvmesi",
       "botDirection": "BEKLE",
-      "botScore": 68,
-      "botReason": "Fiyat 200G ortalamanın (6.2594) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botScore": 67,
+      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -10.1, IBS12 0.37)."
+    },
+    {
+      "symbol": "SOL/USD",
+      "name": "Solana",
+      "cluster": "CRYPTO_L1",
+      "digits": 2,
+      "price": 70.88,
+      "bid": 70.88,
+      "ask": 70.89,
+      "change24hPercent": 6.14,
+      "isOpen": true,
+      "zacScore": -38,
+      "regime": "CRYPTO_CALM_MOM",
+      "regimeLabelTR": "Kripto Sakin Düşüş İvmesi",
+      "ewmac": -9.72,
+      "aboveSma200": false,
+      "sma200": 88.02,
+      "volRatio": 1.06,
+      "efficiencyRatio": 0.46,
+      "ibs12h": 0.315,
+      "cumRsi2_12h": 68.5,
+      "mom12hAtr": 0.12,
+      "xsmomRank": 15,
+      "xsmomScore30d": -1.145,
+      "activePod": "NONE",
+      "direction": "BEKLE",
+      "conviction": 21,
+      "pred24hPct": -0.45,
+      "pUp24h": 47,
+      "status": "Kripto Sakin Düşüş İvmesi",
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -9.7, IBS12 0.32).",
+      "botStatus": "Kripto Sakin Düşüş İvmesi",
+      "botDirection": "BEKLE",
+      "botScore": 67,
+      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -9.7, IBS12 0.32)."
     },
     {
       "symbol": "XAU/USD",
       "name": "Ons Altın",
       "cluster": "PRECIOUS",
       "digits": 2,
-      "price": 3563.8,
-      "bid": 3563.68,
-      "ask": 3563.93,
-      "change24hPercent": -0.07,
-      "isOpen": true,
+      "price": 3620.4,
+      "bid": 3620.27,
+      "ask": 3620.52,
+      "change24hPercent": 2.05,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
       "zacScore": -36,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -10.04,
+      "ewmac": -9.89,
       "aboveSma200": false,
-      "sma200": 4420.76,
-      "volRatio": 1.05,
-      "efficiencyRatio": 0.38,
-      "ibs12h": 0.732,
-      "cumRsi2_12h": 19.5,
+      "sma200": 4413.62,
+      "volRatio": 1.08,
+      "efficiencyRatio": 0.33,
+      "ibs12h": 0.744,
+      "cumRsi2_12h": 77.5,
       "mom12hAtr": 0.03,
       "xsmomRank": 11,
-      "xsmomScore30d": -1.145,
+      "xsmomScore30d": -0.899,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 20,
-      "pred24hPct": -0.21,
+      "pred24hPct": -0.22,
       "pUp24h": 47,
       "status": "AÇIK (CTA_TREND)",
-      "reason": "Fiyat 200G ortalamanın (4420.76) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "reason": "Fiyat 200G ortalamanın (4413.62) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "botStatus": "AÇIK (CTA_TREND)",
       "botDirection": "BEKLE",
       "botScore": 66,
-      "botReason": "Fiyat 200G ortalamanın (4420.76) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (4413.62) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+    },
+    {
+      "symbol": "COPPER",
+      "name": "Bakır",
+      "cluster": "PRECIOUS",
+      "digits": 4,
+      "price": 5.4925,
+      "bid": 5.4915,
+      "ask": 5.4935,
+      "change24hPercent": 0.69,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
+      "zacScore": -35,
+      "regime": "BEAR_DEFENSE",
+      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
+      "ewmac": -8.51,
+      "aboveSma200": false,
+      "sma200": 6.2579,
+      "volRatio": 1.2,
+      "efficiencyRatio": 0.62,
+      "ibs12h": 0.438,
+      "cumRsi2_12h": 59.5,
+      "mom12hAtr": 0.07,
+      "xsmomRank": 13,
+      "xsmomScore30d": -1.167,
+      "activePod": "NONE",
+      "direction": "BEKLE",
+      "conviction": 19,
+      "pred24hPct": -0.26,
+      "pUp24h": 47,
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Fiyat 200G ortalamanın (6.2579) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "SEANS KAPALI (İzlemede)",
+      "botDirection": "BEKLE",
+      "botScore": 66,
+      "botReason": "Fiyat 200G ortalamanın (6.2579) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+    },
+    {
+      "symbol": "EUR/USD",
+      "name": "Euro / USD",
+      "cluster": "USD_MAJORS",
+      "digits": 4,
+      "price": 1.0977,
+      "bid": 1.0976,
+      "ask": 1.0978,
+      "change24hPercent": 0.32,
+      "isOpen": true,
+      "zacScore": -35,
+      "regime": "BEAR_DEFENSE",
+      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
+      "ewmac": -10.61,
+      "aboveSma200": false,
+      "sma200": 1.1491,
+      "volRatio": 1.1,
+      "efficiencyRatio": 0.26,
+      "ibs12h": 0.599,
+      "cumRsi2_12h": 69.2,
+      "mom12hAtr": -0.08,
+      "xsmomRank": 9,
+      "xsmomScore30d": -0.506,
+      "activePod": "NONE",
+      "direction": "BEKLE",
+      "conviction": 19,
+      "pred24hPct": -0.04,
+      "pUp24h": 47,
+      "status": "İZLEME MODU (FX Komisyon Kalkanı)",
+      "reason": "Fiyat 200G ortalamanın (1.1491) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "İZLEME MODU (FX Komisyon Kalkanı)",
+      "botDirection": "BEKLE",
+      "botScore": 66,
+      "botReason": "Fiyat 200G ortalamanın (1.1491) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "AAPL",
       "name": "Apple",
       "cluster": "US_TECH",
       "digits": 2,
-      "price": 354.54,
-      "bid": 354.53,
-      "ask": 354.56,
-      "change24hPercent": 2.03,
-      "isOpen": true,
+      "price": 355.45,
+      "bid": 355.43,
+      "ask": 355.46,
+      "change24hPercent": 3.04,
+      "isOpen": false,
+      "closedReason": "ABD Şükran Günü (Thanksgiving — NYSE Kapalı / CME 13:00 ET Tatil Molası)",
       "zacScore": 34,
       "regime": "NEUTRAL_CHOP",
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
@@ -449,9 +3214,9 @@
       "sma200": 303.99,
       "volRatio": 1.09,
       "efficiencyRatio": 0.07,
-      "ibs12h": 0.903,
-      "cumRsi2_12h": 56.5,
-      "mom12hAtr": 0.58,
+      "ibs12h": 0.769,
+      "cumRsi2_12h": 58.4,
+      "mom12hAtr": 0.73,
       "xsmomRank": 1,
       "xsmomScore30d": 0.288,
       "activePod": "NONE",
@@ -459,94 +3224,60 @@
       "conviction": 19,
       "pred24hPct": 0.14,
       "pUp24h": 53,
-      "status": "Yatay / Düşük İnanç Bölgesi",
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.90).",
-      "botStatus": "Yatay / Düşük İnanç Bölgesi",
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.77).",
+      "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 65,
-      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.90)."
-    },
-    {
-      "symbol": "EUR/USD",
-      "name": "Euro / USD",
-      "cluster": "USD_MAJORS",
-      "digits": 4,
-      "price": 1.0987,
-      "bid": 1.0986,
-      "ask": 1.0987,
-      "change24hPercent": 0.16,
-      "isOpen": true,
-      "zacScore": -33,
-      "regime": "BEAR_DEFENSE",
-      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -10.69,
-      "aboveSma200": false,
-      "sma200": 1.1495,
-      "volRatio": 1.11,
-      "efficiencyRatio": 0.23,
-      "ibs12h": 0.166,
-      "cumRsi2_12h": 55.5,
-      "mom12hAtr": -0.62,
-      "xsmomRank": 5,
-      "xsmomScore30d": -0.645,
-      "activePod": "NONE",
-      "direction": "BEKLE",
-      "conviction": 18,
-      "pred24hPct": -0.04,
-      "pUp24h": 47,
-      "status": "İZLEME MODU (FX Komisyon Kalkanı)",
-      "reason": "Fiyat 200G ortalamanın (1.1495) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "İZLEME MODU (FX Komisyon Kalkanı)",
-      "botDirection": "BEKLE",
-      "botScore": 65,
-      "botReason": "Fiyat 200G ortalamanın (1.1495) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.77)."
     },
     {
       "symbol": "USD/JPY",
       "name": "USD / JPY",
       "cluster": "USD_MAJORS",
       "digits": 2,
-      "price": 159.1,
-      "bid": 159.09,
-      "ask": 159.11,
-      "change24hPercent": -0.11,
+      "price": 159.24,
+      "bid": 159.24,
+      "ask": 159.25,
+      "change24hPercent": -0.08,
       "isOpen": true,
-      "zacScore": 28,
+      "zacScore": 26,
       "regime": "NEUTRAL_CHOP",
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
-      "ewmac": 1.88,
+      "ewmac": 1.86,
       "aboveSma200": true,
-      "sma200": 158.91,
+      "sma200": 158.93,
       "volRatio": 0.91,
-      "efficiencyRatio": 0.15,
-      "ibs12h": 0.897,
-      "cumRsi2_12h": 57.1,
-      "mom12hAtr": 0.32,
+      "efficiencyRatio": 0.16,
+      "ibs12h": 0.892,
+      "cumRsi2_12h": 39.7,
+      "mom12hAtr": 0.13,
       "xsmomRank": 2,
-      "xsmomScore30d": 0.182,
+      "xsmomScore30d": 0.166,
       "activePod": "NONE",
       "direction": "BEKLE",
-      "conviction": 15,
+      "conviction": 14,
       "pred24hPct": 0.03,
-      "pUp24h": 53,
+      "pUp24h": 52,
       "status": "İZLEME MODU (FX Komisyon Kalkanı)",
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +28, EWMAC 1.9, IBS12 0.90).",
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +26, EWMAC 1.9, IBS12 0.89).",
       "botStatus": "İZLEME MODU (FX Komisyon Kalkanı)",
       "botDirection": "BEKLE",
-      "botScore": 63,
-      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +28, EWMAC 1.9, IBS12 0.90)."
+      "botScore": 62,
+      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +26, EWMAC 1.9, IBS12 0.89)."
     },
     {
       "symbol": "NVDA",
       "name": "NVIDIA",
       "cluster": "US_TECH",
       "digits": 2,
-      "price": 147,
-      "bid": 146.98,
-      "ask": 147.02,
-      "change24hPercent": -4.07,
-      "isOpen": true,
-      "zacScore": -26,
+      "price": 149.27,
+      "bid": 149.25,
+      "ask": 149.29,
+      "change24hPercent": -0.1,
+      "isOpen": false,
+      "closedReason": "ABD Şükran Günü (Thanksgiving — NYSE Kapalı / CME 13:00 ET Tatil Molası)",
+      "zacScore": -25,
       "regime": "VOL_SHOCK",
       "regimeLabelTR": "Volatilite Şoku (Koruma Modu)",
       "ewmac": -9.01,
@@ -554,104 +3285,71 @@
       "sma200": 203.07,
       "volRatio": 1.49,
       "efficiencyRatio": 0.37,
-      "ibs12h": 0.766,
-      "cumRsi2_12h": 43.6,
-      "mom12hAtr": 0.36,
-      "xsmomRank": 13,
+      "ibs12h": 0.836,
+      "cumRsi2_12h": 47.1,
+      "mom12hAtr": 0.59,
+      "xsmomRank": 12,
       "xsmomScore30d": -1.141,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 14,
-      "pred24hPct": -0.43,
+      "pred24hPct": -0.41,
       "pUp24h": 48,
-      "status": "Volatilite Şoku (Koruma Modu)",
+      "status": "SEANS KAPALI (İzlemede)",
       "reason": "Fiyat 200G ortalamanın (203.07) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Volatilite Şoku (Koruma Modu)",
+      "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
-      "botScore": 62,
+      "botScore": 61,
       "botReason": "Fiyat 200G ortalamanın (203.07) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
-    },
-    {
-      "symbol": "GBP/USD",
-      "name": "GBP / USD",
-      "cluster": "USD_MAJORS",
-      "digits": 4,
-      "price": 1.3124,
-      "bid": 1.3123,
-      "ask": 1.3124,
-      "change24hPercent": 0.06,
-      "isOpen": true,
-      "zacScore": -22,
-      "regime": "BEAR_DEFENSE",
-      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -5.85,
-      "aboveSma200": false,
-      "sma200": 1.3395,
-      "volRatio": 1.07,
-      "efficiencyRatio": 0.21,
-      "ibs12h": 0,
-      "cumRsi2_12h": 54.4,
-      "mom12hAtr": -1.07,
-      "xsmomRank": 3,
-      "xsmomScore30d": -0.342,
-      "activePod": "NONE",
-      "direction": "BEKLE",
-      "conviction": 12,
-      "pred24hPct": -0.02,
-      "pUp24h": 48,
-      "status": "İZLEME MODU (FX Komisyon Kalkanı)",
-      "reason": "Fiyat 200G ortalamanın (1.3395) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "İZLEME MODU (FX Komisyon Kalkanı)",
-      "botDirection": "BEKLE",
-      "botScore": 60,
-      "botReason": "Fiyat 200G ortalamanın (1.3395) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "NAS100",
       "name": "Nasdaq 100",
       "cluster": "US_TECH",
       "digits": 2,
-      "price": 25868.75,
-      "bid": 25868.17,
-      "ask": 25869.33,
-      "change24hPercent": -1.84,
-      "isOpen": true,
+      "price": 26389.75,
+      "bid": 26389.17,
+      "ask": 26390.33,
+      "change24hPercent": 1.42,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
       "zacScore": -19,
       "regime": "BEAR_DEFENSE",
       "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
-      "ewmac": -5.45,
+      "ewmac": -5.58,
       "aboveSma200": false,
-      "sma200": 28278.97,
-      "volRatio": 1.39,
-      "efficiencyRatio": 0.3,
-      "ibs12h": 0.136,
-      "cumRsi2_12h": 28.1,
-      "mom12hAtr": -0.8,
+      "sma200": 28284.85,
+      "volRatio": 1.4,
+      "efficiencyRatio": 0.31,
+      "ibs12h": 0.895,
+      "cumRsi2_12h": 61.4,
+      "mom12hAtr": 0.53,
       "xsmomRank": 10,
-      "xsmomScore30d": -0.919,
+      "xsmomScore30d": -0.823,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 10,
       "pred24hPct": -0.14,
       "pUp24h": 48,
-      "status": "Ayı / Riskten Kaçış Rejimi",
-      "reason": "Fiyat 200G ortalamanın (28278.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Ayı / Riskten Kaçış Rejimi",
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Fiyat 200G ortalamanın (28284.85) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 59,
-      "botReason": "Fiyat 200G ortalamanın (28278.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (28284.85) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "MSFT",
       "name": "Microsoft",
       "cluster": "US_TECH",
       "digits": 2,
-      "price": 490.07,
-      "bid": 490.05,
-      "ask": 490.09,
-      "change24hPercent": -0.33,
-      "isOpen": true,
-      "zacScore": 18,
+      "price": 489.75,
+      "bid": 489.73,
+      "ask": 489.77,
+      "change24hPercent": 0.1,
+      "isOpen": false,
+      "closedReason": "ABD Şükran Günü (Thanksgiving — NYSE Kapalı / CME 13:00 ET Tatil Molası)",
+      "zacScore": 19,
       "regime": "NEUTRAL_CHOP",
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
       "ewmac": 0.66,
@@ -659,162 +3357,201 @@
       "sma200": 444.5,
       "volRatio": 1.21,
       "efficiencyRatio": 0.18,
-      "ibs12h": 0.917,
-      "cumRsi2_12h": 31.4,
-      "mom12hAtr": 0.41,
-      "xsmomRank": 6,
+      "ibs12h": 0.571,
+      "cumRsi2_12h": 30.8,
+      "mom12hAtr": 0.38,
+      "xsmomRank": 5,
       "xsmomScore30d": -0.545,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 10,
-      "pred24hPct": 0.12,
+      "pred24hPct": 0.13,
       "pUp24h": 52,
-      "status": "Yatay / Düşük İnanç Bölgesi",
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +18, EWMAC 0.7, IBS12 0.92).",
-      "botStatus": "Yatay / Düşük İnanç Bölgesi",
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +19, EWMAC 0.7, IBS12 0.57).",
+      "botStatus": "SEANS KAPALI (İzlemede)",
+      "botDirection": "BEKLE",
+      "botScore": 59,
+      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +19, EWMAC 0.7, IBS12 0.57)."
+    },
+    {
+      "symbol": "GBP/USD",
+      "name": "GBP / USD",
+      "cluster": "USD_MAJORS",
+      "digits": 4,
+      "price": 1.31,
+      "bid": 1.31,
+      "ask": 1.3101,
+      "change24hPercent": 0.29,
+      "isOpen": true,
+      "zacScore": -18,
+      "regime": "BEAR_DEFENSE",
+      "regimeLabelTR": "Ayı / Riskten Kaçış Rejimi",
+      "ewmac": -5.88,
+      "aboveSma200": false,
+      "sma200": 1.3393,
+      "volRatio": 1.08,
+      "efficiencyRatio": 0.24,
+      "ibs12h": 0.584,
+      "cumRsi2_12h": 65.4,
+      "mom12hAtr": -0.11,
+      "xsmomRank": 4,
+      "xsmomScore30d": -0.189,
+      "activePod": "NONE",
+      "direction": "BEKLE",
+      "conviction": 10,
+      "pred24hPct": -0.02,
+      "pUp24h": 48,
+      "status": "İZLEME MODU (FX Komisyon Kalkanı)",
+      "reason": "Fiyat 200G ortalamanın (1.3393) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "İZLEME MODU (FX Komisyon Kalkanı)",
       "botDirection": "BEKLE",
       "botScore": 58,
-      "botReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +18, EWMAC 0.7, IBS12 0.92)."
+      "botReason": "Fiyat 200G ortalamanın (1.3393) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "BRENT",
       "name": "Brent Petrol",
       "cluster": "ENERGY",
       "digits": 2,
-      "price": 90.19,
-      "bid": 90.18,
-      "ask": 90.21,
-      "change24hPercent": 2.61,
-      "isOpen": true,
-      "zacScore": -18,
+      "price": 91.17,
+      "bid": 91.15,
+      "ask": 91.18,
+      "change24hPercent": 4.19,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
+      "zacScore": -15,
       "regime": "NEUTRAL_CHOP",
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
-      "ewmac": -3.3,
+      "ewmac": -3.26,
       "aboveSma200": false,
-      "sma200": 93.97,
+      "sma200": 94.08,
       "volRatio": 0.92,
-      "efficiencyRatio": 0.39,
-      "ibs12h": 0.727,
-      "cumRsi2_12h": 64.5,
-      "mom12hAtr": -0.1,
-      "xsmomRank": 8,
-      "xsmomScore30d": -0.719,
+      "efficiencyRatio": 0.35,
+      "ibs12h": 0.911,
+      "cumRsi2_12h": 90.7,
+      "mom12hAtr": 0.13,
+      "xsmomRank": 7,
+      "xsmomScore30d": -0.617,
       "activePod": "NONE",
       "direction": "BEKLE",
-      "conviction": 10,
-      "pred24hPct": -0.15,
-      "pUp24h": 48,
-      "status": "Yatay / Düşük İnanç Bölgesi",
-      "reason": "Fiyat 200G ortalamanın (93.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Yatay / Düşük İnanç Bölgesi",
+      "conviction": 8,
+      "pred24hPct": -0.12,
+      "pUp24h": 49,
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Fiyat 200G ortalamanın (94.08) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
-      "botScore": 58,
-      "botReason": "Fiyat 200G ortalamanın (93.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botScore": 57,
+      "botReason": "Fiyat 200G ortalamanın (94.08) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "WTI",
       "name": "WTI Petrol",
       "cluster": "ENERGY",
       "digits": 2,
-      "price": 83.48,
-      "bid": 83.47,
-      "ask": 83.5,
-      "change24hPercent": 2.62,
-      "isOpen": true,
-      "zacScore": -17,
+      "price": 84.42,
+      "bid": 84.4,
+      "ask": 84.43,
+      "change24hPercent": 4.56,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
+      "zacScore": -14,
       "regime": "NEUTRAL_CHOP",
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
-      "ewmac": -3.48,
+      "ewmac": -3.39,
       "aboveSma200": false,
-      "sma200": 88.3,
+      "sma200": 88.4,
       "volRatio": 0.94,
-      "efficiencyRatio": 0.41,
-      "ibs12h": 0.745,
-      "cumRsi2_12h": 61.7,
-      "mom12hAtr": -0.07,
-      "xsmomRank": 7,
-      "xsmomScore30d": -0.597,
+      "efficiencyRatio": 0.39,
+      "ibs12h": 0.912,
+      "cumRsi2_12h": 91.1,
+      "mom12hAtr": 0.11,
+      "xsmomRank": 6,
+      "xsmomScore30d": -0.501,
       "activePod": "NONE",
       "direction": "BEKLE",
-      "conviction": 9,
-      "pred24hPct": -0.14,
-      "pUp24h": 48,
-      "status": "Yatay / Düşük İnanç Bölgesi",
-      "reason": "Fiyat 200G ortalamanın (88.3) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Yatay / Düşük İnanç Bölgesi",
+      "conviction": 8,
+      "pred24hPct": -0.11,
+      "pUp24h": 49,
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Fiyat 200G ortalamanın (88.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
-      "botScore": 58,
-      "botReason": "Fiyat 200G ortalamanın (88.3) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botScore": 56,
+      "botReason": "Fiyat 200G ortalamanın (88.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "SPX500",
       "name": "S&P 500",
       "cluster": "US_TECH",
       "digits": 2,
-      "price": 7170.75,
-      "bid": 7170.52,
-      "ask": 7170.98,
-      "change24hPercent": -0.75,
-      "isOpen": true,
-      "zacScore": -11,
+      "price": 7247.75,
+      "bid": 7247.52,
+      "ask": 7247.98,
+      "change24hPercent": 1.03,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
+      "zacScore": -10,
       "regime": "VOL_SHOCK",
       "regimeLabelTR": "Volatilite Şoku (Koruma Modu)",
-      "ewmac": -4.41,
+      "ewmac": -4.48,
       "aboveSma200": false,
-      "sma200": 7388.77,
-      "volRatio": 1.46,
-      "efficiencyRatio": 0.25,
-      "ibs12h": 0.172,
-      "cumRsi2_12h": 37.5,
-      "mom12hAtr": -0.7,
-      "xsmomRank": 9,
-      "xsmomScore30d": -0.775,
+      "sma200": 7390.4,
+      "volRatio": 1.47,
+      "efficiencyRatio": 0.26,
+      "ibs12h": 0.91,
+      "cumRsi2_12h": 68.1,
+      "mom12hAtr": 0.47,
+      "xsmomRank": 8,
+      "xsmomScore30d": -0.675,
       "activePod": "NONE",
       "direction": "BEKLE",
       "conviction": 6,
       "pred24hPct": -0.05,
       "pUp24h": 49,
-      "status": "Volatilite Şoku (Koruma Modu)",
-      "reason": "Fiyat 200G ortalamanın (7388.77) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Volatilite Şoku (Koruma Modu)",
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Fiyat 200G ortalamanın (7390.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 55,
-      "botReason": "Fiyat 200G ortalamanın (7388.77) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (7390.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "US30",
       "name": "Dow Jones 30",
       "cluster": "US_TECH",
       "digits": 2,
-      "price": 50219,
-      "bid": 50218.1,
-      "ask": 50219.9,
-      "change24hPercent": 0.32,
-      "isOpen": true,
-      "zacScore": -7,
+      "price": 50415,
+      "bid": 50414.1,
+      "ask": 50415.9,
+      "change24hPercent": 1.08,
+      "isOpen": false,
+      "closedReason": "Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)",
+      "zacScore": -6,
       "regime": "NEUTRAL_CHOP",
       "regimeLabelTR": "Yatay / Düşük İnanç Bölgesi",
-      "ewmac": -3.89,
+      "ewmac": -3.73,
       "aboveSma200": false,
-      "sma200": 50960.95,
-      "volRatio": 1.31,
+      "sma200": 50963.88,
+      "volRatio": 1.33,
       "efficiencyRatio": 0.19,
-      "ibs12h": 0.28,
-      "cumRsi2_12h": 63.7,
-      "mom12hAtr": -0.47,
-      "xsmomRank": 4,
-      "xsmomScore30d": -0.37,
+      "ibs12h": 0.671,
+      "cumRsi2_12h": 80.3,
+      "mom12hAtr": 0.26,
+      "xsmomRank": 3,
+      "xsmomScore30d": -0.31,
       "activePod": "NONE",
       "direction": "BEKLE",
-      "conviction": 4,
-      "pred24hPct": -0.03,
+      "conviction": 3,
+      "pred24hPct": -0.02,
       "pUp24h": 49,
-      "status": "Yatay / Düşük İnanç Bölgesi",
-      "reason": "Fiyat 200G ortalamanın (50960.95) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "botStatus": "Yatay / Düşük İnanç Bölgesi",
+      "status": "SEANS KAPALI (İzlemede)",
+      "reason": "Fiyat 200G ortalamanın (50963.88) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "botStatus": "SEANS KAPALI (İzlemede)",
       "botDirection": "BEKLE",
       "botScore": 53,
-      "botReason": "Fiyat 200G ortalamanın (50960.95) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "botReason": "Fiyat 200G ortalamanın (50963.88) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     }
   ],
   "podStats": [
@@ -839,23 +3576,23 @@
     {
       "pod": "CTA_TREND",
       "label": "Pod-3: Cortex +4S Trend İçi Sniper",
-      "openCount": 1,
+      "openCount": 2,
       "maxSlots": 2,
       "closedCount": 0,
       "winRatePct": 0,
-      "netPnL_USD": -75.37
+      "netPnL_USD": -250.89
     }
   ],
   "liveReadiness": {
     "targetDateTR": "01.12.2026",
-    "daysRemaining": 6,
+    "daysRemaining": 5,
     "overallStatus": "DOĞRULAMA DEVAM EDİYOR",
     "gates": [
       {
         "id": "WF_2Y",
         "label": "30G / 90G / 1Y / 2Y Gerçek Saatlik Walk-Forward Kanıtı ($25K)",
         "status": "GEÇTİ",
-        "metric": "4/4 Pencere Net Kârlı | 1Y +%22.0 (PF 1.76) | 2Y +$8,182 (DD %5.7)",
+        "metric": "4/4 Pencere Net Kârlı | 90G +%6.57 (PF 2.10) | 2Y +$8,530 (DD %6.2)",
         "target": "30G, 90G, 1Y ve 2Y pencerelerinin tamamı net pozitif"
       },
       {
@@ -869,21 +3606,21 @@
         "id": "LIVE_EXEC",
         "label": "Aktif Test Ortamı Emir İletimi",
         "status": "GEÇTİ",
-        "metric": "1 Açık / 0 Kapalı İşlem (50 tarama)",
+        "metric": "2 Açık / 0 Kapalı İşlem (2053 tarama)",
         "target": "01.12.2026’ya kadar kesintisiz canlı veri takibi"
       },
       {
         "id": "RISK_DD",
         "label": "Canlı Risk & Drawdown Kalkanı",
         "status": "GEÇTİ",
-        "metric": "Mevcut DD %0.34 | MaxDD %0.34",
+        "metric": "Mevcut DD %1.08 | MaxDD %1.22",
         "target": "MaxDD < %8.0 (Kademeli lot freni aktif)"
       }
     ]
   },
   "metrics": {
     "totalClosedTrades": 0,
-    "openPositionsCount": 1,
+    "openPositionsCount": 2,
     "winningTrades": 0,
     "losingTrades": 0,
     "winRatePercent": 0,
@@ -892,200 +3629,200 @@
     "avgWinUSD": 0,
     "avgLossUSD": 0,
     "expectancyUSD": 0,
-    "maxDrawdownPercent": 0.34,
-    "totalSpreadAndCommissionUSD": 2,
+    "maxDrawdownPercent": 1.22,
+    "totalSpreadAndCommissionUSD": 12.08,
     "totalFinancingUSD": 0.01,
-    "activeNotionalVolumeUSD": 8379.56,
-    "avgMarginLeverage": 1.52,
-    "spot1xTotalNetProfitUSD": -77.38
+    "activeNotionalVolumeUSD": 14144.61,
+    "avgMarginLeverage": 1.29,
+    "spot1xTotalNetProfitUSD": -262.98
   },
   "marketScanner": [
     {
-      "symbol": "SOL/USD",
-      "price": 69.47,
-      "status": "Kripto Sakin Düşüş İvmesi",
-      "direction": "BEKLE",
-      "candidateDirection": "BEKLE",
-      "score": 74,
-      "confluenceScore": 74,
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -53, EWMAC -9.8, IBS12 0.10).",
-      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -53, EWMAC -9.8, IBS12 0.10)."
+      "symbol": "XAG/USD",
+      "price": 42.085,
+      "status": "SEANS KAPALI (İzlemede)",
+      "direction": "SAT (SHORT)",
+      "candidateDirection": "SAT (SHORT)",
+      "score": 72,
+      "confluenceScore": 72,
+      "reason": "CTA MAKRO AYI TRENDİ TETİKLENDİ: EWMAC=-12.9 (≤-10.5), Fiyat < SMA200, 12H Tepki Satışı (IBS12=0.74≥0.65), Verimlilik ER=0.41. 3.2 ATR İz Süren Stop ile ayı trendi sürülür.",
+      "decisionReason": "CTA MAKRO AYI TRENDİ TETİKLENDİ: EWMAC=-12.9 (≤-10.5), Fiyat < SMA200, 12H Tepki Satışı (IBS12=0.74≥0.65), Verimlilik ER=0.41. 3.2 ATR İz Süren Stop ile ayı trendi sürülür."
     },
     {
       "symbol": "BTC/USD",
-      "price": 59586.75,
-      "status": "Ayı / Riskten Kaçış Rejimi",
+      "price": 60754.65,
+      "status": "AÇIK (CTA_TREND)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
-      "score": 71,
-      "confluenceScore": 71,
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.14).",
-      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.14)."
+      "score": 69,
+      "confluenceScore": 69,
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -43, EWMAC -10.0, IBS12 0.29).",
+      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -43, EWMAC -10.0, IBS12 0.29)."
     },
     {
       "symbol": "ETH/USD",
-      "price": 1678.82,
+      "price": 1703.95,
       "status": "Kripto Sakin Düşüş İvmesi",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
-      "score": 71,
-      "confluenceScore": 71,
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.11).",
-      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -47, EWMAC -10.0, IBS12 0.11)."
+      "score": 67,
+      "confluenceScore": 67,
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -10.1, IBS12 0.37).",
+      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -10.1, IBS12 0.37)."
     },
     {
-      "symbol": "XAG/USD",
-      "price": 40.65,
-      "status": "Ayı / Riskten Kaçış Rejimi",
+      "symbol": "SOL/USD",
+      "price": 70.88,
+      "status": "Kripto Sakin Düşüş İvmesi",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
-      "score": 71,
-      "confluenceScore": 71,
-      "reason": "Fiyat 200G ortalamanın (67.181) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (67.181) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
-    },
-    {
-      "symbol": "COPPER",
-      "price": 5.453,
-      "status": "Ayı / Riskten Kaçış Rejimi",
-      "direction": "BEKLE",
-      "candidateDirection": "BEKLE",
-      "score": 68,
-      "confluenceScore": 68,
-      "reason": "Fiyat 200G ortalamanın (6.2594) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (6.2594) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "score": 67,
+      "confluenceScore": 67,
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -9.7, IBS12 0.32).",
+      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC -38, EWMAC -9.7, IBS12 0.32)."
     },
     {
       "symbol": "XAU/USD",
-      "price": 3563.8,
+      "price": 3620.4,
       "status": "AÇIK (CTA_TREND)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
       "score": 66,
       "confluenceScore": 66,
-      "reason": "Fiyat 200G ortalamanın (4420.76) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (4420.76) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (4413.62) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (4413.62) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
-      "symbol": "AAPL",
-      "price": 354.54,
-      "status": "Yatay / Düşük İnanç Bölgesi",
+      "symbol": "COPPER",
+      "price": 5.4925,
+      "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
-      "score": 65,
-      "confluenceScore": 65,
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.90).",
-      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.90)."
+      "score": 66,
+      "confluenceScore": 66,
+      "reason": "Fiyat 200G ortalamanın (6.2579) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (6.2579) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "EUR/USD",
-      "price": 1.0987,
+      "price": 1.0977,
       "status": "İZLEME MODU (FX Komisyon Kalkanı)",
+      "direction": "BEKLE",
+      "candidateDirection": "BEKLE",
+      "score": 66,
+      "confluenceScore": 66,
+      "reason": "Fiyat 200G ortalamanın (1.1491) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (1.1491) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+    },
+    {
+      "symbol": "AAPL",
+      "price": 355.45,
+      "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
       "score": 65,
       "confluenceScore": 65,
-      "reason": "Fiyat 200G ortalamanın (1.1495) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (1.1495) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.77).",
+      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +34, EWMAC 5.1, IBS12 0.77)."
     },
     {
       "symbol": "USD/JPY",
-      "price": 159.1,
+      "price": 159.24,
       "status": "İZLEME MODU (FX Komisyon Kalkanı)",
-      "direction": "BEKLE",
-      "candidateDirection": "BEKLE",
-      "score": 63,
-      "confluenceScore": 63,
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +28, EWMAC 1.9, IBS12 0.90).",
-      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +28, EWMAC 1.9, IBS12 0.90)."
-    },
-    {
-      "symbol": "NVDA",
-      "price": 147,
-      "status": "Volatilite Şoku (Koruma Modu)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
       "score": 62,
       "confluenceScore": 62,
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +26, EWMAC 1.9, IBS12 0.89).",
+      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +26, EWMAC 1.9, IBS12 0.89)."
+    },
+    {
+      "symbol": "NVDA",
+      "price": 149.27,
+      "status": "SEANS KAPALI (İzlemede)",
+      "direction": "BEKLE",
+      "candidateDirection": "BEKLE",
+      "score": 61,
+      "confluenceScore": 61,
       "reason": "Fiyat 200G ortalamanın (203.07) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
       "decisionReason": "Fiyat 200G ortalamanın (203.07) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
-      "symbol": "GBP/USD",
-      "price": 1.3124,
-      "status": "İZLEME MODU (FX Komisyon Kalkanı)",
-      "direction": "BEKLE",
-      "candidateDirection": "BEKLE",
-      "score": 60,
-      "confluenceScore": 60,
-      "reason": "Fiyat 200G ortalamanın (1.3395) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (1.3395) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
-    },
-    {
       "symbol": "NAS100",
-      "price": 25868.75,
-      "status": "Ayı / Riskten Kaçış Rejimi",
+      "price": 26389.75,
+      "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
       "score": 59,
       "confluenceScore": 59,
-      "reason": "Fiyat 200G ortalamanın (28278.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (28278.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (28284.85) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (28284.85) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "MSFT",
-      "price": 490.07,
-      "status": "Yatay / Düşük İnanç Bölgesi",
+      "price": 489.75,
+      "status": "SEANS KAPALI (İzlemede)",
+      "direction": "BEKLE",
+      "candidateDirection": "BEKLE",
+      "score": 59,
+      "confluenceScore": 59,
+      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +19, EWMAC 0.7, IBS12 0.57).",
+      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +19, EWMAC 0.7, IBS12 0.57)."
+    },
+    {
+      "symbol": "GBP/USD",
+      "price": 1.31,
+      "status": "İZLEME MODU (FX Komisyon Kalkanı)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
       "score": 58,
       "confluenceScore": 58,
-      "reason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +18, EWMAC 0.7, IBS12 0.92).",
-      "decisionReason": "Aktif 3-Pod eşikleri henüz tetiklenmedi (ZAC +18, EWMAC 0.7, IBS12 0.92)."
+      "reason": "Fiyat 200G ortalamanın (1.3393) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (1.3393) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "BRENT",
-      "price": 90.19,
-      "status": "Yatay / Düşük İnanç Bölgesi",
+      "price": 91.17,
+      "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
-      "score": 58,
-      "confluenceScore": 58,
-      "reason": "Fiyat 200G ortalamanın (93.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (93.97) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "score": 57,
+      "confluenceScore": 57,
+      "reason": "Fiyat 200G ortalamanın (94.08) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (94.08) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "WTI",
-      "price": 83.48,
-      "status": "Yatay / Düşük İnanç Bölgesi",
+      "price": 84.42,
+      "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
-      "score": 58,
-      "confluenceScore": 58,
-      "reason": "Fiyat 200G ortalamanın (88.3) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (88.3) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "score": 56,
+      "confluenceScore": 56,
+      "reason": "Fiyat 200G ortalamanın (88.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (88.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "SPX500",
-      "price": 7170.75,
-      "status": "Volatilite Şoku (Koruma Modu)",
+      "price": 7247.75,
+      "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
       "score": 55,
       "confluenceScore": 55,
-      "reason": "Fiyat 200G ortalamanın (7388.77) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (7388.77) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (7390.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (7390.4) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     },
     {
       "symbol": "US30",
-      "price": 50219,
-      "status": "Yatay / Düşük İnanç Bölgesi",
+      "price": 50415,
+      "status": "SEANS KAPALI (İzlemede)",
       "direction": "BEKLE",
       "candidateDirection": "BEKLE",
       "score": 53,
       "confluenceScore": 53,
-      "reason": "Fiyat 200G ortalamanın (50960.95) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
-      "decisionReason": "Fiyat 200G ortalamanın (50960.95) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
+      "reason": "Fiyat 200G ortalamanın (50963.88) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor.",
+      "decisionReason": "Fiyat 200G ortalamanın (50963.88) altında; ZAC v14 sermayeyi düşen bıçaklara karşı koruyor."
     }
   ]
 }

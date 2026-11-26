@@ -16,6 +16,9 @@ import {
   fetchLiveUsdTryRate,
   fetchMacroPulse,
   fetchRealFinancialNews,
+  getNyLocalTimeInfo,
+  getUsExchangeHolidayInfo,
+  isAssetFeedLiveAndFresh,
   type HourlyBar,
 } from './marketService';
 import {
@@ -76,7 +79,7 @@ function readAssetDirectionalStats(): Map<string, { dirAccPct: number; sampleCou
       if (
         !f ||
         (f.horizonHours !== 1 && f.horizonHours !== 4) ||
-        f.status === 'BEKLİYOR' ||
+        (f.status !== 'DOĞRU' && f.status !== 'YANLIŞ') ||
         (f.expectedDirection !== 'YÜKSELİŞ' && f.expectedDirection !== 'DÜŞÜŞ') ||
         Math.abs(Number(f.zacScore || 0)) < 10 ||
         Math.abs(Number(f.actualMovePct || 0)) > 16.0
@@ -94,9 +97,7 @@ function readAssetDirectionalStats(): Map<string, { dirAccPct: number; sampleCou
         res.set(sym, { dirAccPct: 58, sampleCount: recent.length });
         continue;
       }
-      const hits = recent.filter((f) =>
-        f.expectedDirection === 'YÜKSELİŞ' ? Number(f.actualMovePct || 0) > 0.004 : Number(f.actualMovePct || 0) < -0.004
-      ).length;
+      const hits = recent.filter((f) => f.status === 'DOĞRU').length;
       res.set(sym, { dirAccPct: +((hits / recent.length) * 100).toFixed(1), sampleCount: recent.length });
     }
   } catch {
@@ -230,29 +231,79 @@ export function computeIbkrCommissionUSD(
   return +(brokerFee + passThroughRegFees).toFixed(2);
 }
 
+const CME_FUTURES_SET = new Set([
+  'XAU/USD',
+  'XAG/USD',
+  'COPPER',
+  'WTI',
+  'BRENT',
+  'NAS100',
+  'SPX500',
+  'US30',
+]);
+
 export function isMarketOpenForAsset(
   symbol: string,
   nowInput: number | Date = Date.now()
 ): { open: boolean; isOpen: boolean; reason?: string } {
   if (ZAC_CRYPTO_ASSETS.has(symbol)) return { open: true, isOpen: true };
   const nowMs = nowInput instanceof Date ? nowInput.getTime() : nowInput;
-  const d = new Date(nowMs);
-  const day = d.getUTCDay(); // 0=Paz, 6=Cmt
-  const h = d.getUTCHours();
-  const m = d.getUTCMinutes();
-  const minOfDay = h * 60 + m;
+  const ny = getNyLocalTimeInfo(nowMs);
+  const hol = getUsExchangeHolidayInfo(nowMs);
+  const nyMin = ny.minutesOfDay; // America/New_York yerel dakikası (DST yaz/kış otomatik!)
 
-  // Hafta sonu geleneksel piyasalar kapalı (Cuma 21:55 UTC -> Pazar 22:05 UTC)
-  if (day === 6) return { open: false, isOpen: false, reason: 'Hafta Sonu Kapalı (Cumartesi)' };
-  if (day === 0 && minOfDay < 22 * 60 + 5) return { open: false, isOpen: false, reason: 'Hafta Sonu Kapalı (Pazar 22:05 UTC Açılış)' };
-  if (day === 5 && minOfDay >= 21 * 60 + 55) return { open: false, isOpen: false, reason: 'Hafta Sonu Kapanışı' };
-
-  // ABD Hisseleri: Pre-market + Regular + After-hours (13:30 - 21:00 UTC ana seans)
-  if (symbol === 'NVDA' || symbol === 'AAPL' || symbol === 'MSFT') {
-    if (minOfDay < 13 * 60 + 30 || minOfDay >= 21 * 60) {
-      return { open: false, isOpen: false, reason: 'NYSE/NASDAQ Seans Dışı (13:30–21:00 UTC)' };
-    }
+  // 1) Hafta sonu geleneksel piyasalar kapalı (Cuma 17:00 ET -> Pazar 18:00 ET)
+  if (ny.dayOfWeek === 6) {
+    return { open: false, isOpen: false, reason: 'Hafta Sonu Kapalı (Cumartesi)' };
   }
+  if (ny.dayOfWeek === 0 && nyMin < 18 * 60 + 5) {
+    return { open: false, isOpen: false, reason: 'Hafta Sonu Kapalı (Pazar 18:05 ET Açılış)' };
+  }
+  if (ny.dayOfWeek === 5 && nyMin >= 16 * 60 + 55) {
+    return { open: false, isOpen: false, reason: 'Hafta Sonu Kapanışı (Cuma 17:00 ET)' };
+  }
+
+  // 2) ABD Hisseleri: Resmi NYSE RTH Seansı [09:30, 16:00) ET + Resmi ABD Tatil & Erken Kapanış Takvimi!
+  if (symbol === 'NVDA' || symbol === 'AAPL' || symbol === 'MSFT') {
+    if (hol.isNyseFullHoliday) {
+      return { open: false, isOpen: false, reason: hol.holidayNameTR || 'NYSE Resmi Borsa Tatili' };
+    }
+    const closeMin = hol.isNyseEarlyClose13ET ? 13 * 60 : 16 * 60;
+    if (nyMin < 9 * 60 + 30 || nyMin >= closeMin) {
+      return {
+        open: false,
+        isOpen: false,
+        reason: hol.isNyseEarlyClose13ET
+          ? 'NYSE Erken Kapanış Sonrası (09:30–13:00 ET)'
+          : 'NYSE/NASDAQ Ana Seans Dışı (09:30–16:00 ET)',
+      };
+    }
+    return { open: true, isOpen: true };
+  }
+
+  // 3) CME Globex Vadeli Endeks, Metal & Enerji (Günlük 17:00–18:00 ET Bakım + ABD Tatil Erken Kapanışı!)
+  if (CME_FUTURES_SET.has(symbol)) {
+    if (hol.isCmeFullHoliday && nyMin < 18 * 60) {
+      return { open: false, isOpen: false, reason: hol.holidayNameTR || 'CME Resmi Tatil Kapanışı' };
+    }
+    if (nyMin >= 17 * 60 && nyMin < 18 * 60) {
+      return { open: false, isOpen: false, reason: 'CME Günlük Bakım Molası (17:00–18:00 ET)' };
+    }
+    if (hol.isCmeEarlyHalt13ET && nyMin >= 13 * 60 && nyMin < 18 * 60) {
+      return {
+        open: false,
+        isOpen: false,
+        reason: hol.holidayNameTR || 'ABD Tatili CME Erken Kapanış Molası (13:00–18:00 ET)',
+      };
+    }
+    return { open: true, isOpen: true };
+  }
+
+  // 4) Spot FX (Noel ve Yılbaşı tam gün tatillerinde kapalı)
+  if (hol.isCmeFullHoliday && (ny.month === 12 || ny.month === 1) && nyMin < 17 * 60) {
+    return { open: false, isOpen: false, reason: hol.holidayNameTR || 'Küresel FX Tatil Kapanışı' };
+  }
+
   return { open: true, isOpen: true };
 }
 
@@ -703,7 +754,7 @@ export function recalculateLedgerMetrics(ledger: AutonomousLedgerState): void {
       id: 'WF_2Y',
       label: '30G / 90G / 1Y / 2Y Gerçek Saatlik Walk-Forward Kanıtı ($25K)',
       status: 'GEÇTİ',
-      metric: '4/4 Pencere Net Kârlı | 1Y +%22.0 (PF 1.76) | 2Y +$8,182 (DD %5.7)',
+      metric: '4/4 Pencere Net Kârlı | 90G +%6.57 (PF 2.10) | 2Y +$8,530 (DD %6.2)',
       target: '30G, 90G, 1Y ve 2Y pencerelerinin tamamı net pozitif',
     },
     {
@@ -908,13 +959,15 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         });
       };
 
-      // Çıkış kontrolleri (sadece piyasa açıksa veya kriptoysa)
+      // Çıkış kontrolleri (yalnızca piyasa VE canlı veri akışı aktifse — tatil molasında donmuş fiyattan sahte çıkış yapılmaz!)
       const isCortexTrade =
         pos.id.startsWith('CORTEX-') ||
         (pos.podLabel || '').includes('Cortex') ||
         (pos.rationale || '').includes('[Cortex');
       const mkt = isMarketOpenForAsset(pos.symbol, nowMs);
-      if (mkt.open && ledger.isRunning) {
+      const posFeed = isAssetFeedLiveAndFresh(pos.symbol, h1Map.get(pos.symbol), nowMs);
+      const canExecuteExit = mkt.open && (ZAC_CRYPTO_ASSETS.has(pos.symbol) || posFeed.fresh);
+      if (canExecuteExit && ledger.isRunning) {
         // 0) Gerçek IBKR %85 Marjin Tasfiyesi (Maintenance Margin Liquidation)
         if (pos.unrealizedPnL_USD <= -pos.allocatedCapitalUSD * 0.85) {
           closeTrade(liqPrice, 'IBKR ZORUNLU MARJİN LİKİDASYONU', 'STOP_LOSS', true);
@@ -938,48 +991,56 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           closeTrade(liqPrice, 'HEDEF KÂR AL (LİMİT TP)', 'TP2_FULL', false);
           continue;
         }
-        // 3) Cortex Erken Kâr Realizasyonu (Gerçek makro/4S/12S uzman vektörüyle momentum tersine dönerse kârı koru!)
+        // 3) Cortex Erken Kâr Realizasyonu & Yapısal Tez İptali Kalkanı
         const openMins = (nowMs - pos.entryTimestamp) / 60000;
         const earlyBankFloor = Math.max(8, (pos.riskUSD || 15) * 0.65);
-        if (openMins >= 50 && pos.totalPnL_USD >= earlyBankFloor) {
-          const h1ForPos = h1Map.get(pos.symbol);
-          const p4ForPos = h4Packs.get(pos.symbol);
-          if (h1ForPos && h1ForPos.length >= 25 && p12 && p12.bars.length >= 5 && dPack && dPack.bars.length >= 60) {
-            const compD = findLastClosedBarIndex(dPack.bars, nowMs, 86400_000, pos.symbol);
-            const comp12 = findLastClosedBarIndex(p12.bars, nowMs, 12 * 3600_000, pos.symbol);
-            const snapPos = evaluateZacAt(
-              pos.symbol,
-              spec.digits,
-              q.price,
-              dPack,
-              compD,
-              p12,
-              comp12,
-              vixLevel,
-              rankMap.get(pos.symbol) || 8,
-              CORE_SYMBOLS.length
-            );
-            const microPos = analyzeCandlestickAndMicrostructure(h1ForPos, spec.digits, undefined, {
-              nowMs,
-              symbol: pos.symbol,
-              barDurationMs: 3600_000,
-              livePrice: q.price,
-            });
-            const h4CtxPos = p4ForPos ? extract4hContextAt(p4ForPos, nowMs) : undefined;
-            const expPos = buildExpertVector(
-              snapPos.ewmac,
-              snapPos.aboveSma200,
-              snapPos.ibs12h,
-              snapPos.cumRsi2_12h,
-              snapPos.mom12hAtr,
-              rankMap.get(pos.symbol) || 8,
-              CORE_SYMBOLS.length,
-              snapPos.volRatio,
-              microPos,
-              ZAC_CRYPTO_ASSETS.has(pos.symbol),
-              ZAC_MR12_ASSETS.has(pos.symbol),
-              h4CtxPos
-            );
+        const h1ForPos = h1Map.get(pos.symbol);
+        const p4ForPos = h4Packs.get(pos.symbol);
+        if (
+          openMins >= 50 &&
+          h1ForPos &&
+          h1ForPos.length >= 25 &&
+          p12 &&
+          p12.bars.length >= 5 &&
+          dPack &&
+          dPack.bars.length >= 60
+        ) {
+          const compD = findLastClosedBarIndex(dPack.bars, nowMs, 86400_000, pos.symbol);
+          const comp12 = findLastClosedBarIndex(p12.bars, nowMs, 12 * 3600_000, pos.symbol);
+          const snapPos = evaluateZacAt(
+            pos.symbol,
+            spec.digits,
+            q.price,
+            dPack,
+            compD,
+            p12,
+            comp12,
+            vixLevel,
+            rankMap.get(pos.symbol) || 8,
+            CORE_SYMBOLS.length
+          );
+          const microPos = analyzeCandlestickAndMicrostructure(h1ForPos, spec.digits, undefined, {
+            nowMs,
+            symbol: pos.symbol,
+            barDurationMs: 3600_000,
+            livePrice: q.price,
+          });
+          const h4CtxPos = p4ForPos ? extract4hContextAt(p4ForPos, nowMs) : undefined;
+          const expPos = buildExpertVector(
+            snapPos.ewmac,
+            snapPos.aboveSma200,
+            snapPos.ibs12h,
+            snapPos.cumRsi2_12h,
+            snapPos.mom12hAtr,
+            rankMap.get(pos.symbol) || 8,
+            CORE_SYMBOLS.length,
+            snapPos.volRatio,
+            microPos,
+            ZAC_CRYPTO_ASSETS.has(pos.symbol),
+            ZAC_MR12_ASSETS.has(pos.symbol),
+            h4CtxPos
+          );
+          if (pos.totalPnL_USD >= earlyBankFloor) {
             const fc1Pos = computeAdaptiveHorizonForecast(
               1,
               q.price,
@@ -994,6 +1055,40 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
             if (lostMom) {
               closeTrade(liqPrice, 'CORTEX MOMENTUM KÂR REALİZASYONU', 'TP2_FULL');
               continue;
+            }
+          } else if (
+            isCortexTrade &&
+            openMins >= 120 &&
+            pos.totalPnL_USD <= -Math.max(40, (pos.riskUSD || 250) * 0.25) &&
+            p4ForPos &&
+            p4ForPos.bars.length >= 55
+          ) {
+            // Akıllı Yapısal Tez İptali: Hem 4S EMA trendi hem 1S SMC yapısı (BOS/ChoCH + güçlü ters mum) hem +4S Cortex tam tersine döndüyse -1R beklemeden hasarı kes!
+            const i4Pos = findLastClosedBarIndex(p4ForPos.bars, nowMs, 4 * 3600_000, pos.symbol);
+            const h4TrendFlipped = isLong
+              ? p4ForPos.e21[i4Pos] < p4ForPos.e50[i4Pos]
+              : p4ForPos.e21[i4Pos] > p4ForPos.e50[i4Pos];
+            const smcStructBroken = isLong
+              ? (microPos.structureState === 'BOS_AŞAĞI' || microPos.structureState === 'CHOCH_DÖNÜŞ_AŞAĞI') &&
+                microPos.candleVsaScore <= -24
+              : (microPos.structureState === 'BOS_YUKARI' || microPos.structureState === 'CHOCH_DÖNÜŞ_YUKARI') &&
+                microPos.candleVsaScore >= 24;
+            if (h4TrendFlipped && smcStructBroken) {
+              const fc4Pos = computeAdaptiveHorizonForecast(
+                4,
+                q.price,
+                snapPos.atr12h14,
+                spec.digits,
+                expPos,
+                microPos,
+                false,
+                pos.symbol
+              );
+              const cortexFlipped = isLong ? fc4Pos.compositeScore <= -20 : fc4Pos.compositeScore >= 20;
+              if (cortexFlipped) {
+                closeTrade(liqPrice, 'CORTEX YAPISAL TEZ İPTALİ (AKILLI RİSK KESİMİ)', 'STOP_LOSS', true);
+                continue;
+              }
             }
           }
         }
@@ -1121,7 +1216,13 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       if (!dPack || !p12 || !q) continue;
 
       const spec = getSpec(sym);
-      const mkt = isMarketOpenForAsset(sym, nowMs);
+      const rawMkt = isMarketOpenForAsset(sym, nowMs);
+      const h1Bars = h1Map.get(sym);
+      const feedCheck = isAssetFeedLiveAndFresh(sym, h1Bars, nowMs);
+      const mkt =
+        rawMkt.open && !feedCheck.fresh
+          ? { open: false, isOpen: false, reason: feedCheck.reason }
+          : rawMkt;
       const completedDailyIdx = findLastClosedBarIndex(dPack.bars, nowMs, 86400_000, sym);
       const completed12Idx = findLastClosedBarIndex(p12.bars, nowMs, 12 * 3600_000, sym);
       const h4Ctx = p4 ? extract4hContextAt(p4, nowMs) : undefined;
@@ -1141,7 +1242,6 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       );
       const h24 = snap.horizons.find((h) => h.horizonHours === 24)!;
 
-      const h1Bars = h1Map.get(sym);
       const dirProf = dirStatsMap.get(sym);
       const assetProf = aiBrain.assetProfiles?.[sym];
       const assetAcc =
@@ -1157,6 +1257,16 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
       const isUsEquity = sym === 'NVDA' || sym === 'AAPL' || sym === 'MSFT';
       const pdtAllowed = !isUsEquity || curEq >= 25_000;
 
+      const microSym =
+        h1Bars && h1Bars.length >= 25
+          ? analyzeCandlestickAndMicrostructure(h1Bars, spec.digits, undefined, {
+              nowMs,
+              symbol: sym,
+              barDurationMs: 3600_000,
+              livePrice: q.price,
+            })
+          : null;
+
       let chosenCand: CortexEntryCandidate | null = null;
 
       // A) POD-1 (MR_SPRING_12H) & POD-2 (CRYPTO_MOM_12H) KANITLANMIŞ SWING MOTORLARI
@@ -1166,14 +1276,21 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         (snap.activeSetup.pod === 'MR_SPRING_12H' || snap.activeSetup.pod === 'CRYPTO_MOM_12H') &&
         snap.activeSetup.direction !== 'BEKLE' &&
         h1Bars &&
-        h1Bars.length >= 25
+        h1Bars.length >= 25 &&
+        microSym
       ) {
         const pod = snap.activeSetup.pod;
         const dir = snap.activeSetup.direction;
         const dpLast = completedDailyIdx;
+        // MR12 şelale koruması: Aktif yüksek-hacimli düşüş mumunun (falling knife) tam ortasında alım yapma, satışın emilmesini bekle!
+        const fallingKnifeActive =
+          pod === 'MR_SPRING_12H' &&
+          microSym.vsaSignal === 'TRUE_DISPLACEMENT' &&
+          microSym.ibs1h <= 0.20;
         const mrWaterfallOk =
           pod !== 'MR_SPRING_12H' ||
-          (vixLevel < 26.5 &&
+          (!fallingKnifeActive &&
+            vixLevel < 26.5 &&
             snap.ewmac > 1.0 &&
             snap.volRatio <= 1.32 &&
             dPack.e8[dpLast] >= dPack.e32[dpLast] * 0.992);
@@ -1225,7 +1342,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         }
       }
 
-      // B) POD-3: CORTEX v16.1 +4S TREND İÇİ GERİ ÇEKİLME SNIPER (+1S Mikro-Scalp & FX Tamamen Kapatıldı!)
+      // B) POD-3: CORTEX v16.2 +4S TREND İÇİ GERİ ÇEKİLME SNIPER (Ters Mum & Sıkışma & Squeeze Kilidi Aktif!)
       if (
         !chosenCand &&
         !isFxExcluded &&
@@ -1233,6 +1350,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         CORTEX_4H_SNIPER_ASSETS.has(sym) &&
         h1Bars &&
         h1Bars.length >= 25 &&
+        microSym &&
         p4 &&
         p4.bars.length >= 55 &&
         isHighAccuracyAsset &&
@@ -1247,12 +1365,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
         const er4 = calcEfficiencyRatio(p4.closes, i4, 12);
         const atr4 = Math.max(q.price * 0.0025, p4.atr14[i4] || snap.atr12h14 / Math.sqrt(3));
 
-        const micro = analyzeCandlestickAndMicrostructure(h1Bars, spec.digits, undefined, {
-          nowMs,
-          symbol: sym,
-          barDurationMs: 3600_000,
-          livePrice: q.price,
-        });
+        const micro = microSym;
         const experts = buildExpertVector(
           snap.ewmac,
           snap.aboveSma200,
@@ -1284,8 +1397,33 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           newsCtx
         );
 
+        // MUM & SMC ÇARPIŞMA KİLİDİ:
+        // 1) İç Mum Sıkışması (INSIDE_BAR_COMPRESSION) kırılım yönü belli olmadan işlem açılmaz.
+        // 2) Kapanmış 1S mumda karşıt kurumsal dönüş (Boğa Yutan / SSL Sweep önüne SHORT veya Ayı Yutan / BSL Sweep önüne LONG) kesinlikle yasaktır!
+        // 3) 24 saatlik sert ters squeeze (>%2.2) varsa onaylı dönüş mumu olmadan karşıt pozisyon açılmaz.
+        const bullCandleBlocked =
+          micro.pattern === 'INSIDE_BAR_COMPRESSION' ||
+          micro.candleVsaScore <= -14 ||
+          micro.sweptBslBearish ||
+          micro.pattern === 'BEARISH_ENGULFING_DISPLACEMENT' ||
+          micro.pattern === 'EVENING_STAR_REVERSAL' ||
+          micro.structureState === 'CHOCH_DÖNÜŞ_AŞAĞI' ||
+          micro.structureState === 'BOS_AŞAĞI' ||
+          (q.change24hPct <= -2.2 && micro.candleVsaScore < 24);
+
+        const bearCandleBlocked =
+          micro.pattern === 'INSIDE_BAR_COMPRESSION' ||
+          micro.candleVsaScore >= 14 ||
+          micro.sweptSslBullish ||
+          micro.pattern === 'BULLISH_ENGULFING_DISPLACEMENT' ||
+          micro.pattern === 'MORNING_STAR_REVERSAL' ||
+          micro.structureState === 'CHOCH_DÖNÜŞ_YUKARI' ||
+          micro.structureState === 'BOS_YUKARI' ||
+          (q.change24hPct >= 2.2 && micro.candleVsaScore > -24);
+
         const sealed = pendingSeals.get(sym);
         const bull4hPullback =
+          !bullCandleBlocked &&
           snap.aboveSma200 &&
           snap.ewmac >= POD_CONFIG.CTA_TREND.minEwmac &&
           p4.e21[i4] > p4.e50[i4] &&
@@ -1296,6 +1434,7 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           fc4h.compositeScore >= -4;
 
         const bear4hPullback =
+          !bearCandleBlocked &&
           !snap.aboveSma200 &&
           snap.ewmac <= -POD_CONFIG.CTA_TREND.minEwmac &&
           p4.e21[i4] < p4.e50[i4] &&
@@ -1306,22 +1445,28 @@ export async function runAutonomousBotTick(force = false): Promise<AutonomousLed
           fc4h.compositeScore <= 4;
 
         const cortex4hBullSniper =
+          !bullCandleBlocked &&
           snap.aboveSma200 &&
-          snap.ewmac >= 5.0 &&
+          snap.ewmac >= 5.5 &&
           p4.e21[i4] > p4.e50[i4] &&
+          er4 >= 0.20 &&
+          (b4.close >= (b4.open ?? b4.close) || micro.candleVsaScore >= 18) &&
           fc4h.expectedDirection === 'YÜKSELİŞ' &&
           fc4h.compositeScore >= 24 &&
           snap.ibs12h <= 0.72 &&
-          micro.zScoreEma20_1h <= 1.35;
+          micro.zScoreEma20_1h <= 1.30;
 
         const cortex4hBearSniper =
+          !bearCandleBlocked &&
           !snap.aboveSma200 &&
-          snap.ewmac <= -5.0 &&
+          snap.ewmac <= -5.5 &&
           p4.e21[i4] < p4.e50[i4] &&
+          er4 >= 0.20 &&
+          (b4.close <= (b4.open ?? b4.close) || micro.candleVsaScore <= -18) &&
           fc4h.expectedDirection === 'DÜŞÜŞ' &&
           fc4h.compositeScore <= -24 &&
           snap.ibs12h >= 0.28 &&
-          micro.zScoreEma20_1h >= -1.35;
+          micro.zScoreEma20_1h >= -1.30;
 
         let sniperDir: 'YÜKSELİŞ' | 'DÜŞÜŞ' | null = null;
         let sniperReason = '';
@@ -2222,7 +2367,7 @@ export async function runLiveWalkForwardAudit(
       }
     }
 
-    // Pod-3: CORTEX +4S TREND İÇİ GERİ ÇEKİLME SNIPER (Emtia & Kripto)
+    // Pod-3: CORTEX +4S TREND İÇİ GERİ ÇEKİLME SNIPER (Emtia & Kripto — Kapanmış Mum & SMC Çarpışma Kilidi Dahil!)
     for (const s of CORTEX_4H_SNIPER_ASSETS) {
       const i4 = b4End.get(s)?.get(hrTs);
       if (i4 === undefined || i4 < 55) continue;
@@ -2237,13 +2382,39 @@ export async function runLiveWalkForwardAudit(
       const cr2_4 = (p4.rsi2[i4] + p4.rsi2[i4 - 1]) / 2;
       const er4 = calcEfficiencyRatio(p4.closes, i4, 12);
 
+      const hiCur = h1Idx.get(s)?.get(hrTs);
+      const h1Arr = h1Map.get(s);
+      const specWf = getSpec(s);
+
       if (dP.bars[dp].close > dP.s200[dp] && ew >= POD_CONFIG.CTA_TREND.minEwmac && p4.e21[i4] > p4.e50[i4] && er4 >= POD_CONFIG.CTA_TREND.minEr) {
         if (cr2_4 < 24 && ibs4 >= 0.45 && p4.bars[i4].close > (p4.bars[i4].open ?? p4.bars[i4].close)) {
-          tryOpen(s, 'CTA_TREND', 1, POD_CONFIG.CTA_TREND.riskPct, p4.atr14[i4], POD_CONFIG.CTA_TREND.slAtr, POD_CONFIG.CTA_TREND.tpAtr, 48);
+          const microWf = hiCur !== undefined && h1Arr && hiCur >= 25 ? analyzeCandlestickAndMicrostructure(h1Arr, specWf.digits, hiCur, { symbol: s }) : null;
+          const bullBlocked =
+            microWf &&
+            (microWf.pattern === 'INSIDE_BAR_COMPRESSION' ||
+              microWf.candleVsaScore <= -14 ||
+              microWf.sweptBslBearish ||
+              microWf.pattern === 'BEARISH_ENGULFING_DISPLACEMENT' ||
+              microWf.structureState === 'CHOCH_DÖNÜŞ_AŞAĞI' ||
+              microWf.structureState === 'BOS_AŞAĞI');
+          if (!bullBlocked) {
+            tryOpen(s, 'CTA_TREND', 1, POD_CONFIG.CTA_TREND.riskPct, p4.atr14[i4], POD_CONFIG.CTA_TREND.slAtr, POD_CONFIG.CTA_TREND.tpAtr, 48);
+          }
         }
       } else if (dP.bars[dp].close < dP.s200[dp] && ew <= -POD_CONFIG.CTA_TREND.minEwmac && p4.e21[i4] < p4.e50[i4] && er4 >= POD_CONFIG.CTA_TREND.minEr) {
         if (cr2_4 > 76 && ibs4 <= 0.55 && p4.bars[i4].close < (p4.bars[i4].open ?? p4.bars[i4].close)) {
-          tryOpen(s, 'CTA_TREND', -1, POD_CONFIG.CTA_TREND.riskPct, p4.atr14[i4], POD_CONFIG.CTA_TREND.slAtr, POD_CONFIG.CTA_TREND.tpAtr, 48);
+          const microWf = hiCur !== undefined && h1Arr && hiCur >= 25 ? analyzeCandlestickAndMicrostructure(h1Arr, specWf.digits, hiCur, { symbol: s }) : null;
+          const bearBlocked =
+            microWf &&
+            (microWf.pattern === 'INSIDE_BAR_COMPRESSION' ||
+              microWf.candleVsaScore >= 14 ||
+              microWf.sweptSslBullish ||
+              microWf.pattern === 'BULLISH_ENGULFING_DISPLACEMENT' ||
+              microWf.structureState === 'CHOCH_DÖNÜŞ_YUKARI' ||
+              microWf.structureState === 'BOS_YUKARI');
+          if (!bearBlocked) {
+            tryOpen(s, 'CTA_TREND', -1, POD_CONFIG.CTA_TREND.riskPct, p4.atr14[i4], POD_CONFIG.CTA_TREND.slAtr, POD_CONFIG.CTA_TREND.tpAtr, 48);
+          }
         }
       }
     }

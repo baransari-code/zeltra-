@@ -123,6 +123,240 @@ export function getSessionMode(symbol: string): SessionMode {
   return 'NY_CLOSE_17ET';
 }
 
+// Meeus/Jones/Butcher Gregoryen Paskalya algoritması üzerinden Kutsal Cuma (Good Friday) hesabı
+function computeGoodFridayMonthDay(year: number): { month: number; day: number } {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+  const easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+  const gfUtc = new Date(Date.UTC(year, easterMonth - 1, easterDay - 2));
+  return { month: gfUtc.getUTCMonth() + 1, day: gfUtc.getUTCDate() };
+}
+
+export interface UsExchangeHolidayInfo {
+  isNyseFullHoliday: boolean;
+  isNyseEarlyClose13ET: boolean;
+  isCmeFullHoliday: boolean;
+  isCmeEarlyHalt13ET: boolean;
+  holidayNameTR?: string;
+}
+
+// Resmi NYSE / NASDAQ & CME Vadeli Tatil ve Erken Kapanış Takvimi (Tüm Yıllar İçin Otomatik)
+export function getUsExchangeHolidayInfo(tsMs: number): UsExchangeHolidayInfo {
+  const ny = getNyLocalTimeInfo(tsMs);
+  const { year, month, day, dayOfWeek } = ny;
+
+  // 1) Yılbaşı (1 Ocak; Pazar'a denk gelirse 2 Ocak Pazartesi resmi tatil)
+  if ((month === 1 && day === 1 && dayOfWeek !== 0) || (month === 1 && day === 2 && dayOfWeek === 1)) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: true,
+      isCmeEarlyHalt13ET: false,
+      holidayNameTR: 'Yılbaşı Resmi Borsa Tatili',
+    };
+  }
+
+  // 2) Martin Luther King Jr. Günü (Ocak ayının 3. Pazartesi günü)
+  if (month === 1 && dayOfWeek === 1 && day >= 15 && day <= 21) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'ABD MLK Günü Tatili (NYSE Kapalı / CME 13:00 ET Mola)',
+    };
+  }
+
+  // 3) Başkanlar Günü — Presidents' Day (Şubat ayının 3. Pazartesi günü)
+  if (month === 2 && dayOfWeek === 1 && day >= 15 && day <= 21) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'ABD Başkanlar Günü Tatili (NYSE Kapalı / CME 13:00 ET Mola)',
+    };
+  }
+
+  // 4) Kutsal Cuma — Good Friday (NYSE & CME Tam Gün Kapalı)
+  const gf = computeGoodFridayMonthDay(year);
+  if (month === gf.month && day === gf.day) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: true,
+      isCmeEarlyHalt13ET: false,
+      holidayNameTR: 'Kutsal Cuma (NYSE & CME Kapalı)',
+    };
+  }
+
+  // 5) Anma Günü — Memorial Day (Mayıs ayının son Pazartesi günü)
+  if (month === 5 && dayOfWeek === 1 && day >= 25) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'ABD Anma Günü Tatili (NYSE Kapalı / CME 13:00 ET Mola)',
+    };
+  }
+
+  // 6) Juneteenth (19 Haziran; Cumartesi ise 18 Cuma, Pazar ise 20 Pazartesi)
+  if (
+    (month === 6 && day === 19 && dayOfWeek >= 1 && dayOfWeek <= 5) ||
+    (month === 6 && day === 18 && dayOfWeek === 5) ||
+    (month === 6 && day === 20 && dayOfWeek === 1)
+  ) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'ABD Juneteenth Resmi Tatili (NYSE Kapalı / CME 13:00 ET Mola)',
+    };
+  }
+
+  // 7) ABD Bağımsızlık Günü — 4 Temmuz (+ 3 Temmuz Erken Kapanış)
+  if (
+    (month === 7 && day === 4 && dayOfWeek >= 1 && dayOfWeek <= 5) ||
+    (month === 7 && day === 3 && dayOfWeek === 5) ||
+    (month === 7 && day === 5 && dayOfWeek === 1)
+  ) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'ABD 4 Temmuz Bağımsızlık Günü Tatili (NYSE Kapalı / CME 13:00 ET Mola)',
+    };
+  }
+  if (month === 7 && day === 3 && dayOfWeek >= 1 && dayOfWeek <= 4) {
+    return {
+      isNyseFullHoliday: false,
+      isNyseEarlyClose13ET: true,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: false,
+      holidayNameTR: 'ABD Bağımsızlık Günü Arifesi (13:00 ET Erken Kapanış)',
+    };
+  }
+
+  // 8) İşçi Bayramı — Labor Day (Eylül ayının ilk Pazartesi günü)
+  if (month === 9 && dayOfWeek === 1 && day <= 7) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'ABD İşçi Bayramı Tatili (NYSE Kapalı / CME 13:00 ET Mola)',
+    };
+  }
+
+  // 9) Şükran Günü — Thanksgiving Day (Kasım ayının 4. Perşembe günü) & Ertesi Cuma Erken Kapanış
+  if (month === 11 && dayOfWeek === 4 && day >= 22 && day <= 28) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'ABD Şükran Günü (Thanksgiving — NYSE Kapalı / CME 13:00 ET Tatil Molası)',
+    };
+  }
+  if (month === 11 && dayOfWeek === 5 && day >= 23 && day <= 29) {
+    return {
+      isNyseFullHoliday: false,
+      isNyseEarlyClose13ET: true,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'Şükran Günü Ertesi (13:00 ET Erken Kapanış)',
+    };
+  }
+
+  // 10) Noel — Christmas (25 Aralık; Cumartesi ise 24 Cuma, Pazar ise 26 Pazartesi + 24 Aralık Erken Kapanış)
+  if (
+    (month === 12 && day === 25 && dayOfWeek >= 1 && dayOfWeek <= 5) ||
+    (month === 12 && day === 24 && dayOfWeek === 5) ||
+    (month === 12 && day === 26 && dayOfWeek === 1)
+  ) {
+    return {
+      isNyseFullHoliday: true,
+      isNyseEarlyClose13ET: false,
+      isCmeFullHoliday: true,
+      isCmeEarlyHalt13ET: false,
+      holidayNameTR: 'Noel Resmi Borsa Tatili (NYSE & CME Kapalı)',
+    };
+  }
+  if (month === 12 && day === 24 && dayOfWeek >= 1 && dayOfWeek <= 4) {
+    return {
+      isNyseFullHoliday: false,
+      isNyseEarlyClose13ET: true,
+      isCmeFullHoliday: false,
+      isCmeEarlyHalt13ET: true,
+      holidayNameTR: 'Noel Arifesi (13:00 ET Erken Kapanış)',
+    };
+  }
+
+  return {
+    isNyseFullHoliday: false,
+    isNyseEarlyClose13ET: false,
+    isCmeFullHoliday: false,
+    isCmeEarlyHalt13ET: false,
+  };
+}
+
+// Canlı Veri Tazeliği & Donmuş Tahta Denetçisi (Tatil molası, CME bakım arası ve veri kesintisini anında yakalar!)
+export function isAssetFeedLiveAndFresh(
+  symbol: string,
+  h1Bars: HourlyBar[] | undefined,
+  nowMs = Date.now()
+): { fresh: boolean; reason?: string } {
+  if (!h1Bars || h1Bars.length < 5) {
+    return { fresh: false, reason: 'Yetersiz saatlik bar verisi' };
+  }
+  const lastBar = h1Bars[h1Bars.length - 1];
+  const ageMs = nowMs - lastBar.timestamp;
+
+  // 7/24 Kripto piyasasında 3 saatten eski son mum veri kopukluğu demektir
+  if (KRAKEN_PAIR_MAP[symbol]) {
+    if (ageMs > 3 * 3600_000) {
+      return { fresh: false, reason: 'Kripto saatlik veri akışı gecikmeli' };
+    }
+    return { fresh: true };
+  }
+
+  // Geleneksel enstrümanlarda son saatlik mum başlangıcından >105 dk geçtiyse tahta tatil/bakım molasındadır!
+  if (ageMs > 105 * 60_000) {
+    return { fresh: false, reason: 'Tahta Tatil / Seans Molasında (Son Mum Hareketsiz)' };
+  }
+
+  // Son 3 saatlik barda tek tik bile hareket yoksa (O=H=L=C kilitli) donmuş kotasyon
+  const b1 = h1Bars[h1Bars.length - 1];
+  const b2 = h1Bars[h1Bars.length - 2];
+  const b3 = h1Bars[h1Bars.length - 3];
+  const r1 = (b1.high ?? b1.close) - (b1.low ?? b1.close);
+  const r2 = (b2.high ?? b2.close) - (b2.low ?? b2.close);
+  if (
+    r1 < 1e-12 &&
+    r2 < 1e-12 &&
+    Math.abs(b1.close - b2.close) < 1e-12 &&
+    Math.abs(b2.close - b3.close) < 1e-12
+  ) {
+    return { fresh: false, reason: 'Donmuş Kotasyon / Hareketsiz Tatil Tahtası' };
+  }
+
+  return { fresh: true };
+}
+
 function getPrecisionForSymbol(symbol: string): number {
   if (symbol === 'DOGE/USD') return 6;
   if (symbol.includes('JPY')) return 3;
